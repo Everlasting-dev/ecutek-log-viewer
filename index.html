@@ -2,8 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>EcuTek Log Viewer (Beta)</title>
+  <title>EcuTek Log Viewer · BETA</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
@@ -46,9 +49,9 @@
       <div class="meta card">
         <div class="meta-title">Hints</div>
         <div class="meta-body">
-          • CSV with a <strong>time</strong> column required (e.g., <em>Time</em>, <em>Time(s)</em>).<br/>
-          • One chart is created per other numeric column vs. time.<br/>
-          • Large files: keep columns tidy for speed.
+          • CSV needs a <strong>time</strong> column (e.g., <em>Time</em>, <em>Time(s)</em>).<br/>
+          • One chart per other numeric column vs time.<br/>
+          • For huge files, trim unused columns for speed.
         </div>
       </div>
     </section>
