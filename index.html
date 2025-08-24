@@ -15,7 +15,7 @@
   .file{flex:1}
   input[type=file]{width:100%;padding:12px;border-radius:10px;border:1px solid #2a3038;background:#12151a;color:var(--fg)}
   #chart{height:70vh;width:100%}
-  #err{margin:8px 14px 0;padding:10px;border:1px solid var(--err);background:#3b0b0b;color:#fff;border-radius:8px;display:none}
+  #err{margin:8px 14px 0;padding:10px;border:1px solid var(--err);background:#3b0b0b;color:#fff;border-radius:8px;display:none;white-space:pre-wrap}
   #meta{padding:6px 14px;color:var(--muted)}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
@@ -25,12 +25,14 @@
 <header><h1>EcuTek Log Viewer (auto)</h1></header>
 
 <div class="bar">
-  <label class="file"><input id="file" type="file" accept=".csv,.txt,.log,text/*"></label>
+  <label class="file">
+    <input id="file" type="file" accept=".csv,.txt,.log,text/*" />
+  </label>
 </div>
 <div id="err"></div>
 <div id="meta"></div>
 <main><div id="chart"></div></main>
-<footer><small>Client‑side only. Pick a file and it plots. If your log is huge, it auto‑downsamples.</small></footer>
+<footer><small>If file picker doesn’t open, use Safari/Chrome (not an in‑app browser). Files stay on device.</small></footer>
 
 <script>
 const elFile = document.getElementById('file');
@@ -38,7 +40,7 @@ const elErr  = document.getElementById('err');
 const elMeta = document.getElementById('meta');
 const elChart= document.getElementById('chart');
 
-function err(msg){ elErr.textContent = msg; elErr.style.display='block'; }
+function err(msg){ elErr.textContent = String(msg); elErr.style.display='block'; }
 function clearErr(){ elErr.style.display='none'; elErr.textContent=''; }
 
 function sniffDelimiter(sample){
@@ -51,12 +53,12 @@ function sniffDelimiter(sample){
   if (wsCols>=3) return 'WS';
   return ',';
 }
-function toNum(v){ if(typeof v==='number')return v; const n=Number(String(v).trim()); return Number.isFinite(n)?n:NaN; }
+function toNum(v){ if(typeof v==='number')return v; const n=Number(String(v??'').trim()); return Number.isFinite(n)?n:NaN; }
 
 function chooseX(headers, rows){
   const prefs = ["Time","Timestamp","Time(s)","Seconds","ms","Sample","RPM","time","TIME"];
   for(const k of prefs) if(headers.includes(k)) return k;
-  // find a monotonic-ish numeric column
+  // monotonic-ish fallback
   for(const h of headers){
     let prev=-Infinity, ok=0, seen=0;
     for(let i=0;i<Math.min(rows.length,2000);i++){
@@ -64,25 +66,20 @@ function chooseX(headers, rows){
     }
     if(seen>200 && ok/seen>0.9) return h;
   }
-  // fallback to first numeric column
   for(const h of headers){
-    let hits=0, seen=0;
+    let hits=0;
     for(let i=0;i<Math.min(rows.length,2000);i++){
-      const n=toNum(rows[i][h]); if(Number.isFinite(n)){ hits++; } seen++;
+      if(Number.isFinite(toNum(rows[i][h]))) hits++;
     }
     if(hits>100) return h;
   }
-  return null;
+  return headers[0] || null;
 }
 
 function pickY(headers, xKey){
   const y = headers.filter(h => h!==xKey);
-  // prefer common signals first
   const prefer = ["RPM","Engine Speed","Vehicle Speed","Boost","MAP","TPS","Lambda","AFR","Knock","Ign","Injector DC","Load"];
-  const ordered = [
-    ...prefer.filter(p => y.includes(p)),
-    ...y.filter(h => !prefer.includes(h))
-  ];
+  const ordered = [...prefer.filter(p => y.includes(p)), ...y.filter(h => !prefer.includes(h))];
   return ordered.slice(0,6);
 }
 
@@ -94,35 +91,38 @@ function strideDownsample(xs, ys, maxPts=15000){
   return {x,y};
 }
 
-async function preprocessWhitespace(file){
-  const rdr=file.stream().getReader(); const dec=new TextDecoder();
-  let buf="", out="";
-  while(true){
-    const {done,value}=await rdr.read(); if(done)break;
-    buf += dec.decode(value,{stream:true});
-    let last = buf.lastIndexOf("\n"); if(last===-1) continue;
-    const chunk = buf.slice(0,last+1); buf = buf.slice(last+1);
-    const lines = chunk.split(/\r?\n/);
-    for(const line of lines){
-      if(!line.trim()) continue;
-      out += line.trim().split(/\s+/).map(s=>{
-        const t=String(s);
-        return /[",\n]/.test(t)?`"${t.replace(/"/g,'""')}"`:t;
-      }).join(",") + "\n";
-    }
-    if(out.length>32*1024*1024) err("Warning: very large whitespace→CSV conversion in memory.");
-  }
-  if(buf.trim()){
-    out += buf.trim().split(/\s+/).join(",") + "\n";
-  }
-  return new Blob([out],{type:"text/csv"});
+function csvEscape(t){ return /[",\n]/.test(t)?`"${t.replace(/"/g,'""')}"`:t; }
+
+// Fallback-friendly whitespace→CSV using FileReader
+function preprocessWhitespaceWithFR(file){
+  return new Promise((resolve,reject)=>{
+    const fr=new FileReader();
+    fr.onerror = ()=> reject(new Error("Failed to read file (FileReader)."));
+    fr.onload = ()=> {
+      const txt = String(fr.result||"");
+      const lines = txt.split(/\r?\n/);
+      let out = "";
+      for(const line of lines){
+        if(!line.trim()) continue;
+        out += line.trim().split(/\s+/).map(s=>csvEscape(String(s))).join(",") + "\n";
+      }
+      resolve(new Blob([out],{type:"text/csv"}));
+    };
+    fr.readAsText(file); // caution: loads whole file; OK for typical logs
+  });
 }
 
 async function parseFile(file){
-  // peek
-  const head = await file.slice(0, 32*1024).text();
+  // Peek via FileReader (works everywhere)
+  const head = await new Promise((res,rej)=>{
+    const fr=new FileReader();
+    fr.onerror = ()=> rej(new Error("Failed to read file head."));
+    fr.onload  = ()=> res(String(fr.result||"").slice(0, 32*1024));
+    fr.readAsText(file.slice(0, 64*1024));
+  });
+
   const delim = sniffDelimiter(head);
-  const source = (delim==="WS") ? await preprocessWhitespace(file) : file;
+  const source = (delim==="WS") ? await preprocessWhitespaceWithFR(file) : file;
 
   return new Promise((resolve,reject)=>{
     let headers=[], rows=[], count=0;
@@ -131,13 +131,13 @@ async function parseFile(file){
       delimiter: (delim==="WS")? "," : undefined,
       chunk: (res, parser)=>{
         if(!headers.length){
-          headers = res.meta.fields||[];
+          headers = res.meta.fields || [];
           if(!headers || headers.length<2){ parser.abort(); return reject(new Error("No header row detected (<2 columns).")); }
         }
         rows.push(...res.data); count += res.data.length;
         if(rows.length>1_000_000){ parser.abort(); return reject(new Error("Row cap 1,000,000 to protect mobile memory.")); }
       },
-      complete:()=> resolve({headers, rows, delimiter: (delim==="WS")?",":delim, count}),
+      complete:()=> resolve({headers, rows, delimiter:(delim==="WS")?",":delim, count}),
       error:(e)=> reject(e)
     });
   });
@@ -145,9 +145,9 @@ async function parseFile(file){
 
 function plot(headers, rows){
   const xKey = chooseX(headers, rows);
-  if(!xKey){ throw new Error("No suitable X axis found."); }
   const yKeys = pickY(headers, xKey);
-  if(!yKeys.length){ throw new Error("No Y series found."); }
+  if(!xKey) throw new Error("No suitable X axis found.");
+  if(!yKeys.length) throw new Error("No Y series found.");
 
   const traces=[];
   const canGL = !!window.Plotly?.Registry?.allTypes?.includes("scattergl");
@@ -158,20 +158,14 @@ function plot(headers, rows){
       if(Number.isFinite(xv) && Number.isFinite(yv)){ xs.push(xv); ys.push(yv); }
     }
     const ds = strideDownsample(xs, ys, 15000);
-    traces.push({
-      type: canGL ? "scattergl" : "scatter",
-      mode: "lines",
-      name: yk,
-      x: ds.x, y: ds.y,
-      line: {width:1}, connectgaps:false,
-      hovertemplate: "%{x}, %{y}<extra>"+yk+"</extra>"
-    });
+    traces.push({ type: canGL ? "scattergl" : "scatter", mode:"lines", name: yk,
+      x: ds.x, y: ds.y, line:{width:1}, connectgaps:false,
+      hovertemplate: "%{x}, %{y}<extra>"+yk+"</extra>" });
   }
 
   const layout={
     paper_bgcolor:"#0b0d10", plot_bgcolor:"#0b0d10",
-    font:{color:"#e7ecf2",size:12},
-    margin:{l:60,r:10,t:10,b:40},
+    font:{color:"#e7ecf2",size:12}, margin:{l:60,r:10,t:10,b:40},
     xaxis:{gridcolor:"#1b1f25"}, yaxis:{gridcolor:"#1b1f25",automargin:true},
     showlegend:true, legend:{orientation:"h",y:-0.15}
   };
@@ -179,11 +173,12 @@ function plot(headers, rows){
   return {xKey, yKeys};
 }
 
-elFile.addEventListener('change', async ()=>{
-  clearErr(); elMeta.textContent=""; Plotly.purge(elChart);
-  const f = elFile.files?.[0]; if(!f){ return; }
+async function handleFile(){
+  clearErr(); elMeta.textContent=""; try{ Plotly.purge(elChart); }catch{}
+  const f = elFile.files?.[0];
+  if(!f){ err("No file selected. If picker didn’t appear, open this link in Safari/Chrome (not inside another app)."); return; }
   try{
-    if(f.size>200*1024*1024) err("Large file detected (>200MB). Viewer will downsample aggressively.");
+    if(f.size>200*1024*1024) err("Large file (>200MB). Viewer will downsample; performance may degrade.");
     const t0=performance.now();
     const {headers, rows, delimiter, count} = await parseFile(f);
     const {xKey, yKeys} = plot(headers, rows);
@@ -191,8 +186,15 @@ elFile.addEventListener('change', async ()=>{
     elMeta.textContent = `OK · Delimiter: ${delimiter} · Rows: ${count} · Cols: ${headers.length} · X: ${xKey} · Y: ${yKeys.join(", ")} · ${(t1-t0|0)} ms`;
   }catch(e){
     console.error(e); err(e.message||String(e));
+  } finally {
+    // allow picking the SAME file again (Edge/Safari quirk)
+    elFile.value = "";
   }
-});
+}
+
+// Fire on both change & input (some iOS builds only trigger one)
+elFile.addEventListener('change', handleFile, {passive:true});
+elFile.addEventListener('input', handleFile, {passive:true});
 </script>
 </body>
 </html>
