@@ -14,9 +14,10 @@
   .bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 14px}
   .file{flex:1}
   input[type=file]{width:100%;padding:12px;border-radius:10px;border:1px solid #2a3038;background:#12151a;color:var(--fg)}
-  #chart{height:70vh;width:100%}
+  #chart{height:68vh;width:100%}
   #err{margin:8px 14px 0;padding:10px;border:1px solid var(--err);background:#3b0b0b;color:#fff;border-radius:8px;display:none;white-space:pre-wrap}
   #meta{padding:6px 14px;color:var(--muted)}
+  #dbg{padding:6px 14px;color:var(--muted);font-size:12px;white-space:pre-wrap}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
@@ -30,6 +31,7 @@
 <div id="err"></div>
 <div id="meta"></div>
 <main><div id="chart"></div></main>
+<div id="dbg"></div>
 <footer><small>Pick a file → it auto‑plots. Files stay on device.</small></footer>
 
 <script>
@@ -37,9 +39,10 @@ const elFile = document.getElementById('file');
 const elErr  = document.getElementById('err');
 const elMeta = document.getElementById('meta');
 const elChart= document.getElementById('chart');
+const elDbg  = document.getElementById('dbg');
 
 function err(msg){ elErr.textContent = String(msg); elErr.style.display='block'; }
-function clearErr(){ elErr.style.display='none'; elErr.textContent=''; }
+function clearErr(){ elErr.style.display='none'; elErr.textContent=''; elDbg.textContent=""; }
 
 /* ---------- Delimiter + header helpers ---------- */
 function sniffDelimiter(sample){
@@ -120,7 +123,7 @@ async function parseFile(file){
       chunk:(res, parser)=>{
         if(!headers.length){
           headers = res.meta.fields||[];
-          if(!headers || headers.length<2){ parser.abort(); return reject(new Error("No header row detected (<2 columns).")); }
+          if(!headers || headers.length<2){ parser.abort(); return reject(new Error("No header row detected (<2 columns)."))); }
         }
         rows.push(...res.data); count += res.data.length;
         if(rows.length>1_000_000){ parser.abort(); return reject(new Error("Row cap 1,000,000 to protect mobile memory.")); }
@@ -134,9 +137,38 @@ async function parseFile(file){
   });
 }
 
-/* ---------- X/Y picking + plotting ---------- */
-function toNum(v){ if(typeof v==='number')return v; const n=Number(String(v??'').trim()); return Number.isFinite(n)?n:NaN; }
+/* ---------- Numeric parsing & stats ---------- */
+function toNum(v){
+  if (typeof v === "number") return Number.isFinite(v) ? v : NaN;
+  if (v == null) return NaN;
+  let s = String(v).trim();
+  if (s === "") return NaN;
+  // Handle "1,234.56", "12.3%", "1.2e3", etc.
+  s = s.replace(/,/g,"").replace(/%$/,"");
+  const n = Number(s);
+  return Number.isFinite(n) ? n : NaN;
+}
 
+function columnStats(headers, rows, sampleN=5000){
+  const N = Math.min(rows.length, sampleN);
+  const stats = {};
+  for (const h of headers){
+    let cnt=0, min=+Infinity, max=-Infinity, sum=0, sum2=0;
+    for (let i=0;i<N;i++){
+      const n = toNum(rows[i][h]);
+      if (Number.isFinite(n)){
+        cnt++; if(n<min) min=n; if(n>max) max=n; sum+=n; sum2+=n*n;
+      }
+    }
+    const ratio = N ? cnt/N : 0;
+    const mean = cnt ? sum/cnt : 0;
+    const var_ = cnt ? Math.max(0, (sum2/cnt) - mean*mean) : 0;
+    stats[h] = { cnt, ratio, min, max, var_ };
+  }
+  return stats;
+}
+
+/* ---------- X/Y picking + plotting ---------- */
 function chooseX(headers, rows){
   const prefs = [
     "Time","Time s","Time s.","Timestamp","Date Time","Datetime",
@@ -163,22 +195,29 @@ function chooseX(headers, rows){
     if(seen>200 && ok/seen>0.9) return h;
   }
   // first numeric column with variance
-  for(const h of headers){
-    let cnt=0, min=+Infinity, max=-Infinity;
-    for(let i=0;i<Math.min(rows.length,5000);i++){
-      const n=toNum(rows[i][h]); if(Number.isFinite(n)){ cnt++; if(n<min)min=n; if(n>max)max=n; }
-    }
-    if(cnt>200 && (max-min)>0) return h;
-  }
-  // fallback (never fail)
+  const st = columnStats(headers, rows, 5000);
+  const candidate = headers.find(h => st[h].cnt>200 && (st[h].max - st[h].min) > 0);
+  if (candidate) return candidate;
+
   return "__SAMPLE_INDEX__";
 }
 
-function pickY(headers, xKey){
-  const y = headers.filter(h => h!==xKey);
-  const prefer = ["RPM","Engine Speed","Vehicle Speed","Boost","MAP","TPS","Lambda","AFR","Knock","Ign","Injector DC","Load"];
-  const ordered = [...prefer.filter(p => y.includes(p)), ...y.filter(h => !prefer.includes(h))];
-  return ordered.slice(0,6);
+function pickY(headers, rows, xKey){
+  const st = columnStats(headers, rows, 5000);
+
+  // prefer engine-ish signals first if they look numeric enough
+  const prefer = ["RPM","Engine Speed","Vehicle Speed","Boost","MAP","TPS","Lambda","AFR","Knock","Ign","Injector DC","Load"]
+    .filter(h => headers.includes(h))
+    .filter(h => st[h].ratio >= 0.2); // at least 20% numeric
+
+  // generic numeric columns (exclude chosen X and low-variance)
+  const numerics = headers
+    .filter(h => h !== xKey)
+    .filter(h => st[h].ratio >= 0.2 && st[h].var_ > 0);
+
+  // unique + cap
+  const pick = [...new Set([...prefer, ...numerics])].slice(0, 6);
+  return pick;
 }
 
 function strideDownsample(xs, ys, maxPts=15000){
@@ -191,8 +230,12 @@ function strideDownsample(xs, ys, maxPts=15000){
 
 function plot(headers, rows){
   const xKey = chooseX(headers, rows);
-  const yKeys = pickY(headers, xKey);
-  if(!yKeys.length) throw new Error("No Y series found.");
+  const yKeys = pickY(headers, rows, xKey);
+  if(!yKeys.length){
+    const preview = JSON.stringify(rows.slice(0,3), null, 2);
+    elDbg.textContent = `Debug: headers=${headers.join(", ")}\nNo numeric Y columns detected.\nFirst rows:\n${preview}`;
+    throw new Error("No Y series found (no numeric columns).");
+  }
 
   const traces=[];
   const canGL = !!window.Plotly?.Registry?.allTypes?.includes("scattergl");
@@ -207,14 +250,22 @@ function plot(headers, rows){
       if(Number.isFinite(xv) && Number.isFinite(yv)){ xs.push(xv); ys.push(yv); }
     }
     const ds = strideDownsample(xs, ys, 15000);
-    traces.push({
-      type: canGL ? "scattergl" : "scatter",
-      mode: "lines",
-      name: yk,
-      x: ds.x, y: ds.y,
-      line:{width:1}, connectgaps:false,
-      hovertemplate: "%{x}, %{y}<extra>"+yk+"</extra>"
-    });
+    if (ds.x.length && ds.y.length) {
+      traces.push({
+        type: canGL ? "scattergl" : "scatter",
+        mode: "lines",
+        name: yk,
+        x: ds.x, y: ds.y,
+        line:{width:1}, connectgaps:false,
+        hovertemplate: "%{x}, %{y}<extra>"+yk+"</extra>"
+      });
+    }
+  }
+
+  if (!traces.length){
+    const preview = JSON.stringify(rows.slice(0,3), null, 2);
+    elDbg.textContent = `Debug: headers=${headers.join(", ")}\nAll candidate series were non-numeric after cleaning.\nFirst rows:\n${preview}`;
+    throw new Error("No Y series found after filtering.");
   }
 
   const layout={
@@ -240,8 +291,13 @@ async function handleFile(){
     const {xKey, yKeys} = plot(headers, rows);
     const t1=performance.now();
     elMeta.textContent = `OK · Delim: ${delimiter} · Rows: ${count} · Cols: ${headers.length} · X: ${xKey} · Y: ${yKeys.join(", ")} · ${(t1-t0|0)} ms`;
-  }catch(e){ console.error(e); err(e.message||String(e)); }
-  finally { elFile.value = ""; } // allow reselect same file
+    // Only reset input AFTER a successful plot to allow reselecting same file next time
+    elFile.value = "";
+  }catch(e){
+    console.error(e);
+    err(e.message||String(e));
+    // DO NOT reset file input here—so you can try again or screenshot debug
+  }
 }
 elFile.addEventListener('change', handleFile, {passive:true});
 elFile.addEventListener('input',  handleFile, {passive:true});
