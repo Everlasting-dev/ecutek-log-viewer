@@ -1,106 +1,41 @@
-:root {
-  --bg: #0b0d10;
-  --fg: #e7ecf2;
-  --muted: #9aa7b2;
-  --primary: #34a0ff;
-  --error: #ff3b30;
-}
-
-* { box-sizing: border-box; }
-html, body { height: 100%; }
 body {
+  background-color: #111;
+  color: #eee;
+  font-family: Arial, sans-serif;
+  text-align: center;
   margin: 0;
-  background: var(--bg);
-  color: var(--fg);
-  font: 14px system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
 }
 
-/* Header */
-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid #1b1f25;
-}
-h1 { margin: 0; font-size: 18px; }
-#err {
-  margin-top: 8px;
-  padding: 10px;
-  border: 1px solid var(--error);
-  background: #3b0b0b;
-  color: #fff;
-  border-radius: 8px;
-}
-.hidden { display: none; }
+.title { color: #00ff00; margin: 18px 0; }
 
-/* Controls */
-.controls {
-  padding: 16px 20px;
-  display: grid;
-  gap: 12px;
-}
-.row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
-}
+.controls { margin: 10px auto 0; display: flex; gap: 10px; justify-content: center; }
 
-label { display: flex; flex-direction: column; gap: 6px; }
-select, input[type="text"] {
-  min-width: 180px;
+#csvFile {
   padding: 8px;
-  border-radius: 10px;
-  border: 1px solid #2a3038;
-  background: #12151a;
-  color: var(--fg);
-}
-select[multiple] { min-width: 260px; }
-
-/* File input */
-.file input { display: none; }
-.file span {
-  display: inline-block;
-  padding: 12px 16px;
-  border-radius: 12px;
-  background: #141820;
-  border: 1px dashed #2a3038;
-  color: var(--fg);
-  cursor: pointer;
-}
-
-/* Buttons */
-button {
-  padding: 12px 16px;
-  border: 0;
-  border-radius: 12px;
-  background: var(--primary);
-  color: #00131f;
-  font-weight: 600;
-  cursor: pointer;
-}
-button.ghost {
-  background: transparent;
-  color: var(--muted);
-  border: 1px solid #2a3038;
-}
-button:active { transform: translateY(1px); }
-
-/* Chart area */
-#chart { height: 62vh; width: 100%; }
-
-/* Footer */
-footer {
-  padding: 10px 20px;
-  border-top: 1px solid #1b1f25;
-  color: var(--muted);
-}
-small { color: var(--muted); }
-
-/* Debug */
-details { padding: 0 20px 20px; }
-pre {
-  background: #12151a;
-  padding: 10px;
   border-radius: 8px;
-  overflow-x: auto;
-  font-size: 12px;
+  border: 1px solid #333;
+  background: #1a1a1a;
+  color: #eee;
+}
+
+#genBtn {
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: #00ff00;
+  color: #000;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.plot {
+  margin: 20px auto;
+  width: 95%;
+  max-width: 900px;
+}
+
+footer {
+  margin: 30px 0 20px;
+  font-size: 14px;
+  color: #aaa;
 }
