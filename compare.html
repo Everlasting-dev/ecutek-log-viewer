@@ -3,12 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>EcuTek Log Viewer (Compare)</title>
+  <title>EcuTek Log Viewer</title>
   <link rel="stylesheet" href="style.css" />
-  <!-- Plotly (CDN) -->
   <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
-  <!-- PapaParse (CDN) -->
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 </head>
 <body>
   <div class="topbar">
@@ -16,12 +13,12 @@
       <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
         <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
       </svg>
-      EcuTek Log Viewer <span class="badge">COMPARE</span>
+      EcuTek Log Viewer <span class="badge">BETA</span>
     </div>
-    <div class="actions"></div>
   </div>
 
   <div class="wrap">
+    <!-- Uploader -->
     <div class="card uploader">
       <div class="pickers">
         <label class="filebtn">
@@ -31,47 +28,51 @@
         <button id="plotBtn" class="btn primary">Generate Plot</button>
         <button id="clearBtn" class="btn ghost">Clear</button>
       </div>
-      <div id="fileDrop" class="drop">Drag & drop files here</div>
       <div id="fileInfo" class="fileinfo"></div>
       <div id="toast" class="toast hidden"></div>
     </div>
 
-    <div class="card">
-      <div style="display:flex; gap:10px; align-items:center; margin-bottom:8px;">
-        <label style="color:#b8c6d6; font-weight:600;">Offset step</label>
-        <select id="stepPct" class="btn" style="width:auto;">
-          <option value="0.05">5%</option>
-          <option value="0.10" selected>10%</option>
-          <option value="0.25">25%</option>
-          <option value="0.50">50%</option>
-        </select>
-        <span class="hint">applies per‑series based on that series’ value range</span>
+    <!-- Tabs -->
+    <div class="tabs card">
+      <div class="tabbar">
+        <button class="tab active" data-tab="compare">Single Plot</button>
+        <button class="tab" data-tab="multi">All Plots</button>
       </div>
-      <div id="axisPanel"></div>
-    </div>
 
-    <div class="plots">
-      <div class="plot-card">
-        <div class="plot-title">Comparison Plot</div>
-        <div class="plot-frame">
-          <div id="chart" class="plot"></div>
+      <!-- Pane: Single plot (controls + chart side-by-side) -->
+      <section id="pane-compare" class="tabpane active">
+        <div class="twocol">
+          <div>
+            <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;">
+              <label class="muted semibold">Offset step</label>
+              <select id="stepPct" class="btn" style="width:auto;">
+                <option value="0.05">5%</option>
+                <option value="0.10" selected>10%</option>
+                <option value="0.25">25%</option>
+                <option value="0.50">50%</option>
+              </select>
+              <span class="hint">per‑series based on that series’ range</span>
+            </div>
+            <div id="axisPanel"></div>
+          </div>
+
+          <div class="plot-card">
+            <div class="plot-title">Comparison Plot</div>
+            <div class="plot-frame">
+              <div id="chart" class="plot"></div>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
+      </section>
 
-    <div class="card">
-      <details>
-        <summary class="meta-title">Debug Information</summary>
-        <pre id="debug"></pre>
-      </details>
+      <!-- Pane: many small plots -->
+      <section id="pane-multi" class="tabpane">
+        <div class="plots" id="plots"></div>
+      </section>
     </div>
   </div>
 
-  <div class="footer">
-    Client‑side parsing. Your file never leaves the device.
-  </div>
-
-  <!-- IMPORTANT: module so imports in compare.js work -->
+  <div class="footer">Client‑side parsing. Your file never leaves the device.</div>
   <script type="module" src="compare.js"></script>
 </body>
 </html>
