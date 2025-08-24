@@ -1,306 +1,85 @@
-<!doctype html>
+
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>EcuTek Log Viewer — Simple</title>
-<style>
-  :root{--bg:#0b0d10;--fg:#e7ecf2;--muted:#9aa7b2;--err:#ff3b30}
-  *{box-sizing:border-box} html,body{height:100%}
-  body{margin:0;background:var(--bg);color:var(--fg);font:14px system-ui,Segoe UI,Roboto,Arial}
-  header,footer{padding:10px 14px;border-bottom:1px solid #1b1f25}
-  footer{border-top:1px solid #1b1f25;border-bottom:none;color:var(--muted)}
-  h1{margin:0;font-size:16px}
-  .bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 14px}
-  .file{flex:1}
-  input[type=file]{width:100%;padding:12px;border-radius:10px;border:1px solid #2a3038;background:#12151a;color:var(--fg)}
-  #chart{height:68vh;width:100%}
-  #err{margin:8px 14px 0;padding:10px;border:1px solid var(--err);background:#3b0b0b;color:#fff;border-radius:8px;display:none;white-space:pre-wrap}
-  #meta{padding:6px 14px;color:var(--muted)}
-  #dbg{padding:6px 14px;color:var(--muted);font-size:12px;white-space:pre-wrap}
-</style>
-<script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <meta charset="UTF-8">
+    <title>EcuTek Log Viewer (Beta)</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body {
+            background-color: #111;
+            color: #eee;
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        .plot {
+            margin: 20px auto;
+            width: 95%;
+            max-width: 900px;
+        }
+        footer {
+            margin-top: 30px;
+            font-size: 14px;
+            color: #aaa;
+        }
+    </style>
 </head>
 <body>
-<header><h1>EcuTek Log Viewer (auto)</h1></header>
+    <h2 style="color:#00ff00;">EcuTek Log Viewer (Beta)</h2>
+    <input type="file" id="csvFile" accept=".csv" />
+    <button onclick="handleFile()">Generate Plots</button>
+    <div id="plots"></div>
+    <footer>Made by AK Sauce</footer>
 
-<div class="bar">
-  <label class="file"><input id="file" type="file" accept=".csv,.txt,.log,text/*"/></label>
-</div>
-<div id="err"></div>
-<div id="meta"></div>
-<main><div id="chart"></div></main>
-<div id="dbg"></div>
-<footer><small>Pick a file → it auto‑plots. Files stay on device.</small></footer>
+    <script>
+        function handleFile() {
+            const fileInput = document.getElementById('csvFile');
+            const file = fileInput.files[0];
+            if (!file) return;
 
-<script>
-const elFile = document.getElementById('file');
-const elErr  = document.getElementById('err');
-const elMeta = document.getElementById('meta');
-const elChart= document.getElementById('chart');
-const elDbg  = document.getElementById('dbg');
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                const lines = text.split(/\r?\n/).filter(line => line && !line.startsWith('#'));
 
-function err(msg){ elErr.textContent = String(msg); elErr.style.display='block'; }
-function clearErr(){ elErr.style.display='none'; elErr.textContent=''; elDbg.textContent=""; }
+                const headers = lines[0].split(',');
+                const timeIndex = headers.findIndex(h => h.toLowerCase().includes('time'));
+                if (timeIndex === -1) {
+                    alert('No Time column found.');
+                    return;
+                }
 
-/* ---------- Delimiter + header helpers ---------- */
-function sniffDelimiter(sample){
-  const comma=(sample.match(/,/g)||[]).length;
-  const tab=(sample.match(/\t/g)||[]).length;
-  const first=(sample.split(/\r?\n/)[0]||'').trim();
-  const wsCols= first.split(/\s+/).length;
-  if (tab>comma && tab>0) return '\t';
-  if (comma>0) return ',';
-  if (wsCols>=3) return 'WS';
-  return ',';
-}
-function cleanHeader(h){
-  if(!h) return "";
-  return String(h)
-    .replace(/^\uFEFF/,"")    // BOM
-    .replace(/\(.*?\)/g,"")   // (ms)
-    .replace(/\[.*?\]/g,"")   // [s]
-    .replace(/\s+/g," ")
-    .trim();
-}
-function normalizeHeaders(rows){
-  if(!rows.length) return [];
-  const old = Object.keys(rows[0]);
-  const map = {};
-  const cleaned = old.map(h => {
-    const c = cleanHeader(h);
-    map[h] = c || h;
-    return c || h;
-  });
-  for(const r of rows){
-    for(const k in r){
-      const nk = map[k];
-      if(nk !== k){ r[nk] = r[k]; delete r[k]; }
-    }
-  }
-  return cleaned;
-}
+                const dataColumns = headers.map(() => []);
+                for (let i = 1; i < lines.length; i++) {
+                    const values = lines[i].split(',');
+                    if (values.length !== headers.length) continue;
+                    values.forEach((val, j) => {
+                        dataColumns[j].push(parseFloat(val));
+                    });
+                }
 
-/* ---------- Parsing (FileReader fallback works on iOS) ---------- */
-function csvEscape(t){ return /[",\n]/.test(t)?`"${t.replace(/"/g,'""')}"`:t; }
-
-function preprocessWhitespaceWithFR(file){
-  return new Promise((resolve,reject)=>{
-    const fr=new FileReader();
-    fr.onerror = ()=> reject(new Error("Failed to read file (FileReader)."));
-    fr.onload  = ()=> {
-      const txt = String(fr.result||"");
-      const lines = txt.split(/\r?\n/);
-      let out = "";
-      for(const line of lines){
-        if(!line.trim()) continue;
-        out += line.trim().split(/\s+/).map(s=>csvEscape(String(s))).join(",") + "\n";
-      }
-      resolve(new Blob([out],{type:"text/csv"}));
-    };
-    fr.readAsText(file);
-  });
-}
-
-async function parseFile(file){
-  // Peek head via FileReader (universal)
-  const head = await new Promise((res,rej)=>{
-    const fr=new FileReader();
-    fr.onerror = ()=> rej(new Error("Failed to read file head."));
-    fr.onload  = ()=> res(String(fr.result||"").slice(0,32*1024));
-    fr.readAsText(file.slice(0,64*1024));
-  });
-
-  const delim = sniffDelimiter(head);
-  const source = (delim==="WS") ? await preprocessWhitespaceWithFR(file) : file;
-
-  return new Promise((resolve,reject)=>{
-    let headers=[], rows=[], count=0;
-    Papa.parse(source,{
-      worker:true, header:true, skipEmptyLines:true, dynamicTyping:true,
-      delimiter:(delim==="WS")?",":undefined,
-      chunk:(res, parser)=>{
-        if(!headers.length){
-          headers = res.meta.fields||[];
-          if(!headers || headers.length<2){ parser.abort(); return reject(new Error("No header row detected (<2 columns)."))); }
+                const plotsDiv = document.getElementById('plots');
+                plotsDiv.innerHTML = '';
+                headers.forEach((header, i) => {
+                    if (i === timeIndex) return;
+                    const div = document.createElement('div');
+                    div.className = 'plot';
+                    plotsDiv.appendChild(div);
+                    Plotly.newPlot(div, [{
+                        x: dataColumns[timeIndex],
+                        y: dataColumns[i],
+                        mode: 'lines',
+                        name: header,
+                        line: { shape: 'linear' }
+                    }], {
+                        title: header,
+                        xaxis: { title: 'Time (s)' },
+                        yaxis: { title: header }
+                    });
+                });
+            };
+            reader.readAsText(file);
         }
-        rows.push(...res.data); count += res.data.length;
-        if(rows.length>1_000_000){ parser.abort(); return reject(new Error("Row cap 1,000,000 to protect mobile memory.")); }
-      },
-      complete:()=>{
-        if(rows.length){ headers = normalizeHeaders(rows); }
-        resolve({headers, rows, delimiter:(delim==="WS")?",":delim, count});
-      },
-      error:(e)=> reject(e)
-    });
-  });
-}
-
-/* ---------- Numeric parsing & stats ---------- */
-function toNum(v){
-  if (typeof v === "number") return Number.isFinite(v) ? v : NaN;
-  if (v == null) return NaN;
-  let s = String(v).trim();
-  if (s === "") return NaN;
-  // Handle "1,234.56", "12.3%", "1.2e3", etc.
-  s = s.replace(/,/g,"").replace(/%$/,"");
-  const n = Number(s);
-  return Number.isFinite(n) ? n : NaN;
-}
-
-function columnStats(headers, rows, sampleN=5000){
-  const N = Math.min(rows.length, sampleN);
-  const stats = {};
-  for (const h of headers){
-    let cnt=0, min=+Infinity, max=-Infinity, sum=0, sum2=0;
-    for (let i=0;i<N;i++){
-      const n = toNum(rows[i][h]);
-      if (Number.isFinite(n)){
-        cnt++; if(n<min) min=n; if(n>max) max=n; sum+=n; sum2+=n*n;
-      }
-    }
-    const ratio = N ? cnt/N : 0;
-    const mean = cnt ? sum/cnt : 0;
-    const var_ = cnt ? Math.max(0, (sum2/cnt) - mean*mean) : 0;
-    stats[h] = { cnt, ratio, min, max, var_ };
-  }
-  return stats;
-}
-
-/* ---------- X/Y picking + plotting ---------- */
-function chooseX(headers, rows){
-  const prefs = [
-    "Time","Time s","Time s.","Timestamp","Date Time","Datetime",
-    "Elapsed","Seconds","Second","ms","msec","Sample","Index","RPM","Engine Speed","time","TIME"
-  ].map(cleanHeader);
-  for(const k of prefs){ if(headers.includes(k)) return k; }
-
-  // ISO datetime detector
-  for(const h of headers){
-    let hits=0, good=0;
-    for(let i=0;i<Math.min(rows.length,2000);i++){
-      const v = rows[i][h]; if(v==null) continue;
-      const d = new Date(v);
-      if(!Number.isNaN(+d)){ hits++; if(i>0){ const d0 = new Date(rows[i-1][h]); if(+d >= +d0) good++; } }
-    }
-    if(hits>50 && good/hits>0.8) return h;
-  }
-  // monotonic numeric
-  for(const h of headers){
-    let prev=-Infinity, ok=0, seen=0;
-    for(let i=0;i<Math.min(rows.length,2000);i++){
-      const n=toNum(rows[i][h]); if(Number.isFinite(n)){ seen++; if(n>=prev){ ok++; prev=n; } }
-    }
-    if(seen>200 && ok/seen>0.9) return h;
-  }
-  // first numeric column with variance
-  const st = columnStats(headers, rows, 5000);
-  const candidate = headers.find(h => st[h].cnt>200 && (st[h].max - st[h].min) > 0);
-  if (candidate) return candidate;
-
-  return "__SAMPLE_INDEX__";
-}
-
-function pickY(headers, rows, xKey){
-  const st = columnStats(headers, rows, 5000);
-
-  // prefer engine-ish signals first if they look numeric enough
-  const prefer = ["RPM","Engine Speed","Vehicle Speed","Boost","MAP","TPS","Lambda","AFR","Knock","Ign","Injector DC","Load"]
-    .filter(h => headers.includes(h))
-    .filter(h => st[h].ratio >= 0.2); // at least 20% numeric
-
-  // generic numeric columns (exclude chosen X and low-variance)
-  const numerics = headers
-    .filter(h => h !== xKey)
-    .filter(h => st[h].ratio >= 0.2 && st[h].var_ > 0);
-
-  // unique + cap
-  const pick = [...new Set([...prefer, ...numerics])].slice(0, 6);
-  return pick;
-}
-
-function strideDownsample(xs, ys, maxPts=15000){
-  const n=xs.length; if(n<=maxPts) return {x:xs,y:ys};
-  const step=Math.ceil(n/maxPts), m=Math.floor(n/step);
-  const x=new Array(m), y=new Array(m); let j=0;
-  for(let i=0;i<n;i+=step){ x[j]=xs[i]; y[j]=ys[i]; j++; }
-  return {x,y};
-}
-
-function plot(headers, rows){
-  const xKey = chooseX(headers, rows);
-  const yKeys = pickY(headers, rows, xKey);
-  if(!yKeys.length){
-    const preview = JSON.stringify(rows.slice(0,3), null, 2);
-    elDbg.textContent = `Debug: headers=${headers.join(", ")}\nNo numeric Y columns detected.\nFirst rows:\n${preview}`;
-    throw new Error("No Y series found (no numeric columns).");
-  }
-
-  const traces=[];
-  const canGL = !!window.Plotly?.Registry?.allTypes?.includes("scattergl");
-  const synthX = (xKey==="__SAMPLE_INDEX__");
-  const xvec = synthX ? Array.from({length: rows.length}, (_,i)=>i) : null;
-
-  for(const yk of yKeys){
-    const xs=[], ys=[];
-    for(let i=0;i<rows.length;i++){
-      const xv = synthX ? xvec[i] : toNum(rows[i][xKey]);
-      const yv = toNum(rows[i][yk]);
-      if(Number.isFinite(xv) && Number.isFinite(yv)){ xs.push(xv); ys.push(yv); }
-    }
-    const ds = strideDownsample(xs, ys, 15000);
-    if (ds.x.length && ds.y.length) {
-      traces.push({
-        type: canGL ? "scattergl" : "scatter",
-        mode: "lines",
-        name: yk,
-        x: ds.x, y: ds.y,
-        line:{width:1}, connectgaps:false,
-        hovertemplate: "%{x}, %{y}<extra>"+yk+"</extra>"
-      });
-    }
-  }
-
-  if (!traces.length){
-    const preview = JSON.stringify(rows.slice(0,3), null, 2);
-    elDbg.textContent = `Debug: headers=${headers.join(", ")}\nAll candidate series were non-numeric after cleaning.\nFirst rows:\n${preview}`;
-    throw new Error("No Y series found after filtering.");
-  }
-
-  const layout={
-    paper_bgcolor:"#0b0d10", plot_bgcolor:"#0b0d10",
-    font:{color:"#e7ecf2",size:12}, margin:{l:60,r:10,t:10,b:40},
-    xaxis:{gridcolor:"#1b1f25", title: synthX ? "Sample" : xKey},
-    yaxis:{gridcolor:"#1b1f25",automargin:true},
-    showlegend:true, legend:{orientation:"h",y:-0.15}
-  };
-  Plotly.react(elChart, traces, layout, {responsive:true,displaylogo:false});
-  return {xKey: synthX ? "Sample(index)" : xKey, yKeys};
-}
-
-/* ---------- Wire up ---------- */
-async function handleFile(){
-  clearErr(); elMeta.textContent=""; try{ Plotly.purge(elChart); }catch{}
-  const f = elFile.files?.[0];
-  if(!f){ err("No file selected. If picker didn’t open, use Safari/Chrome (not in-app browser)."); return; }
-  try{
-    if(f.size>200*1024*1024) err("Large file (>200MB). Downsampling enabled.");
-    const t0=performance.now();
-    const {headers, rows, delimiter, count} = await parseFile(f);
-    const {xKey, yKeys} = plot(headers, rows);
-    const t1=performance.now();
-    elMeta.textContent = `OK · Delim: ${delimiter} · Rows: ${count} · Cols: ${headers.length} · X: ${xKey} · Y: ${yKeys.join(", ")} · ${(t1-t0|0)} ms`;
-    // Only reset input AFTER a successful plot to allow reselecting same file next time
-    elFile.value = "";
-  }catch(e){
-    console.error(e);
-    err(e.message||String(e));
-    // DO NOT reset file input here—so you can try again or screenshot debug
-  }
-}
-elFile.addEventListener('change', handleFile, {passive:true});
-elFile.addEventListener('input',  handleFile, {passive:true});
-</script>
+    </script>
 </body>
 </html>
