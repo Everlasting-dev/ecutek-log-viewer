@@ -85,3 +85,35 @@
     margin:22px auto 30px; max-width:1200px; padding:0 14px;
     color:var(--muted); display:flex; justify-content:flex-end; opacity:.85
   }
+
+/* compare controls layout */
+.slot{
+  display:grid;
+  grid-template-columns: 110px 1fr auto; /* [label+enable] [select] [buttons+color] */
+  align-items:center;
+  gap:10px;
+  margin-bottom:8px;
+}
+.slot > .btns{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:nowrap;
+}
+.slot .mini{
+  padding:6px 10px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:#151a21;
+  color:var(--fg);
+  cursor:pointer;
+}
+.slot input[type="color"]{
+  width:44px; height:32px;
+  border-radius:8px;
+  border:1px solid #2a3038;
+  padding:0;
+}
+
+
+    
