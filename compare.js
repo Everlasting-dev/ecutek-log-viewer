@@ -1,5 +1,8 @@
 // Multi‑Y single plot with offsets/colors; can use Time or RPM for X.
 // Uses cached CSV if available.
+const isMobile = matchMedia("(max-width: 900px), (pointer: coarse)").matches;
+document.documentElement.classList.toggle("mobile", isMobile);
+
 import { parseCSV, findTimeIndex, findRpmIndex, numericColumns } from "./parser.js";
 
 const $ = (id) => document.getElementById(id);
