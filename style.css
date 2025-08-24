@@ -50,6 +50,12 @@ body{ margin:0; background:var(--bg); color:var(--fg);
 .plot-frame{padding:10px}
 .plot{height:280px; width:100%}
 .plot.big{height:560px}
+/* Make the mega plot (compare.html) wider + taller */
+#chart.plot {
+  width: 100% !important;   /* force same width as parent card */
+  height: 600px !important; /* taller plot for clarity */
+}
+
 
 /* compare controls (one-row slots) */
 .slot{
