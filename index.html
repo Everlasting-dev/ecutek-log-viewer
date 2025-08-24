@@ -1,94 +1,56 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>EcuTek Log Viewer · Tabs</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>EcuTek Log Viewer (TXT/CSV)</title>
   <link rel="stylesheet" href="style.css" />
-  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-  <style>
-    /* tabs */
-    .tabs { display:flex; gap:8px; margin:10px 0 0; }
-    .tab { padding:10px 14px; border:1px solid var(--line); border-radius:10px; background:#151a21; cursor:pointer; }
-    .tab.active { background:var(--accent); color:#06130b; border-color:#0b2b19; }
-    .tabpanes > section { display:none; }
-    .tabpanes > section.active { display:block; }
-    .list { max-height: 320px; overflow:auto; border:1px solid var(--line); border-radius:10px; padding:8px; background:#0f1318; }
-    .list label { display:flex; align-items:center; gap:8px; padding:6px 4px; cursor:pointer; }
-    .counter { color: var(--muted); font-size: 12px; margin-left: 8px;}
-  </style>
+  <!-- Plotly (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
+  <!-- PapaParse (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 </head>
 <body>
-<header class="topbar">
-  <div class="brand">
-    <svg width="22" height="22" viewBox="0 0 24 24"><path fill="currentColor" d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
-    <span>EcuTek Log Viewer</span>
-    <span class="badge">BETA</span>
+  <div class="topbar">
+    <div class="brand">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z" />
+      </svg>
+      EcuTek Log Viewer <span class="badge">BETA</span>
+    </div>
+    <div class="actions">
+      <!-- Future actions here if needed -->
+    </div>
   </div>
-  <div class="actions"><button id="clearAll" class="btn ghost">Clear</button></div>
-</header>
 
-<main class="wrap">
-  <section class="uploader card">
-    <div class="pickers" style="justify-content:space-between;">
-      <label class="filebtn">
-        <input type="file" id="csvFile" accept=".csv" />
-        <span>Choose CSV</span>
-      </label>
-      <div id="fileInfo" class="fileinfo hidden"></div>
-    </div>
-    <div id="toast" class="toast hidden"></div>
-    <div class="tabs">
-      <button class="tab active" data-tab="multi">Multi‑plots</button>
-      <a class="btn primary" href="./compare.html">Compare (multi‑Y)</a>
-    </div>
-  </section>
-
-  <div class="tabpanes">
-    <!-- Multi-plots -->
-    <section id="pane-multi" class="active">
-      <section class="meta-grid">
-        <div class="meta card">
-          <div class="meta-title">Summary</div>
-          <div id="summary" class="meta-body">No file loaded.</div>
-        </div>
-        <div class="meta card">
-          <div class="meta-title">Hints</div>
-          <div class="meta-body">
-            • Needs a <strong>time</strong> column (e.g., Time, Time(s)).<br/>
-            • One chart per other numeric column vs time.
-          </div>
-        </div>
-      </section>
-      <section id="plots" class="plots"></section>
-    </section>
-
-    <!-- Compare -->
-    <section id="pane-compare">
-      <div class="grid-two" style="display:grid; grid-template-columns:280px 1fr; gap:14px;">
-        <div class="card">
-          <div class="meta-title">X Axis</div>
-          <select id="xSelect" class="btn" style="width:100%;"></select>
-
-          <div class="meta-title" style="margin-top:12px;">Y Series <span class="counter" id="yCount">(0/5)</span></div>
-          <div id="yList" class="list"></div>
-          <div class="hint" style="color:var(--muted); font-size:12px; margin-top:6px;">Select up to 5 series.</div>
-
-          <div style="display:flex; gap:10px; margin-top:12px;">
-            <button id="plotCompare" class="btn primary">Generate Plot</button>
-          </div>
-        </div>
-
-        <div class="card plot-card">
-          <div class="plot-title">Combined Plot</div>
-          <div class="plot-frame"><div id="chart" class="plot"></div></div>
-        </div>
+  <div class="wrap">
+    <div class="card uploader">
+      <div class="pickers">
+        <label class="filebtn">
+          <input id="csvFile" type="file" accept=".csv,.txt,.log,text/csv,text/plain" />
+          <span>Choose Log File (.txt/.csv)</span>
+        </label>
+        <button id="genBtn" class="btn primary">Generate Plots</button>
+        <button id="clearBtn" class="btn ghost">Clear</button>
       </div>
-    </section>
-  </div>
-</main>
+      <div id="dropzone" class="drop">Drag & drop files here</div>
+      <div id="fileInfo" class="fileinfo"></div>
+      <div id="toast" class="toast hidden"></div>
+    </div>
 
-<footer class="footer"><span>Made by AK Sauce</span></footer>
-<script src="main.js"></script>
+    <!-- The X/Y axis and checkbox controls are no longer used by the provided app.js -->
+
+    <div class="plots" id="plots">
+      <!-- Plots will be rendered here by app.js -->
+    </div>
+
+    <!-- Debug Information section is no longer used by the provided app.js -->
+  </div>
+
+  <div class="footer">
+    Client‑side parsing. Your file never leaves the device.
+  </div>
+
+  <script src="app.js"></script>
 </body>
 </html>
