@@ -133,13 +133,20 @@ function buildYControls(){
     btns.className = "control-btns";
 
     const mkBtn = (label, title, handler) => {
-      const b = document.createElement("button");
-      b.className = "mini-btn";
-      b.textContent = label;
-      b.title = title;
-      b.addEventListener("click", handler);
-      return b;
-    };
+  const b = document.createElement("button");
+  b.style.padding = "4px 8px";
+  b.style.margin = "0 2px";
+  b.style.border = "1px solid #444";
+  b.style.borderRadius = "4px";
+  b.style.background = "#222";
+  b.style.color = "#fff";
+  b.style.cursor = "pointer";
+  b.textContent = label;
+  b.title = title;
+  b.addEventListener("click", handler);
+  return b;
+};
+
 
     const step = Math.max( computeRange(idx).range * 0.05, 1 ); // 5% of range or 1
 
