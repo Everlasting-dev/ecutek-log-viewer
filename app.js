@@ -1,4 +1,7 @@
 // One Plotly chart per numeric column vs Time. Caches CSV for compare page.
+const isMobile = matchMedia("(max-width: 900px), (pointer: coarse)").matches;
+document.documentElement.classList.toggle("mobile", isMobile);
+
 import { parseCSV, findTimeIndex } from "./parser.js";
 
 const els = {
