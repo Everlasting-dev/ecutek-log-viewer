@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>EcuTek Log Viewer (TXT/CSV)</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Plotly (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
+  <!-- PapaParse (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+</head>
+<body>
+  <header>
+    <h1>EcuTek Log Viewer</h1>
+    <div id="err" class="hidden"></div>
+  </header>
+
+  <section class="controls">
+    <label class="file">
+      <input id="file" type="file" accept=".csv,.txt,.log,text/csv,text/plain" />
+      <span>Choose Log File (.txt/.csv)</span>
+    </label>
+
+    <div class="row">
+      <label>X‑Axis
+        <select id="xField"></select>
+      </label>
+
+      <label>Y‑Series (multi)
+        <select id="yFields" multiple size="8"></select>
+      </label>
+    </div>
+
+    <div class="row">
+      <label><input id="whitespaceMode" type="checkbox" /> Force whitespace delimiter</label>
+      <label><input id="transposeMode" type="checkbox" /> Transpose (rare log formats)</label>
+      <label><input id="autoscale" type="checkbox" checked /> Autoscale Y</label>
+      <label><input id="downsample" type="checkbox" checked /> Downsample for mobile</label>
+    </div>
+
+    <div class="row">
+      <button id="analyzeBtn">Analyze Columns</button>
+      <button id="plotBtn">Generate Plot</button>
+      <button id="clearBtn" class="ghost">Clear</button>
+    </div>
+    <small id="meta"></small>
+  </section>
+
+  <main>
+    <div id="chart"></div>
+    <details>
+      <summary>Debug</summary>
+      <pre id="debug"></pre>
+    </details>
+  </main>
+
+  <footer>
+    <small>Client‑side parsing. Your file never leaves the device.</small>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
