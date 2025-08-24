@@ -1,6 +1,11 @@
+// compare.js — single-plot with multi‑Y (max 5), X = Time or Engine RPM
+// Requires: parser.js (imported as ES module in compare.html)
+
 import { parseCSV, findTimeIndex, findRpmIndex, numericColumns } from "./parser.js";
 
 const $ = (id) => document.getElementById(id);
+
+// DOM
 const csvFile = $("csvFile");
 const xSelect = $("xSelect");
 const yList   = $("yList");
@@ -11,71 +16,64 @@ const chart   = $("chart");
 const toast   = $("toast");
 const fileInfo= $("fileInfo");
 
+// State
 let headers = [];
 let cols = [];
 let timeIdx = -1;
-let rpmIdx = -1;
-
+let rpmIdx  = -1;
 let lastFile = null;
+
 const MAX_Y = 5;
 
+/* ---------- UI helpers ---------- */
 function showToast(msg, type="error"){
   toast.textContent = msg;
   toast.style.display = "block";
   toast.style.background = (type==="error") ? "#3b0b0b" : "#0b3b18";
   toast.style.borderColor = (type==="error") ? "#742020" : "#1a6a36";
   clearTimeout(showToast._t);
-  showToast._t = setTimeout(()=> toast.style.display = "none", 3500);
+  showToast._t = setTimeout(()=> (toast.style.display = "none"), 3500);
 }
 
 function fmtBytes(n){
   if (!Number.isFinite(n)) return "";
   const u = ["B","KB","MB","GB"]; let i=0;
-  while (n >= 1024 && i < u.length-1) { n/=1024; i++; }
+  while (n >= 1024 && i < u.length-1){ n/=1024; i++; }
   return `${n.toFixed(1)} ${u[i]}`;
 }
 
-function handlePicked(file){
-  lastFile = file;
-  if (!file){ fileInfo.classList.add("hidden"); return; }
-  fileInfo.classList.remove("hidden");
-  fileInfo.textContent = `Selected: ${file.name} · ${fmtBytes(file.size)}`;
-}
-
-function buildXOptions() {
+/* ---------- Build controls ---------- */
+function buildXOptions(){
   xSelect.innerHTML = "";
-  // Only add “Time” and/or “Engine RPM” if present
-  if (timeIdx !== -1) {
+  if (timeIdx !== -1){
     const o = document.createElement("option");
     o.value = String(timeIdx);
     o.textContent = headers[timeIdx] + " (Time)";
     xSelect.appendChild(o);
   }
-  if (rpmIdx !== -1) {
+  if (rpmIdx !== -1){
     const o = document.createElement("option");
     o.value = String(rpmIdx);
     o.textContent = headers[rpmIdx] + " (Engine RPM)";
     xSelect.appendChild(o);
   }
-  if (!xSelect.options.length) {
-    // Neither exists → disable plot
+
+  const ok = xSelect.options.length > 0;
+  xSelect.disabled = !ok;
+  plotBtn.disabled = !ok;
+
+  if (!ok){
     const o = document.createElement("option");
     o.textContent = "No Time or RPM column found";
     o.disabled = true;
     xSelect.appendChild(o);
-    xSelect.disabled = true;
-    plotBtn.disabled = true;
-  } else {
-    xSelect.disabled = false;
-    plotBtn.disabled = false;
   }
 }
 
-function populateYList() {
+function populateYList(){
   yList.innerHTML = "";
-  // Candidate numeric columns except the ones that are strictly non-numeric
-  const numericIdx = numericColumns(headers, cols, 5);
-  numericIdx.forEach((idx) => {
+  const candidates = numericColumns(headers, cols, 5); // indexes of “mostly numeric” cols
+  candidates.forEach((idx) => {
     const row = document.createElement("label");
     const cb  = document.createElement("input");
     cb.type = "checkbox";
@@ -90,31 +88,31 @@ function populateYList() {
   updateYCounter();
 }
 
-function getSelectedY() {
-  return Array.from(yList.querySelectorAll("input[type=checkbox]:checked"))
+function getSelectedY(){
+  return Array.from(yList.querySelectorAll('input[type="checkbox"]:checked'))
     .map(cb => Number(cb.value));
 }
 
-function updateYCounter() {
-  const n = getSelectedY().length;
-  yCount.textContent = `(${n}/${MAX_Y})`;
+function updateYCounter(){
+  yCount.textContent = `(${getSelectedY().length}/${MAX_Y})`;
 }
 
 function enforceMaxY(e){
-  const selected = getSelectedY();
-  if (selected.length > MAX_Y) {
-    // uncheck the one that triggered last
+  const n = getSelectedY().length;
+  if (n > MAX_Y){
     e.target.checked = false;
-    showToast(`Max ${MAX_Y} Y series`, "error");
+    showToast(`Max ${MAX_Y} Y series`);
   }
   updateYCounter();
 }
 
-function plot() {
-  const xIdx = Number(xSelect.value);
+/* ---------- Plot ---------- */
+function plot(){
+  const xIdx  = Number(xSelect.value);
   const yIdxs = getSelectedY().filter(i => i !== xIdx).slice(0, MAX_Y);
+
   if (!Number.isFinite(xIdx)) { showToast("Pick an X axis."); return; }
-  if (!yIdxs.length)         { showToast("Pick at least one Y series."); return; }
+  if (!yIdxs.length)          { showToast("Pick at least one Y series."); return; }
 
   const traces = yIdxs.map((i) => ({
     type: "scattergl",
@@ -139,18 +137,23 @@ function plot() {
   Plotly.react(chart, traces, layout, { displaylogo:false, responsive:true });
 }
 
-/* ------------ IO & events ------------ */
+/* ---------- File flow ---------- */
+// Parse ONCE when user selects a file; do NOT parse on Plot click.
 csvFile.addEventListener("change", (e)=>{
-  handlePicked(e.target.files[0]);
+  lastFile = e.target.files[0] || null;
   chart.innerHTML = "";
-});
 
-plotBtn.addEventListener("click", ()=>{
-  if (!lastFile) { showToast("Choose a CSV first."); return; }
+  if (!lastFile){
+    fileInfo.classList.add("hidden");
+    return;
+  }
+  fileInfo.classList.remove("hidden");
+  fileInfo.textContent = `Selected: ${lastFile.name} · ${fmtBytes(lastFile.size)}`;
+
   const reader = new FileReader();
   reader.onerror = () => showToast("Failed to read file.");
   reader.onload  = (ev) => {
-    try {
+    try{
       const text = String(ev.target.result || "");
       const parsed = parseCSV(text);
       headers = parsed.headers;
@@ -160,21 +163,25 @@ plotBtn.addEventListener("click", ()=>{
 
       buildXOptions();
       populateYList();
-      plot(); // initial plot using whatever Y is checked (none → toast)
-    } catch (err) {
+      showToast("Parsed. Pick X and up to 5 Y, then Generate Plot.", "ok");
+    }catch(err){
       showToast(err.message || "Parse error.");
+      headers = []; cols = []; timeIdx = rpmIdx = -1;
+      yList.innerHTML = ""; xSelect.innerHTML = ""; chart.innerHTML = "";
     }
   };
   reader.readAsText(lastFile);
 });
 
+/* ---------- Buttons ---------- */
+// Now Plot just uses current selections — no re-parse.
+plotBtn.addEventListener("click", plot);
+
 clearBtn.addEventListener("click", ()=>{
   csvFile.value = "";
   lastFile = null;
-  headers = cols = [];
-  yList.innerHTML = "";
-  xSelect.innerHTML = "";
-  chart.innerHTML = "";
+  headers = []; cols = []; timeIdx = rpmIdx = -1;
+  yList.innerHTML = ""; xSelect.innerHTML = ""; chart.innerHTML = "";
   fileInfo.classList.add("hidden");
   showToast("Cleared.", "ok");
 });
