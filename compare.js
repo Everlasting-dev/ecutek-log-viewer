@@ -105,12 +105,15 @@ function plot(showToasts=true){
   if (!traces.length){ if(showToasts) toastMsg("Enable at least one Y axis."); return; }
 
   Plotly.react(chart, traces, {
-    paper_bgcolor:"#0f1318", plot_bgcolor:"#0f1318", font:{ color:"#e7ecf2" },
-    margin:{ l:80, r:20, t:10, b:60 },   /* extra padding -> “magnified” feeling */
-    xaxis:{ title: headers[xIdx] || "X", gridcolor:"#1b1f25", tickfont:{size:14}, titlefont:{size:16} },
-    yaxis:{ gridcolor:"#1b1f25", automargin:true, tickfont:{size:14}, titlefont:{size:16} },
-    showlegend:true, legend:{ orientation:"h", y:-0.2 }
-  }, { displaylogo:false, responsive:true });
+  paper_bgcolor:"#0f1318",
+  plot_bgcolor:"#0f1318",
+  font:{ color:"#e7ecf2", size:16 },  // bigger labels
+  margin:{ l:80, r:30, t:40, b:60 },
+  xaxis:{ title: headers[xIdx] || "X", gridcolor:"#1b1f25", titlefont:{size:18}, tickfont:{size:14} },
+  yaxis:{ gridcolor:"#1b1f25", automargin:true, titlefont:{size:18}, tickfont:{size:14} },
+  showlegend:true,
+  legend:{ orientation:"h", y:-0.25 }
+}, { displaylogo:false, responsive:true });
 }
 
 function autoSelectYs(){
