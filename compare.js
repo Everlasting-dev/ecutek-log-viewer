@@ -1,5 +1,5 @@
 // compare.js — single-plot with multi‑Y (max 5), X = Time or Engine RPM
-// Requires: parser.js (imported as ES module in compare.html)
+// Adds per-trace vertical offset/scale controls (Up/Down, Scale ±, Reset)
 
 import { parseCSV, findTimeIndex, findRpmIndex, numericColumns } from "./parser.js";
 
@@ -10,6 +10,7 @@ const csvFile = $("csvFile");
 const xSelect = $("xSelect");
 const yList   = $("yList");
 const yCount  = $("yCount");
+const yControls = $("yControls");
 const plotBtn = $("plotBtn");
 const clearBtn= $("clearBtn");
 const chart   = $("chart");
@@ -25,6 +26,9 @@ let lastFile = null;
 
 const MAX_Y = 5;
 
+// adjustments per column index: { offset, scale }
+const yAdjust = new Map();
+
 /* ---------- UI helpers ---------- */
 function showToast(msg, type="error"){
   toast.textContent = msg;
@@ -34,7 +38,6 @@ function showToast(msg, type="error"){
   clearTimeout(showToast._t);
   showToast._t = setTimeout(()=> (toast.style.display = "none"), 3500);
 }
-
 function fmtBytes(n){
   if (!Number.isFinite(n)) return "";
   const u = ["B","KB","MB","GB"]; let i=0;
@@ -57,11 +60,9 @@ function buildXOptions(){
     o.textContent = headers[rpmIdx] + " (Engine RPM)";
     xSelect.appendChild(o);
   }
-
   const ok = xSelect.options.length > 0;
   xSelect.disabled = !ok;
   plotBtn.disabled = !ok;
-
   if (!ok){
     const o = document.createElement("option");
     o.textContent = "No Time or RPM column found";
@@ -78,7 +79,7 @@ function populateYList(){
     const cb  = document.createElement("input");
     cb.type = "checkbox";
     cb.value = String(idx);
-    cb.addEventListener("change", enforceMaxY);
+    cb.addEventListener("change", () => { enforceMaxY(cb); buildYControls(); });
     const title = document.createElement("span");
     title.textContent = headers[idx];
     row.appendChild(cb);
@@ -92,18 +93,71 @@ function getSelectedY(){
   return Array.from(yList.querySelectorAll('input[type="checkbox"]:checked'))
     .map(cb => Number(cb.value));
 }
-
-function updateYCounter(){
-  yCount.textContent = `(${getSelectedY().length}/${MAX_Y})`;
+function updateYCounter(){ yCount.textContent = `(${getSelectedY().length}/${MAX_Y})`; }
+function enforceMaxY(cb){
+  if (getSelectedY().length > MAX_Y){ cb.checked = false; showToast(`Max ${MAX_Y} Y series`); }
+  updateYCounter();
 }
 
-function enforceMaxY(e){
-  const n = getSelectedY().length;
-  if (n > MAX_Y){
-    e.target.checked = false;
-    showToast(`Max ${MAX_Y} Y series`);
+/* ---------- Per-trace adjustments ---------- */
+function ensureAdjust(idx){
+  if (!yAdjust.has(idx)) yAdjust.set(idx, { offset: 0, scale: 1 });
+  return yAdjust.get(idx);
+}
+function computeRange(idx){
+  const v = cols[idx];
+  let min = +Infinity, max = -Infinity;
+  for (let i=0;i<v.length;i++){
+    const n = v[i];
+    if (Number.isFinite(n)){ if (n<min) min=n; if (n>max) max=n; }
   }
-  updateYCounter();
+  if (min===+Infinity || max===-Infinity) return {min:0,max:1,range:1};
+  const range = (max-min) || 1;
+  return {min,max,range};
+}
+function buildYControls(){
+  yControls.innerHTML = "";
+  const selected = getSelectedY();
+  if (!selected.length) return;
+
+  selected.forEach(idx=>{
+    const row = document.createElement("div");
+    row.style.display = "flex";
+    row.style.alignItems = "center";
+    row.style.justifyContent = "space-between";
+    row.style.gap = "8px";
+    row.style.padding = "4px 0";
+
+    const name = document.createElement("div");
+    name.textContent = headers[idx];
+    name.style.flex = "1";
+
+    const btns = document.createElement("div");
+    btns.style.display = "flex";
+    btns.style.gap = "6px";
+
+    const mkBtn = (label, title, handler) => {
+      const b = document.createElement("button");
+      b.className = "btn";
+      b.style.padding = "6px 8px";
+      b.textContent = label;
+      b.title = title;
+      b.addEventListener("click", handler);
+      return b;
+    };
+
+    const step = Math.max( computeRange(idx).range * 0.05, 1 ); // 5% of range or 1
+
+    const up    = mkBtn("↑", "Shift up",    ()=>{ const a=ensureAdjust(idx); a.offset += step; plot(); });
+    const down  = mkBtn("↓", "Shift down",  ()=>{ const a=ensureAdjust(idx); a.offset -= step; plot(); });
+    const sUp   = mkBtn("×1.1", "Scale up", ()=>{ const a=ensureAdjust(idx); a.scale *= 1.1;  plot(); });
+    const sDown = mkBtn("×0.9", "Scale down",()=>{ const a=ensureAdjust(idx); a.scale *= 0.9;  plot(); });
+    const reset = mkBtn("Reset", "Reset adjust", ()=>{ yAdjust.set(idx,{offset:0,scale:1}); plot(); });
+
+    btns.append(up, down, sUp, sDown, reset);
+    row.append(name, btns);
+    yControls.appendChild(row);
+  });
 }
 
 /* ---------- Plot ---------- */
@@ -114,14 +168,19 @@ function plot(){
   if (!Number.isFinite(xIdx)) { showToast("Pick an X axis."); return; }
   if (!yIdxs.length)          { showToast("Pick at least one Y series."); return; }
 
-  const traces = yIdxs.map((i) => ({
-    type: "scattergl",
-    mode: "lines",
-    name: headers[i],
-    x: cols[xIdx],
-    y: cols[i],
-    line: { width: 1 }
-  }));
+  const traces = yIdxs.map((i) => {
+    const { offset, scale } = ensureAdjust(i);
+    // Apply y = y*scale + offset
+    const y = cols[i].map(v => Number.isFinite(v) ? (v*scale + offset) : v);
+    return {
+      type: "scattergl",
+      mode: "lines",
+      name: headers[i] + (offset||scale!==1 ? `  (Δ=${offset.toFixed(3)}, ×${scale.toFixed(3)})` : ""),
+      x: cols[xIdx],
+      y,
+      line: { width: 1 }
+    };
+  });
 
   const layout = {
     paper_bgcolor: "#0f1318",
@@ -142,6 +201,8 @@ function plot(){
 csvFile.addEventListener("change", (e)=>{
   lastFile = e.target.files[0] || null;
   chart.innerHTML = "";
+  yAdjust.clear();
+  yControls.innerHTML = "";
 
   if (!lastFile){
     fileInfo.classList.add("hidden");
@@ -163,25 +224,27 @@ csvFile.addEventListener("change", (e)=>{
 
       buildXOptions();
       populateYList();
+      buildYControls();
       showToast("Parsed. Pick X and up to 5 Y, then Generate Plot.", "ok");
     }catch(err){
       showToast(err.message || "Parse error.");
       headers = []; cols = []; timeIdx = rpmIdx = -1;
-      yList.innerHTML = ""; xSelect.innerHTML = ""; chart.innerHTML = "";
+      yList.innerHTML = ""; xSelect.innerHTML = ""; chart.innerHTML = ""; yControls.innerHTML = "";
     }
   };
   reader.readAsText(lastFile);
 });
 
 /* ---------- Buttons ---------- */
-// Now Plot just uses current selections — no re-parse.
-plotBtn.addEventListener("click", plot);
+// Plot uses current selections + adjustments.
+plotBtn.addEventListener("click", () => { buildYControls(); plot(); });
 
 clearBtn.addEventListener("click", ()=>{
   csvFile.value = "";
   lastFile = null;
   headers = []; cols = []; timeIdx = rpmIdx = -1;
-  yList.innerHTML = ""; xSelect.innerHTML = ""; chart.innerHTML = "";
+  yList.innerHTML = ""; xSelect.innerHTML = ""; chart.innerHTML = ""; yControls.innerHTML = "";
+  yAdjust.clear();
   fileInfo.classList.add("hidden");
   showToast("Cleared.", "ok");
 });
