@@ -54,6 +54,19 @@ function tryLoadCached(){
 function renderPlots(){
   els.plots.innerHTML = "";
   const tIdx = findTimeIndex(headers);
+  const MOBILE = document.documentElement.classList.contains("mobile");
+
+const layout = {
+  paper_bgcolor:"#0f1318", plot_bgcolor:"#0f1318", font:{color:"#e7ecf2", size: MOBILE ? 14 : 12},
+  margin:{l: MOBILE ? 68 : 50, r:12, t:10, b: MOBILE ? 56 : 40},
+  xaxis:{ title: headers[timeIdx] || headers[xIdx], gridcolor:"#1b1f25", tickfont:{size:MOBILE?13:12} },
+  yaxis:{ gridcolor:"#1b1f25", automargin:true, tickfont:{size:MOBILE?13:12} },
+  hovermode: MOBILE ? "closest" : "x unified",
+  dragmode: MOBILE ? false : "pan",
+  showlegend:true, legend:{orientation:"h", y:-0.2}
+};
+const config = { responsive:true, displaylogo:false, doubleClick:false, displayModeBar: !MOBILE };
+
   if (tIdx === -1){ showToast("No 'Time' column found.", "error"); return; }
   const x = cols[tIdx];
 
