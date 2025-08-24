@@ -55,6 +55,11 @@ body{ margin:0; background:var(--bg); color:var(--fg);
   width: 100% !important;   /* force same width as parent card */
   height: 600px !important; /* taller plot for clarity */
 }
+/* Compare page: make the plot full width */
+.compare-page .plots{ grid-template-columns: 1fr !important; }
+
+/* Taller mega plot */
+.compare-page #chart.plot{ height: 600px !important; width: 100% !important; }
 
 
 /* compare controls (one-row slots) */
