@@ -3,21 +3,62 @@
 <head>
   <meta charset="UTF-8" />
   <title>EcuTek Log Viewer (Beta)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <link rel="stylesheet" href="style.css" />
-  <!-- Plotly CDN -->
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
 <body>
-  <h2 class="title">EcuTek Log Viewer (Beta)</h2>
+  <header class="topbar">
+    <div class="brand">
+      <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+      <span>EcuTek Log Viewer</span>
+      <span class="badge">BETA</span>
+    </div>
+    <div class="actions">
+      <button id="clearBtn" class="btn ghost" title="Clear">Clear</button>
+    </div>
+  </header>
 
-  <div class="controls">
-    <input type="file" id="csvFile" accept=".csv" />
-    <button id="genBtn">Generate Plots</button>
-  </div>
+  <main class="wrap">
+    <section class="uploader card">
+      <div class="pickers">
+        <label class="filebtn">
+          <input type="file" id="csvFile" accept=".csv" />
+          <span>Choose CSV</span>
+        </label>
+        <button id="genBtn" class="btn primary">Generate Plots</button>
+      </div>
 
-  <div id="plots"></div>
+      <div id="dropzone" class="drop">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="M19 15v4H5v-4H3v6h18v-6zM11 3h2v8h3l-4 4l-4-4h3z"/></svg>
+        <span>Drag & drop your CSV here</span>
+      </div>
 
-  <footer>Made by AK Sauce</footer>
+      <div id="fileInfo" class="fileinfo hidden"></div>
+      <div id="toast" class="toast hidden"></div>
+    </section>
+
+    <section class="meta-grid">
+      <div class="meta card">
+        <div class="meta-title">Summary</div>
+        <div id="summary" class="meta-body">No file loaded.</div>
+      </div>
+      <div class="meta card">
+        <div class="meta-title">Hints</div>
+        <div class="meta-body">
+          • CSV with a <strong>time</strong> column required (e.g., <em>Time</em>, <em>Time(s)</em>).<br/>
+          • One chart is created per other numeric column vs. time.<br/>
+          • Large files: keep columns tidy for speed.
+        </div>
+      </div>
+    </section>
+
+    <section id="plots" class="plots"></section>
+  </main>
+
+  <footer class="footer">
+    <span>Made by AK Sauce</span>
+  </footer>
 
   <script src="app.js"></script>
 </body>
