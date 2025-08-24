@@ -1,4 +1,4 @@
-// parser.js — minimal shared CSV helpers (comma-separated, comment lines starting with '#')
+// parser.js — minimal CSV helpers (comma-separated; ignores lines starting with '#')
 
 export function splitLines(text) {
   return text.split(/\r?\n/).filter(l => l && !l.startsWith("#"));
@@ -21,19 +21,15 @@ export function parseCSV(text) {
 }
 
 export function findTimeIndex(headers) {
-  // match "time", "time(s)", "timestamp" etc
-  const idx = headers.findIndex(h => /time|timestamp/i.test(h));
-  return idx; // -1 if not found
+  return headers.findIndex(h => /time|timestamp/i.test(h));
 }
 
 export function findRpmIndex(headers) {
-  // match "RPM" or "Engine Speed"
-  const idxRPM = headers.findIndex(h => /\bRPM\b/i.test(h));
-  if (idxRPM !== -1) return idxRPM;
-  return headers.findIndex(h => /engine\s*speed/i.test(h));
+  const i = headers.findIndex(h => /\bRPM\b/i.test(h));
+  return i !== -1 ? i : headers.findIndex(h => /engine\s*speed/i.test(h));
 }
 
-export function numericColumns(headers, cols, minNumeric=5) {
+export function numericColumns(headers, cols, minNumeric = 5) {
   const out = [];
   for (let c = 0; c < headers.length; c++) {
     let cnt = 0;
@@ -41,5 +37,5 @@ export function numericColumns(headers, cols, minNumeric=5) {
     for (let i = 0; i < v.length; i++) if (Number.isFinite(v[i])) cnt++;
     if (cnt >= minNumeric) out.push(c);
   }
-  return out; // array of column indexes that are “mostly numeric”
+  return out;
 }
