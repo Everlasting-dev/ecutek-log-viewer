@@ -51,6 +51,19 @@ function tryLoadCached(){
   }
 }
 
+function ds(x,y,maxPts){ 
+  if (x.length<=maxPts) return {x,y};
+  const step = Math.ceil(x.length/maxPts);
+  const X=[],Y=[]; for(let i=0;i<x.length;i+=step){ X.push(x[i]); Y.push(y[i]); }
+  return {x:X,y:Y};
+}
+
+const maxPts = MOBILE ? 12000 : 40000;
+const x = cols[xIdx];
+const yRaw = cols[colIdx].map(v => Number.isFinite(v) ? (v + offset) : v);
+const {x:xd, y:yd} = ds(x, yRaw, maxPts);
+traces.push({ type:"scattergl", mode:"lines", name:…, x: xd, y: yd, line:{width:1, color} });
+
 function renderPlots(){
   els.plots.innerHTML = "";
   const tIdx = findTimeIndex(headers);
