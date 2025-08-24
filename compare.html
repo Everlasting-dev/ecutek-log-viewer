@@ -1,66 +1,78 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>EcuTek Log Viewer · Compare</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>EcuTek Log Viewer (Compare)</title>
   <link rel="stylesheet" href="style.css" />
-  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-  <style>
-    .grid-two { display:grid; grid-template-columns: 420px 1fr; gap:14px; }
-    @media (max-width: 980px){ .grid-two { grid-template-columns: 1fr; } }
-    .slot { display:grid; grid-template-columns: 90px 1fr auto; gap:8px; align-items:center; padding:6px 8px;
-            border:1px solid var(--line); border-radius:10px; background:#0f1318; }
-    .slot + .slot { margin-top:8px; }
-    .slot label { color:#b8c6d6; font-weight:600; }
-    .slot select { width:100%; padding:8px 10px; border:1px solid #2a3038; border-radius:8px; background:#121821; color:#e7ecf2; }
-    .btns { display:flex; gap:6px; }
-    .mini { padding:6px 10px; border:1px solid var(--line); border-radius:8px; background:#151a21; color:#e7ecf2; font-weight:700; cursor:pointer; }
-    .mini:hover { border-color:#2a3542; }
-    .mini[disabled] { opacity:.45; cursor:not-allowed; }
-    .plot { height:520px }
-  </style>
+  <!-- Plotly (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
+  <!-- PapaParse (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 </head>
 <body>
-<header class="topbar">
-  <div class="brand">
-    <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
-    <span>EcuTek Log Viewer</span>
-    <span class="badge">COMPARE</span>
-  </div>
-  <div class="actions"><a class="btn ghost" href="./index.html">↩ Multi‑plots</a></div>
-</header>
-
-<main class="wrap">
-  <section class="card">
-    <div class="pickers" style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-      <label class="filebtn">
-        <input type="file" id="csvFile" accept=".csv" />
-        <span>Choose CSV</span>
-      </label>
-      <div id="fileInfo" class="fileinfo hidden"></div>
+  <div class="topbar">
+    <div class="brand">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z" />
+      </svg>
+      EcuTek Log Viewer <span class="badge">COMPARE</span>
     </div>
-    <div id="toast" class="toast hidden"></div>
-  </section>
+    <div class="actions">
+      <!-- Future actions here if needed -->
+    </div>
+  </div>
 
-  <section class="grid-two">
-    <div class="card">
-      <div id="axisPanel"><!-- JS builds rows here --></div>
-      <div style="display:flex; gap:10px; margin-top:12px;">
+  <div class="wrap">
+    <div class="card uploader">
+      <div class="pickers">
+        <label class="filebtn">
+          <input id="csvFile" type="file" accept=".csv,.txt,.log,text/csv,text/plain" />
+          <span>Choose Log File (.txt/.csv)</span>
+        </label>
         <button id="plotBtn" class="btn primary">Generate Plot</button>
         <button id="clearBtn" class="btn ghost">Clear</button>
       </div>
+      <div id="fileDrop" class="drop">Drag & drop files here</div>
+      <div id="fileInfo" class="fileinfo"></div>
+      <div id="toast" class="toast hidden"></div>
     </div>
 
-    <div class="card plot-card">
-      <div class="plot-title">Combined Plot</div>
-      <div class="plot-frame"><div id="chart" class="plot"></div></div>
+    <div class="card">
+      <div style="display:flex; gap:10px; align-items:center; margin-bottom:8px;">
+        <label style="color:#b8c6d6; font-weight:600;">Offset step</label>
+        <select id="stepPct" class="btn" style="width:auto;">
+          <option value="0.05">5%</option>
+          <option value="0.10" selected>10%</option>
+          <option value="0.25">25%</option>
+          <option value="0.50">50%</option>
+        </select>
+        <span class="hint">applies per‑series based on that series’ value range</span>
+      </div>
+      <div id="axisPanel"></div>
     </div>
-  </section>
-</main>
 
-<footer class="footer"><span>Made by AK Sauce</span></footer>
+    <div class="plots">
+      <div class="plot-card">
+        <div class="plot-title">Comparison Plot</div>
+        <div class="plot-frame">
+          <div id="chart" class="plot"></div>
+        </div>
+      </div>
+    </div>
 
-<script type="module" src="./compare.js"></script>
+    <div class="card">
+      <details>
+        <summary class="meta-title">Debug Information</summary>
+        <pre id="debug"></pre>
+      </details>
+    </div>
+  </div>
+
+  <div class="footer">
+    Client‑side parsing. Your file never leaves the device.
+  </div>
+
+  <script src="compare.js"></script>
 </body>
 </html>
