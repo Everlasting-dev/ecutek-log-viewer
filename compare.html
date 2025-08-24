@@ -1,24 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>EcuTek Log Viewer · Compare</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <link rel="stylesheet" href="style.css" />
-  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-  <style>
-    .grid-two { display:grid; grid-template-columns: 420px 1fr; gap:14px; }
-    @media (max-width: 1000px){ .grid-two { grid-template-columns: 1fr; } }
-    .axis-panel.card { padding: 10px 12px; }
-    .row { display:grid; grid-template-columns: 110px 1fr auto; gap:8px; align-items:center; padding:6px 0; }
-    .row + .row { border-top:1px solid var(--line); }
-    .row label { color:#b8c6d6; font-weight:600; }
-    .sel { width:100%; padding:9px 10px; border-radius:10px; border:1px solid var(--line); background:#151a21; color:var(--fg); }
-    .btns { display:flex; gap:6px; flex-wrap:wrap; }
-    .mini-btn { padding:6px 10px; border:1px solid var(--line); border-radius:8px; background:#151a21; color:var(--fg); font-weight:700; cursor:pointer; }
-    .mini-btn:hover { border-color:#2a3542; }
-    .hint { color:var(--muted); font-size:12px; margin-top:8px; }
-  </style>
+<meta charset="UTF-8" />
+<title>EcuTek Log Viewer · Compare (Slots)</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="stylesheet" href="style.css" />
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<style>
+  /* compact panel like EcuTek */
+  .grid-two { display:grid; grid-template-columns: 420px 1fr; gap:14px; }
+  @media (max-width: 980px){ .grid-two{ grid-template-columns:1fr; } }
+  .slot { display:grid; grid-template-columns: 80px 1fr auto; gap:8px; align-items:center; padding:6px 8px; border:1px solid var(--line); border-radius:10px; background:#0f1318; }
+  .slot + .slot{ margin-top:8px; }
+  .slot label{ color:#b8c6d6; font-weight:600; }
+  .slot select{ width:100%; padding:8px 10px; border:1px solid #2a3038; border-radius:8px; background:#121821; color:#e7ecf2; }
+  .slot .btns{ display:flex; gap:6px; }
+  .mini { padding:6px 10px; border:1px solid var(--line); border-radius:8px; background:#151a21; color:#e7ecf2; font-weight:700; cursor:pointer; }
+  .mini:hover{ border-color:#2a3542 }
+  .mini[disabled]{ opacity:.4; cursor:not-allowed }
+  .hint { color: var(--muted); font-size:12px; }
+  .legend-note{ color:#9aa7b2; font-size:12px; margin-top:8px }
+  .plot{ height:520px }
+</style>
 </head>
 <body>
 <header class="topbar">
@@ -34,55 +37,33 @@
 
 <main class="wrap">
   <section class="card">
-    <div class="uploader pickers" style="justify-content:space-between;">
+    <div class="pickers" style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
       <label class="filebtn">
         <input type="file" id="csvFile" accept=".csv" />
         <span>Choose CSV</span>
       </label>
-      <div id="fileInfo" class="fileinfo hidden"></div>
+      <div class="hint">Pick CSV → choose X & up to 5 Y series. Use Up/Down to offset per series.</div>
     </div>
+    <div id="fileInfo" class="fileinfo hidden"></div>
     <div id="toast" class="toast hidden"></div>
   </section>
 
   <section class="grid-two">
-    <div class="axis-panel card">
-      <div class="row">
-        <label for="xSelect">X Axis</label>
-        <select id="xSelect" class="sel"></select>
-        <div></div>
+    <div class="card">
+      <!-- X Axis -->
+      <div class="slot">
+        <label for="xSlot">X Axis</label>
+        <select id="xSlot"></select>
+        <div class="btns">
+          <button class="mini" id="plotBtn">Plot</button>
+          <button class="mini" id="clearBtn">Clear</button>
+        </div>
       </div>
 
-      <div class="row">
-        <label for="ySelect0">Y Axis 1</label>
-        <select id="ySelect0" class="sel"></select>
-        <div class="btns" data-slot="0"></div>
-      </div>
-      <div class="row">
-        <label for="ySelect1">Y Axis 2</label>
-        <select id="ySelect1" class="sel"></select>
-        <div class="btns" data-slot="1"></div>
-      </div>
-      <div class="row">
-        <label for="ySelect2">Y Axis 3</label>
-        <select id="ySelect2" class="sel"></select>
-        <div class="btns" data-slot="2"></div>
-      </div>
-      <div class="row">
-        <label for="ySelect3">Y Axis 4</label>
-        <select id="ySelect3" class="sel"></select>
-        <div class="btns" data-slot="3"></div>
-      </div>
-      <div class="row">
-        <label for="ySelect4">Y Axis 5</label>
-        <select id="ySelect4" class="sel"></select>
-        <div class="btns" data-slot="4"></div>
-      </div>
+      <!-- Y1..Y5 -->
+      <div id="ySlots"></div>
 
-      <div class="hint">Pick Time or Engine RPM as X. Choose up to 5 Y series; adjust with Up/Down or Scale±. Click Generate Plot.</div>
-      <div style="display:flex; gap:10px; margin-top:12px;">
-        <button id="plotBtn" class="btn primary">Generate Plot</button>
-        <button id="clearBtn" class="btn ghost">Clear</button>
-      </div>
+      <div class="legend-note">Offset step = 5% of series range. Reset clears offset.</div>
     </div>
 
     <div class="card plot-card">
@@ -94,7 +75,195 @@
 
 <footer class="footer"><span>Made by AK Sauce</span></footer>
 
-<!-- ES modules -->
-<script type="module" src="compare.js"></script>
+<script>
+/* ---------- tiny CSV parser (comma; ignores '#' lines) ---------- */
+function splitLines(text){ return text.split(/\r?\n/).filter(l => l && !l.startsWith("#")); }
+function parseCSV(text){
+  const lines = splitLines(text);
+  if (lines.length < 2) throw new Error("Empty CSV or missing rows.");
+  const headers = lines[0].split(",");
+  const cols = headers.map(()=>[]);
+  for (let i=1;i<lines.length;i++){
+    const p = lines[i].split(",");
+    if (p.length !== headers.length) continue;
+    for (let j=0;j<p.length;j++){
+      const v = Number(String(p[j]).replace(/,/g,""));
+      cols[j].push(Number.isFinite(v) ? v : NaN);
+    }
+  }
+  return { headers, cols, rows: cols[0]?.length ?? 0 };
+}
+function findTimeIdx(h){ return h.findIndex(x => /time|timestamp/i.test(x)); }
+function findRpmIdx(h){ const i=h.findIndex(x=>/\bRPM\b/i.test(x)); return i!==-1?i:h.findIndex(x=>/engine\s*speed/i.test(x)); }
+function numericIdxs(h,c,min=5){
+  const out=[]; for(let k=0;k<h.length;k++){ let cnt=0; const v=c[k];
+    for(let i=0;i<v.length;i++) if(Number.isFinite(v[i])) cnt++; if(cnt>=min) out.push(k);
+  } return out;
+}
+/* ---------- DOM ---------- */
+const $ = id => document.getElementById(id);
+const csvFile = $("csvFile");
+const fileInfo= $("fileInfo");
+const toast   = $("toast");
+const xSlot   = $("xSlot");
+const ySlots  = $("ySlots");   // container for Y Axis 1..5 rows
+const plotBtn = $("plotBtn");
+const clearBtn= $("clearBtn");
+const chart   = $("chart");
+
+/* ---------- state ---------- */
+let headers=[], cols=[], timeIdx=-1, rpmIdx=-1, lastFile=null;
+const SLOT_COUNT = 5;
+// slot selection -> column index or -1 for None
+const ySel = new Array(SLOT_COUNT).fill(-1);
+// per-column adjust {offset}
+const yAdjust = new Map();
+
+/* ---------- ui helpers ---------- */
+function showToast(msg,type="error"){
+  toast.textContent=msg; toast.style.display="block";
+  toast.style.background=(type==="error")?"#3b0b0b":"#0b3b18";
+  toast.style.borderColor=(type==="error")?"#742020":"#1a6a36";
+  clearTimeout(showToast._t); showToast._t=setTimeout(()=>toast.style.display="none",3200);
+}
+function fmtBytes(n){ const u=["B","KB","MB","GB"]; let i=0; while(n>=1024&&i<u.length-1){n/=1024;i++;} return `${n.toFixed(1)} ${u[i]}`; }
+function ensureAdj(col){ if(!yAdjust.has(col)) yAdjust.set(col,{offset:0}); return yAdjust.get(col); }
+function colRange(col){
+  const v=cols[col]; let min=+Infinity,max=-Infinity;
+  for(let i=0;i<v.length;i++){ const n=v[i]; if(Number.isFinite(n)){ if(n<min)min=n; if(n>max)max=n; } }
+  if(min===+Infinity) return {min:0,max:1,range:1};
+  return {min,max,range:(max-min)||1};
+}
+
+/* ---------- build rows ---------- */
+function buildXOptions(){
+  xSlot.innerHTML="";
+  let added=0;
+  if(timeIdx!==-1){ const o=document.createElement("option"); o.value=String(timeIdx); o.textContent=headers[timeIdx]+" (Time)"; xSlot.appendChild(o); added++; }
+  if(rpmIdx !==-1){ const o=document.createElement("option"); o.value=String(rpmIdx);  o.textContent=headers[rpmIdx]+" (Engine RPM)"; xSlot.appendChild(o); added++; }
+  if(!added){ const o=document.createElement("option"); o.textContent="No Time or RPM"; o.disabled=true; xSlot.appendChild(o); plotBtn.disabled=true; }
+  else { plotBtn.disabled=false; }
+}
+
+function buildYRows(){
+  ySlots.innerHTML="";
+  const candidates = numericIdxs(headers, cols, 5); // numeric columns
+  for(let i=0;i<SLOT_COUNT;i++){
+    const row=document.createElement("div"); row.className="slot";
+
+    const lab=document.createElement("label");
+    lab.textContent = `Y Axis ${i+1}`;
+    row.appendChild(lab);
+
+    const sel=document.createElement("select");
+    // default None option
+    const none=document.createElement("option"); none.value="-1"; none.textContent="(None)";
+    sel.appendChild(none);
+    // fill with headers
+    for(const idx of candidates){
+      const o=document.createElement("option");
+      o.value=String(idx); o.textContent=headers[idx];
+      sel.appendChild(o);
+    }
+    sel.value = String(ySel[i] ?? -1);
+    sel.addEventListener("change", ()=>{
+      ySel[i] = Number(sel.value);
+      // reset offset when series changed
+      if (ySel[i] !== -1) { yAdjust.set(ySel[i], {offset:0}); }
+      renderControls(i, row, sel);
+    });
+    row.appendChild(sel);
+
+    // controls cell
+    const btnWrap=document.createElement("div"); btnWrap.className="btns";
+    row.appendChild(btnWrap);
+
+    ySlots.appendChild(row);
+    renderControls(i, row, sel);
+  }
+}
+
+function renderControls(slotIndex, row, sel){
+  const btnWrap = row.querySelector(".btns");
+  btnWrap.innerHTML="";
+  const col = Number(sel.value);
+  const mk = (txt,title,handler)=>{ const b=document.createElement("button"); b.className="mini"; b.textContent=txt; b.title=title; b.addEventListener("click",handler); return b; };
+  if (col === -1){ btnWrap.appendChild(mk("Reset","Nothing selected", ()=>{})).disabled=true; return; }
+
+  const step = Math.max(colRange(col).range*0.05, 1);
+  const up   = mk("Up","Shift up",   ()=>{ const a=ensureAdj(col); a.offset+=step; plot(); });
+  const down = mk("Down","Shift down",()=>{ const a=ensureAdj(col); a.offset-=step; plot(); });
+  const reset= mk("Reset","Clear offset",()=>{ yAdjust.set(col,{offset:0}); plot(); });
+  btnWrap.append(up,down,reset);
+}
+
+/* ---------- plotting ---------- */
+function plot(){
+  const xIdx = Number(xSlot.value);
+  if (!Number.isFinite(xIdx)) return showToast("Pick X axis.");
+  const traces=[];
+  for(let i=0;i<SLOT_COUNT;i++){
+    const col = ySel[i];
+    if (col === -1) continue;
+    const {offset=0} = ensureAdj(col);
+    const y = cols[col].map(v => Number.isFinite(v) ? v + offset : v);
+    traces.push({
+      type: "scattergl",
+      mode: "lines",
+      name: headers[col] + (offset ? ` (Δ=${offset.toFixed(3)})` : ""),
+      x: cols[xIdx],
+      y,
+      line:{width:1}
+    });
+  }
+  if (!traces.length) return showToast("Select at least one Y axis.");
+  Plotly.react(chart, traces, {
+    paper_bgcolor:"#0f1318", plot_bgcolor:"#0f1318", font:{color:"#e7ecf2"},
+    margin:{l:60,r:10,t:10,b:40},
+    xaxis:{title: headers[xIdx] || "X", gridcolor:"#1b1f25"},
+    yaxis:{gridcolor:"#1b1f25", automargin:true},
+    showlegend:true, legend:{orientation:"h", y:-0.2}
+  }, {displaylogo:false, responsive:true});
+}
+
+/* ---------- file flow ---------- */
+csvFile.addEventListener("change", e=>{
+  lastFile = e.target.files[0] || null;
+  if(!lastFile){ fileInfo.classList.add("hidden"); return; }
+  fileInfo.classList.remove("hidden");
+  fileInfo.textContent = `Selected: ${lastFile.name} · ${fmtBytes(lastFile.size)}`;
+
+  const fr=new FileReader();
+  fr.onerror=()=>showToast("Failed to read file.");
+  fr.onload=(ev)=>{
+    try{
+      const text=String(ev.target.result||"");
+      const parsed=parseCSV(text);
+      headers=parsed.headers; cols=parsed.cols;
+      timeIdx=findTimeIdx(headers); rpmIdx=findRpmIdx(headers);
+      // reset
+      yAdjust.clear();
+      for(let i=0;i<SLOT_COUNT;i++) ySel[i]=-1;
+
+      buildXOptions();
+      buildYRows();
+      chart.innerHTML="";
+      showToast("Parsed. Choose axes, then Plot.","ok");
+    }catch(err){ showToast(err.message||"Parse error."); }
+  };
+  fr.readAsText(lastFile);
+});
+
+plotBtn.addEventListener("click", plot);
+
+clearBtn.addEventListener("click", ()=>{
+  csvFile.value="";
+  headers=[]; cols=[]; timeIdx=rpmIdx=-1; lastFile=null;
+  for(let i=0;i<SLOT_COUNT;i++) ySel[i]=-1;
+  yAdjust.clear(); xSlot.innerHTML=""; ySlots.innerHTML=""; chart.innerHTML="";
+  fileInfo.classList.add("hidden");
+  showToast("Cleared.","ok");
+});
+</script>
 </body>
 </html>
