@@ -97,4 +97,90 @@ function plot(showToasts=true){
   if (!Number.isFinite(xIdx)) { if(showToasts) toastMsg("Pick X axis (Time/RPM)."); return; }
   const traces = [];
   for (let i=0;i<ySlots.length;i++){
-    const { enabled, colIdx,
+    const { enabled, colIdx, offset, color } = ySlots[i];
+    if (!enabled || colIdx === -1) continue;
+    const y = cols[colIdx].map(v => Number.isFinite(v) ? (v + offset) : v);
+    traces.push({ type:"scattergl", mode:"lines", name: headers[colIdx] + (offset?` (Δ=${offset.toFixed(3)})`:""), x: cols[xIdx], y, line:{ width:1, color } });
+  }
+  if (!traces.length){ if(showToasts) toastMsg("Enable at least one Y axis."); return; }
+
+  Plotly.react(chart, traces, {
+    paper_bgcolor:"#0f1318", plot_bgcolor:"#0f1318", font:{ color:"#e7ecf2" },
+    margin:{ l:80, r:20, t:10, b:60 },   /* extra padding -> “magnified” feeling */
+    xaxis:{ title: headers[xIdx] || "X", gridcolor:"#1b1f25", tickfont:{size:14}, titlefont:{size:16} },
+    yaxis:{ gridcolor:"#1b1f25", automargin:true, tickfont:{size:14}, titlefont:{size:16} },
+    showlegend:true, legend:{ orientation:"h", y:-0.2 }
+  }, { displaylogo:false, responsive:true });
+}
+
+function autoSelectYs(){
+  const prefs = [/boost/i, /afr/i, /throttle|pedal/i, /load/i, /ign/i];
+  const used = new Set(); let slot=0;
+  for (const rx of prefs){
+    const idx = headers.findIndex((h,i)=> rx.test(h) && i!==timeIdx && i!==rpmIdx);
+    if (idx>-1 && !used.has(idx)){ ySlots[slot].enabled=true; ySlots[slot].colIdx=idx;
+      ySlots[slot].color = slot===0?"#2aa6ff": slot===1?"#ffaa2a": slot===2?"#7bdc7b": slot===3?"#ff5aa2":"#a98bff";
+      used.add(idx); slot++; if (slot>=3) break;
+    }
+  }
+}
+
+function cacheCSV(text, name, size){
+  sessionStorage.setItem("csvText", text);
+  sessionStorage.setItem("csvName", name || "");
+  sessionStorage.setItem("csvSize", String(size || 0));
+}
+function tryLoadCached(){
+  const text = sessionStorage.getItem("csvText");
+  if (!text) return false;
+  const name = sessionStorage.getItem("csvName") || "cached.csv";
+  const size = Number(sessionStorage.getItem("csvSize") || 0);
+  fileInfo.classList.remove("hidden");
+  fileInfo.textContent = `Selected (cached): ${name} · ${fmtBytes(size)}`;
+  try{
+    const parsed = parseCSV(text);
+    headers = parsed.headers; cols = parsed.cols;
+    timeIdx = findTimeIndex(headers); rpmIdx = findRpmIndex(headers);
+    xIdx = Number.isFinite(timeIdx) ? timeIdx : (Number.isFinite(rpmIdx) ? rpmIdx : NaN);
+    ySlots.forEach(s=>{ s.enabled=false; s.colIdx=-1; s.offset=0; s.color="#00aaff"; });
+    autoSelectYs();
+    buildUI(); chart.innerHTML="";
+    toastMsg("Loaded cached CSV. Configure axes, then Generate Plot.", "ok");
+    return true;
+  }catch(err){ console.warn(err); return false; }
+}
+
+/* file flow */
+csvFile.addEventListener("change", (e)=>{
+  lastFile = e.target.files[0] || null;
+  if (!lastFile){ fileInfo.classList.add("hidden"); return; }
+  const reader = new FileReader();
+  reader.onerror = ()=> toastMsg("Failed to read file.");
+  reader.onload  = (ev)=>{
+    const text = String(ev.target.result || "");
+    cacheCSV(text, lastFile.name, lastFile.size);
+    fileInfo.classList.remove("hidden");
+    fileInfo.textContent = `Selected: ${lastFile.name} · ${fmtBytes(lastFile.size)}`;
+    try{
+      const parsed = parseCSV(text);
+      headers = parsed.headers; cols = parsed.cols;
+      timeIdx = findTimeIndex(headers); rpmIdx = findRpmIndex(headers);
+      xIdx = Number.isFinite(timeIdx) ? timeIdx : (Number.isFinite(rpmIdx) ? rpmIdx : NaN);
+      ySlots.forEach(s=>{ s.enabled=false; s.colIdx=-1; s.offset=0; s.color="#00aaff"; });
+      autoSelectYs();
+      buildUI(); chart.innerHTML="";
+      toastMsg("Parsed. Configure axes, then Generate Plot.", "ok");
+    }catch(err){ toastMsg(err.message || "Parse error."); }
+  };
+  reader.readAsText(lastFile);
+});
+
+plotBtn.addEventListener("click", ()=> plot(true));
+clearBtn.addEventListener("click", ()=>{
+  ySlots.forEach(s=>{ s.enabled=false; s.colIdx=-1; s.offset=0; s.color="#00aaff"; });
+  axisPanel.innerHTML=""; chart.innerHTML=""; fileInfo.classList.add("hidden");
+  headers=[]; cols=[]; timeIdx=rpmIdx=-1; xIdx=NaN;
+  toastMsg("Cleared page state. Cached CSV retained.", "ok");
+});
+
+document.addEventListener("DOMContentLoaded", tryLoadCached);
