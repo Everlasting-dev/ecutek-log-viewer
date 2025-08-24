@@ -7,71 +7,74 @@
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
   <style>
-    /* Small extras specific to compare page */
-    .grid-two { display:grid; grid-template-columns: 280px 1fr; gap:14px; }
+    .grid-two { display:grid; grid-template-columns: 300px 1fr; gap:14px; }
     @media (max-width: 900px){ .grid-two { grid-template-columns: 1fr; } }
     .list { max-height: 320px; overflow:auto; border:1px solid var(--line); border-radius:10px; padding:8px; background:#0f1318; }
     .list label { display:flex; align-items:center; gap:8px; padding:6px 4px; cursor:pointer; }
     .hint { color: var(--muted); font-size: 12px; }
-    .counter { color: var(--muted); font-size: 12px; margin-left: 8px;}
+    .counter { color: var(--muted); font-size: 12px; margin-left:8px; }
+    /* visible mini buttons like the EcuTek UI */
+    .mini-btn { padding:6px 10px; border:1px solid var(--line); border-radius:8px; background:#151a21; color:var(--fg); font-weight:700; cursor:pointer; }
+    .mini-btn:hover { border-color:#2a3542; }
+    .control-row { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 0; }
+    .control-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .control-btns { display:flex; gap:6px; flex-wrap:wrap; }
   </style>
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">
-      <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
-      <span>EcuTek Log Viewer</span>
-      <span class="badge">COMPARE</span>
+<header class="topbar">
+  <div class="brand">
+    <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+    <span>EcuTek Log Viewer</span>
+    <span class="badge">COMPARE</span>
+  </div>
+  <div class="actions">
+    <a class="btn ghost" href="./index.html">↩ Multi‑plots</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="card">
+    <div class="uploader pickers" style="justify-content:space-between;">
+      <label class="filebtn">
+        <input type="file" id="csvFile" accept=".csv" />
+        <span>Choose CSV</span>
+      </label>
+      <div class="hint">X axis allowed: <strong>Time</strong> or <strong>Engine RPM</strong></div>
     </div>
-    <div class="actions">
-      <a class="btn ghost" href="./index.html">↩ Multi‑plots</a>
+    <div id="fileInfo" class="fileinfo hidden"></div>
+    <div id="toast" class="toast hidden"></div>
+  </section>
+
+  <section class="grid-two">
+    <div class="card">
+      <div class="meta-title">X Axis</div>
+      <select id="xSelect" class="btn" style="width:100%;"></select>
+
+      <div class="meta-title" style="margin-top:12px;">Y Series <span class="counter" id="yCount">(0/5)</span></div>
+      <div id="yList" class="list"></div>
+
+      <div class="meta-title" style="margin-top:12px;">Adjust selected series</div>
+      <div id="yControls" class="list"></div>
+
+      <div class="hint" style="margin-top:6px;">Select up to 5 series.</div>
+
+      <div style="display:flex; gap:10px; margin-top:12px;">
+        <button id="plotBtn" class="btn primary">Generate Plot</button>
+        <button id="clearBtn" class="btn ghost">Clear</button>
+      </div>
     </div>
-  </header>
 
-  <main class="wrap">
-    <section class="card">
-      <div class="uploader pickers" style="justify-content:space-between;">
-        <label class="filebtn">
-          <input type="file" id="csvFile" accept=".csv" />
-          <span>Choose CSV</span>
-        </label>
-        <div class="hint">X axis allowed: <strong>Time</strong> or <strong>Engine RPM</strong></div>
-      </div>
-      <div id="fileInfo" class="fileinfo hidden"></div>
-      <div id="toast" class="toast hidden"></div>
-    </section>
+    <div class="card plot-card">
+      <div class="plot-title">Combined Plot</div>
+      <div class="plot-frame"><div id="chart" class="plot"></div></div>
+    </div>
+  </section>
+</main>
 
-    <section class="grid-two">
-      <div class="card">
-        <div class="meta-title">X Axis</div>
-        <select id="xSelect" class="btn" style="width:100%;"></select>
+<footer class="footer"><span>Made by AK Sauce</span></footer>
 
-        <div class="meta-title" style="margin-top:12px;">
-          Y Series <span class="counter" id="yCount">(0/5)</span>
-        </div>
-        <div id="yList" class="list"></div>
-        <div class="meta-title" style="margin-top:12px;">Adjust selected series</div>
-        <div id="yControls" class="list"></div>
-        <div class="hint" style="margin-top:6px;">Select up to 5 series.</div>
-
-        <div style="display:flex; gap:10px; margin-top:12px;">
-          <button id="plotBtn" class="btn primary">Generate Plot</button>
-          <button id="clearBtn" class="btn ghost">Clear</button>
-        </div>
-      </div>
-
-      <div class="card plot-card">
-        <div class="plot-title">Combined Plot</div>
-        <div class="plot-frame">
-          <div id="chart" class="plot"></div>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <footer class="footer"><span>Made by AK Sauce</span></footer>
-
-  <!-- ES modules so we can import parser.js -->
-  <script type="module" src="compare.js"></script>
+<!-- ES module -->
+<script type="module" src="compare.js"></script>
 </body>
 </html>
