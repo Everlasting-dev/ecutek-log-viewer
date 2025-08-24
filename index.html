@@ -5,10 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>EcuTek Log Viewer (TXT/CSV)</title>
   <link rel="stylesheet" href="style.css" />
-  <!-- Plotly (CDN) -->
   <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
-  <!-- PapaParse (CDN) -->
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 </head>
 <body>
   <div class="topbar">
@@ -19,7 +16,7 @@
       EcuTek Log Viewer <span class="badge">BETA</span>
     </div>
     <div class="actions">
-      <!-- Future actions here if needed -->
+      <a class="btn" href="compare.html">Open Mega Plot</a>
     </div>
   </div>
 
@@ -38,19 +35,10 @@
       <div id="toast" class="toast hidden"></div>
     </div>
 
-    <!-- The X/Y axis and checkbox controls are no longer used by the provided app.js -->
-
-    <div class="plots" id="plots">
-      <!-- Plots will be rendered here by app.js -->
-    </div>
-
-    <!-- Debug Information section is no longer used by the provided app.js -->
+    <div class="plots" id="plots"></div>
   </div>
 
-  <div class="footer">
-    Client‑side parsing. Your file never leaves the device.
-  </div>
-
+  <div class="footer">Client‑side parsing. Your file never leaves the device.</div>
   <script type="module" src="app.js"></script>
 </body>
 </html>
