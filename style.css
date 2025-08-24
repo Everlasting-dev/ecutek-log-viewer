@@ -42,17 +42,6 @@ body{ margin:0; background:var(--bg); color:var(--fg);
 .hidden{display:none}
 .toast{ margin-top:10px; padding:10px 12px; border-radius:10px; border:1px solid #3b0b0b; background:#3b0b0b; color:#fff; }
 
-/* Mobile layout + tap targets */
-.mobile .wrap{ max-width:100%; padding:0 8px }
-.mobile .plots{ grid-template-columns:1fr }          /* single column */
-.mobile .plot{ height: 56vh }                         /* taller charts */
-.mobile .card{ border-radius:12px; padding:12px }
-.mobile .btn{ padding:14px 18px; border-radius:14px } /* bigger hit area */
-.mobile .slot{ grid-template-columns: 1fr; gap:8px }  /* Y-row stacks */
-.mobile .slot select{ min-width: auto; width:100% }
-.mobile .btns{ gap:10px }
-.mobile input[type="color"]{ width:48px; height:36px }
-
 /* plots grid */
 .plots{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px}
 @media (max-width:1200px){ .plots{grid-template-columns:1fr} }
@@ -60,33 +49,15 @@ body{ margin:0; background:var(--bg); color:var(--fg);
 .plot-title{padding:10px 12px; border-bottom:1px solid var(--line); color:#b8c6d6; font-weight:600; background:#10161e}
 .plot-frame{padding:10px}
 .plot{height:280px; width:100%}
-.plot.big{height:560px}
-/* Make the mega plot (compare.html) wider + taller */
-#chart.plot {
-  width: 100% !important;   /* force same width as parent card */
-  height: 600px !important; /* taller plot for clarity */
-}
-/* Compare page: make the plot full width */
+
+/* Compare page overrides: full-width + taller chart */
 .compare-page .plots{ grid-template-columns: 1fr !important; }
+.compare-page #chart.plot{ width:100% !important; height:600px !important; }
 
-/* Taller mega plot */
-.compare-page #chart.plot{ height: 600px !important; width: 100% !important; }
-
-
-/* compare controls (one-row slots) */
-.slot{
-  display:grid;
-  grid-template-columns: 120px 1fr auto;
-  align-items:center;
-  gap:10px;
-  margin-bottom:8px;
-}
+/* compare controls (one-row layout) */
+.slot{ display:grid; grid-template-columns: 120px 1fr auto; align-items:center; gap:10px; margin-bottom:8px; }
 .btns{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
-.btns .mini{
-  padding:6px 10px; border:1px solid var(--line); border-radius:8px; background:#121821; color:var(--fg);
-  font-weight:600; cursor:pointer;
-}
-.btns input[type="color"]{width:44px; height:32px; border-radius:8px; border:1px solid #2a3038}
+.btns .mini{ padding:6px 10px; border:1px solid var(--line); border-radius:8px; background:#121821; color:var(--fg); font-weight:600; cursor:pointer; }
 
 /* footer */
 .footer{ margin:22px auto 30px; max-width:1200px; padding:0 14px; color:var(--muted); display:flex; justify-content:flex-end; opacity:.85 }
