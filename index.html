@@ -1,85 +1,24 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>EcuTek Log Viewer (Beta)</title>
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-    <style>
-        body {
-            background-color: #111;
-            color: #eee;
-            font-family: Arial, sans-serif;
-            text-align: center;
-        }
-        .plot {
-            margin: 20px auto;
-            width: 95%;
-            max-width: 900px;
-        }
-        footer {
-            margin-top: 30px;
-            font-size: 14px;
-            color: #aaa;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <title>EcuTek Log Viewer (Beta)</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Plotly CDN -->
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
 <body>
-    <h2 style="color:#00ff00;">EcuTek Log Viewer (Beta)</h2>
+  <h2 class="title">EcuTek Log Viewer (Beta)</h2>
+
+  <div class="controls">
     <input type="file" id="csvFile" accept=".csv" />
-    <button onclick="handleFile()">Generate Plots</button>
-    <div id="plots"></div>
-    <footer>Made by AK Sauce</footer>
+    <button id="genBtn">Generate Plots</button>
+  </div>
 
-    <script>
-        function handleFile() {
-            const fileInput = document.getElementById('csvFile');
-            const file = fileInput.files[0];
-            if (!file) return;
+  <div id="plots"></div>
 
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const text = e.target.result;
-                const lines = text.split(/\r?\n/).filter(line => line && !line.startsWith('#'));
+  <footer>Made by AK Sauce</footer>
 
-                const headers = lines[0].split(',');
-                const timeIndex = headers.findIndex(h => h.toLowerCase().includes('time'));
-                if (timeIndex === -1) {
-                    alert('No Time column found.');
-                    return;
-                }
-
-                const dataColumns = headers.map(() => []);
-                for (let i = 1; i < lines.length; i++) {
-                    const values = lines[i].split(',');
-                    if (values.length !== headers.length) continue;
-                    values.forEach((val, j) => {
-                        dataColumns[j].push(parseFloat(val));
-                    });
-                }
-
-                const plotsDiv = document.getElementById('plots');
-                plotsDiv.innerHTML = '';
-                headers.forEach((header, i) => {
-                    if (i === timeIndex) return;
-                    const div = document.createElement('div');
-                    div.className = 'plot';
-                    plotsDiv.appendChild(div);
-                    Plotly.newPlot(div, [{
-                        x: dataColumns[timeIndex],
-                        y: dataColumns[i],
-                        mode: 'lines',
-                        name: header,
-                        line: { shape: 'linear' }
-                    }], {
-                        title: header,
-                        xaxis: { title: 'Time (s)' },
-                        yaxis: { title: header }
-                    });
-                });
-            };
-            reader.readAsText(file);
-        }
-    </script>
+  <script src="app.js"></script>
 </body>
 </html>
