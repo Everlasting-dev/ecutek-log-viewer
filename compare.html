@@ -7,18 +7,17 @@
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
   <style>
-    .grid-two { display:grid; grid-template-columns: 300px 1fr; gap:14px; }
-    @media (max-width: 900px){ .grid-two { grid-template-columns: 1fr; } }
-    .list { max-height: 320px; overflow:auto; border:1px solid var(--line); border-radius:10px; padding:8px; background:#0f1318; }
-    .list label { display:flex; align-items:center; gap:8px; padding:6px 4px; cursor:pointer; }
-    .hint { color: var(--muted); font-size: 12px; }
-    .counter { color: var(--muted); font-size: 12px; margin-left:8px; }
-    /* visible mini buttons like the EcuTek UI */
+    .grid-two { display:grid; grid-template-columns: 420px 1fr; gap:14px; }
+    @media (max-width: 1000px){ .grid-two { grid-template-columns: 1fr; } }
+    .axis-panel.card { padding: 10px 12px; }
+    .row { display:grid; grid-template-columns: 110px 1fr auto; gap:8px; align-items:center; padding:6px 0; }
+    .row + .row { border-top:1px solid var(--line); }
+    .row label { color:#b8c6d6; font-weight:600; }
+    .sel { width:100%; padding:9px 10px; border-radius:10px; border:1px solid var(--line); background:#151a21; color:var(--fg); }
+    .btns { display:flex; gap:6px; flex-wrap:wrap; }
     .mini-btn { padding:6px 10px; border:1px solid var(--line); border-radius:8px; background:#151a21; color:var(--fg); font-weight:700; cursor:pointer; }
     .mini-btn:hover { border-color:#2a3542; }
-    .control-row { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 0; }
-    .control-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .control-btns { display:flex; gap:6px; flex-wrap:wrap; }
+    .hint { color:var(--muted); font-size:12px; margin-top:8px; }
   </style>
 </head>
 <body>
@@ -40,25 +39,46 @@
         <input type="file" id="csvFile" accept=".csv" />
         <span>Choose CSV</span>
       </label>
-      <div class="hint">X axis allowed: <strong>Time</strong> or <strong>Engine RPM</strong></div>
+      <div id="fileInfo" class="fileinfo hidden"></div>
     </div>
-    <div id="fileInfo" class="fileinfo hidden"></div>
     <div id="toast" class="toast hidden"></div>
   </section>
 
   <section class="grid-two">
-    <div class="card">
-      <div class="meta-title">X Axis</div>
-      <select id="xSelect" class="btn" style="width:100%;"></select>
+    <div class="axis-panel card">
+      <div class="row">
+        <label for="xSelect">X Axis</label>
+        <select id="xSelect" class="sel"></select>
+        <div></div>
+      </div>
 
-      <div class="meta-title" style="margin-top:12px;">Y Series <span class="counter" id="yCount">(0/5)</span></div>
-      <div id="yList" class="list"></div>
+      <div class="row">
+        <label for="ySelect0">Y Axis 1</label>
+        <select id="ySelect0" class="sel"></select>
+        <div class="btns" data-slot="0"></div>
+      </div>
+      <div class="row">
+        <label for="ySelect1">Y Axis 2</label>
+        <select id="ySelect1" class="sel"></select>
+        <div class="btns" data-slot="1"></div>
+      </div>
+      <div class="row">
+        <label for="ySelect2">Y Axis 3</label>
+        <select id="ySelect2" class="sel"></select>
+        <div class="btns" data-slot="2"></div>
+      </div>
+      <div class="row">
+        <label for="ySelect3">Y Axis 4</label>
+        <select id="ySelect3" class="sel"></select>
+        <div class="btns" data-slot="3"></div>
+      </div>
+      <div class="row">
+        <label for="ySelect4">Y Axis 5</label>
+        <select id="ySelect4" class="sel"></select>
+        <div class="btns" data-slot="4"></div>
+      </div>
 
-      <div class="meta-title" style="margin-top:12px;">Adjust selected series</div>
-      <div id="yControls" class="list"></div>
-
-      <div class="hint" style="margin-top:6px;">Select up to 5 series.</div>
-
+      <div class="hint">Pick Time or Engine RPM as X. Choose up to 5 Y series; adjust with Up/Down or Scale±. Click Generate Plot.</div>
       <div style="display:flex; gap:10px; margin-top:12px;">
         <button id="plotBtn" class="btn primary">Generate Plot</button>
         <button id="clearBtn" class="btn ghost">Clear</button>
@@ -74,7 +94,7 @@
 
 <footer class="footer"><span>Made by AK Sauce</span></footer>
 
-<!-- ES module -->
+<!-- ES modules -->
 <script type="module" src="compare.js"></script>
 </body>
 </html>
