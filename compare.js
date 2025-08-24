@@ -1,5 +1,5 @@
 // compare.js — single-plot with multi‑Y (max 5), X = Time or Engine RPM
-// Adds per-trace vertical offset/scale controls (Up/Down, Scale ±, Reset)
+// Adds visible per-trace controls: Up, Down, Scale+, Scale−, Reset
 
 import { parseCSV, findTimeIndex, findRpmIndex, numericColumns } from "./parser.js";
 
@@ -87,6 +87,7 @@ function populateYList(){
     yList.appendChild(row);
   });
   updateYCounter();
+  buildYControls(); // ensure panel refreshes immediately
 }
 
 function getSelectedY(){
@@ -122,24 +123,18 @@ function buildYControls(){
 
   selected.forEach(idx=>{
     const row = document.createElement("div");
-    row.style.display = "flex";
-    row.style.alignItems = "center";
-    row.style.justifyContent = "space-between";
-    row.style.gap = "8px";
-    row.style.padding = "4px 0";
+    row.className = "control-row";
 
     const name = document.createElement("div");
+    name.className = "control-name";
     name.textContent = headers[idx];
-    name.style.flex = "1";
 
     const btns = document.createElement("div");
-    btns.style.display = "flex";
-    btns.style.gap = "6px";
+    btns.className = "control-btns";
 
     const mkBtn = (label, title, handler) => {
       const b = document.createElement("button");
-      b.className = "btn";
-      b.style.padding = "6px 8px";
+      b.className = "mini-btn";
       b.textContent = label;
       b.title = title;
       b.addEventListener("click", handler);
@@ -148,11 +143,11 @@ function buildYControls(){
 
     const step = Math.max( computeRange(idx).range * 0.05, 1 ); // 5% of range or 1
 
-    const up    = mkBtn("↑", "Shift up",    ()=>{ const a=ensureAdjust(idx); a.offset += step; plot(); });
-    const down  = mkBtn("↓", "Shift down",  ()=>{ const a=ensureAdjust(idx); a.offset -= step; plot(); });
-    const sUp   = mkBtn("×1.1", "Scale up", ()=>{ const a=ensureAdjust(idx); a.scale *= 1.1;  plot(); });
-    const sDown = mkBtn("×0.9", "Scale down",()=>{ const a=ensureAdjust(idx); a.scale *= 0.9;  plot(); });
-    const reset = mkBtn("Reset", "Reset adjust", ()=>{ yAdjust.set(idx,{offset:0,scale:1}); plot(); });
+    const up    = mkBtn("Up",     "Shift up",       ()=>{ const a=ensureAdjust(idx); a.offset += step; plot(); });
+    const down  = mkBtn("Down",   "Shift down",     ()=>{ const a=ensureAdjust(idx); a.offset -= step; plot(); });
+    const sUp   = mkBtn("Scale+", "Scale up (×1.1)",()=>{ const a=ensureAdjust(idx); a.scale *= 1.1;  plot(); });
+    const sDown = mkBtn("Scale−", "Scale down (×0.9)",()=>{ const a=ensureAdjust(idx); a.scale *= 0.9;  plot(); });
+    const reset = mkBtn("Reset",  "Reset adjust",   ()=>{ yAdjust.set(idx,{offset:0,scale:1}); plot(); });
 
     btns.append(up, down, sUp, sDown, reset);
     row.append(name, btns);
@@ -170,7 +165,6 @@ function plot(){
 
   const traces = yIdxs.map((i) => {
     const { offset, scale } = ensureAdjust(i);
-    // Apply y = y*scale + offset
     const y = cols[i].map(v => Number.isFinite(v) ? (v*scale + offset) : v);
     return {
       type: "scattergl",
