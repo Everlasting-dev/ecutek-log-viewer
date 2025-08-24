@@ -1,26 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<title>EcuTek Log Viewer · Compare (Slots)</title>
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<link rel="stylesheet" href="style.css" />
-<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-<style>
-  .grid-two { display:grid; grid-template-columns: 420px 1fr; gap:14px; }
-  @media (max-width: 980px){ .grid-two{ grid-template-columns:1fr; } }
-  .slot { display:grid; grid-template-columns: 80px 1fr auto; gap:8px; align-items:center; padding:6px 8px; border:1px solid var(--line); border-radius:10px; background:#0f1318; }
-  .slot + .slot{ margin-top:8px; }
-  .slot label{ color:#b8c6d6; font-weight:600; }
-  .slot select{ width:100%; padding:8px 10px; border:1px solid #2a3038; border-radius:8px; background:#121821; color:#e7ecf2; }
-  .slot .btns{ display:flex; gap:6px; }
-  .mini { padding:6px 10px; border:1px solid var(--line); border-radius:8px; background:#151a21; color:#e7ecf2; font-weight:700; cursor:pointer; }
-  .mini:hover{ border-color:#2a3542 }
-  .mini[disabled]{ opacity:.45; cursor:not-allowed }
-  .hint { color: var(--muted); font-size:12px; }
-  .legend-note{ color:#9aa7b2; font-size:12px; margin-top:8px }
-  .plot{ height:520px }
-</style>
+  <meta charset="UTF-8" />
+  <title>EcuTek Log Viewer · Compare</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <style>
+    .grid-two { display:grid; grid-template-columns: 420px 1fr; gap:14px; }
+    @media (max-width: 980px){ .grid-two { grid-template-columns: 1fr; } }
+    .slot { display:grid; grid-template-columns: 90px 1fr auto; gap:8px; align-items:center; padding:6px 8px;
+            border:1px solid var(--line); border-radius:10px; background:#0f1318; }
+    .slot + .slot { margin-top:8px; }
+    .slot label { color:#b8c6d6; font-weight:600; }
+    .slot select { width:100%; padding:8px 10px; border:1px solid #2a3038; border-radius:8px; background:#121821; color:#e7ecf2; }
+    .btns { display:flex; gap:6px; }
+    .mini { padding:6px 10px; border:1px solid var(--line); border-radius:8px; background:#151a21; color:#e7ecf2; font-weight:700; cursor:pointer; }
+    .mini:hover { border-color:#2a3542; }
+    .mini[disabled] { opacity:.45; cursor:not-allowed; }
+    .plot { height:520px }
+  </style>
 </head>
 <body>
 <header class="topbar">
@@ -46,16 +45,11 @@
 
   <section class="grid-two">
     <div class="card">
-      <div class="slot">
-        <label for="xSlot">X Axis</label>
-        <select id="xSlot"></select>
-        <div class="btns">
-          <button class="mini" id="plotBtn">Plot</button>
-          <button class="mini" id="clearBtn">Clear</button>
-        </div>
+      <div id="axisPanel"><!-- JS builds rows here --></div>
+      <div style="display:flex; gap:10px; margin-top:12px;">
+        <button id="plotBtn" class="btn primary">Generate Plot</button>
+        <button id="clearBtn" class="btn ghost">Clear</button>
       </div>
-      <div id="ySlots"></div>
-      <div class="legend-note">Up/Down applies vertical offset (step = 5% of series range). Reset clears offset.</div>
     </div>
 
     <div class="card plot-card">
@@ -67,122 +61,6 @@
 
 <footer class="footer"><span>Made by AK Sauce</span></footer>
 
-<script>
-/* --- CSV parse (comma; ignores '#' lines) --- */
-function splitLines(t){return t.split(/\\r?\\n/).filter(l=>l&&!l.startsWith("#"))}
-function parseCSV(t){const L=splitLines(t);if(L.length<2)throw Error("Empty CSV or missing rows.");
-const H=L[0].split(","), C=H.map(()=>[]); for(let i=1;i<L.length;i++){const p=L[i].split(","); if(p.length!==H.length) continue;
-for(let j=0;j<p.length;j++){ const v=Number(String(p[j]).replace(/,/g,"")); C[j].push(Number.isFinite(v)?v:NaN);}}
-return {headers:H, cols:C, rows:C[0]?.length??0}}
-function findTime(H){return H.findIndex(h=>/time|timestamp/i.test(h))}
-function findRPM(H){const i=H.findIndex(h=>/\\bRPM\\b/i.test(h)); return i!==-1?i:H.findIndex(h=>/engine\\s*speed/i.test(h))}
-function numericCols(H,C,min=5){const out=[];for(let k=0;k<H.length;k++){let n=0;const v=C[k];for(let i=0;i<v.length;i++) if(Number.isFinite(v[i])) n++; if(n>=min) out.push(k)} return out}
-
-/* --- DOM --- */
-const $=id=>document.getElementById(id);
-const csvFile=$("csvFile"), fileInfo=$("fileInfo"), toast=$("toast");
-const xSlot=$("xSlot"), ySlots=$("ySlots"), plotBtn=$("plotBtn"), clearBtn=$("clearBtn"), chart=$("chart");
-
-/* --- state --- */
-let headers=[], cols=[], timeIdx=-1, rpmIdx=-1, lastFile=null;
-const SLOT_COUNT=5;
-const ySel=new Array(SLOT_COUNT).fill(-1);           // selected column per Y slot
-const yAdjust=new Map();                              // per-column {offset}
-function ensureAdj(col){ if(!yAdjust.has(col)) yAdjust.set(col,{offset:0}); return yAdjust.get(col) }
-function colRange(col){ const v=cols[col]; let mn=+Infinity,mx=-Infinity;
-for(let i=0;i<v.length;i++){ const n=v[i]; if(Number.isFinite(n)){ if(n<mn)mn=n; if(n>mx)mx=n }} if(mn===+Infinity) return {range:1}; return {range:(mx-mn)||1}}
-
-/* --- ui helpers --- */
-function toastMsg(msg,type="error"){ toast.textContent=msg; toast.style.display="block";
-toast.style.background=(type==="error")?"#3b0b0b":"#0b3b18"; toast.style.borderColor=(type==="error")?"#742020":"#1a6a36";
-clearTimeout(toastMsg._t); toastMsg._t=setTimeout(()=>toast.style.display="none",3200) }
-function fmtBytes(n){const u=["B","KB","MB","GB"];let i=0;while(n>=1024&&i<u.length-1){n/=1024;i++}return `${n.toFixed(1)} ${u[i]}`}
-
-/* --- build UI --- */
-function buildXOptions(){
-  xSlot.innerHTML=""; let added=0;
-  if(timeIdx!==-1){ const o=document.createElement("option"); o.value=String(timeIdx); o.textContent=headers[timeIdx]+" (Time)"; xSlot.appendChild(o); added++; }
-  if(rpmIdx !==-1){ const o=document.createElement("option"); o.value=String(rpmIdx);  o.textContent=headers[rpmIdx]+" (Engine RPM)"; xSlot.appendChild(o); added++; }
-  plotBtn.disabled = added===0; if(!added){ const o=document.createElement("option"); o.textContent="No Time or RPM"; o.disabled=true; xSlot.appendChild(o); }
-}
-function buildYRows(){
-  ySlots.innerHTML="";
-  const cand = numericCols(headers, cols, 5);
-  for(let i=0;i<SLOT_COUNT;i++){
-    const row=document.createElement("div"); row.className="slot";
-    const lab=document.createElement("label"); lab.textContent=`Y Axis ${i+1}`; row.appendChild(lab);
-    const sel=document.createElement("select"); const none=document.createElement("option"); none.value="-1"; none.textContent="(None)"; sel.appendChild(none);
-    for(const idx of cand){ const o=document.createElement("option"); o.value=String(idx); o.textContent=headers[idx]; sel.appendChild(o) }
-    sel.value=String(ySel[i]); sel.addEventListener("change",()=>{ ySel[i]=Number(sel.value); if(ySel[i]!==-1) yAdjust.set(ySel[i],{offset:0}); renderBtns(i,row,sel) });
-    row.appendChild(sel);
-    const btns=document.createElement("div"); btns.className="btns"; row.appendChild(btns);
-    ySlots.appendChild(row); renderBtns(i,row,sel);
-  }
-}
-function renderBtns(slot,row,sel){
-  const btns=row.querySelector(".btns"); btns.innerHTML="";
-  const col=Number(sel.value); const mk=(t,tt,h)=>{const b=document.createElement("button"); b.className="mini"; b.textContent=t; b.title=tt; b.addEventListener("click",h); return b};
-  if(col===-1){ const b=mk("Reset","Nothing selected",()=>{}); b.disabled=true; btns.appendChild(b); return }
-  const step=Math.max(colRange(col).range*0.05,1);
-  btns.append(
-    mk("Up","Offset up", ()=>{ ensureAdj(col).offset+=step; plot() }),
-    mk("Down","Offset down", ()=>{ ensureAdj(col).offset-=step; plot() }),
-    mk("Reset","Clear offset", ()=>{ yAdjust.set(col,{offset:0}); plot() }),
-  );
-}
-
-/* --- plotting --- */
-function plot(){
-  const xIdx=Number(xSlot.value); if(!Number.isFinite(xIdx)) return toastMsg("Pick X axis.");
-  const traces=[];
-  for(let i=0;i<SLOT_COUNT;i++){
-    const col=ySel[i]; if(col===-1) continue;
-    const {offset=0}=ensureAdj(col);
-    const y=cols[col].map(v=>Number.isFinite(v)?v+offset:v);
-    traces.push({type:"scattergl",mode:"lines",name:headers[col]+(offset?` (Δ=${offset.toFixed(3)})`:""),x:cols[xIdx],y,line:{width:1}});
-  }
-  if(!traces.length) return toastMsg("Select at least one Y axis.");
-  Plotly.react(chart,traces,{
-    paper_bgcolor:"#0f1318",plot_bgcolor:"#0f1318",font:{color:"#e7ecf2"},
-    margin:{l:60,r:10,t:10,b:40},
-    xaxis:{title:headers[xIdx]||"X",gridcolor:"#1b1f25"},
-    yaxis:{gridcolor:"#1b1f25",automargin:true},
-    showlegend:true,legend:{orientation:"h",y:-0.2}
-  },{displaylogo:false,responsive:true});
-}
-
-/* --- file flow --- */
-csvFile.addEventListener("change",e=>{
-  lastFile=e.target.files[0]||null; if(!lastFile){fileInfo.classList.add("hidden");return}
-  fileInfo.classList.remove("hidden"); fileInfo.textContent=`Selected: ${lastFile.name} · ${fmtBytes(lastFile.size)}`
-  const fr=new FileReader(); fr.onerror=()=>toastMsg("Failed to read file."); fr.onload=ev=>{
-    try{
-      const {headers:h,cols:c}=parseCSV(String(ev.target.result||"")); headers=h; cols=c;
-      timeIdx=findTime(H=h); function H(h){return findTime(h)}  /* trick to keep minified lines short */
-    }catch{ }
-  };
-});
-/* fix typo from minify above; build fully onload */
-csvFile.addEventListener("change",e=>{
-  const fr=new FileReader(); fr.onload=ev=>{
-    try{
-      const {headers:h,cols:c}=parseCSV(String(ev.target.result||"")); headers=h; cols=c;
-      timeIdx = findTime(headers); rpmIdx = findRPM(headers);
-      yAdjust.clear(); for(let i=0;i<SLOT_COUNT;i++) ySel[i]=-1;
-      buildXOptions(); buildYRows(); chart.innerHTML="";
-      toastMsg("Parsed. Choose axes, then Plot.","ok");
-    }catch(err){ toastMsg(err.message||"Parse error.") }
-  }; fr.readAsText(e.target.files[0]);
-});
-
-/* --- buttons --- */
-plotBtn.addEventListener("click",plot);
-clearBtn.addEventListener("click",()=>{
-  csvFile.value=""; headers=[]; cols=[]; timeIdx=rpmIdx=-1; lastFile=null;
-  for(let i=0;i<SLOT_COUNT;i++) ySel[i]=-1; yAdjust.clear();
-  xSlot.innerHTML=""; ySlots.innerHTML=""; chart.innerHTML=""; fileInfo.classList.add("hidden");
-  toastMsg("Cleared.","ok");
-});
-</script>
+<script type="module" src="./compare.js"></script>
 </body>
 </html>
