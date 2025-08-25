@@ -1,5 +1,5 @@
 // Multi-plot page: one chart per numeric column vs Time, caching for compare view
-import { parseCSV, findTimeIndex } from "./parser.js";
+import { parseCSV, findTimeIndex, numericColumns } from "./parser.js";
 
 const els = {
   file: document.getElementById("csvFile"),
@@ -66,7 +66,7 @@ function renderPlots(){
       x, y: cols[i], mode:"lines", name:headers[i], line:{width:1}
     }], {
       paper_bgcolor:"#0f1318", plot_bgcolor:"#0f1318", font:{color:"#e7ecf2"},
-      margin:{l:50,r:10,t:10,b:40}, xaxis:{title:headers[timeIdx], gridcolor:"#1b1f25"},
+      margin:{l:50,r:10,t:10,b:40}, xaxis:{title:headers[timeIdx], gridcolor:"#1b1f25", rangeslider: {visible: true, bgcolor: "#10161e", borderColor: "#1b1f25"}},
       yaxis:{title:headers[i], gridcolor:"#1b1f25", automargin:true}, showlegend:false
     }, {displaylogo:false, responsive:true});
   }
