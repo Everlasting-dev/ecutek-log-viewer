@@ -63,12 +63,20 @@ function renderPlots(){
     frame.appendChild(div); card.appendChild(title); card.appendChild(frame); els.plots.appendChild(card);
 
     Plotly.newPlot(div, [{
-      x, y: cols[i], mode:"lines", name:headers[i], line:{width:1}
+      x, y: cols[i], mode:"lines", name:headers[i], line:{width:1, color: '#00ff66'}
     }], {
       paper_bgcolor:"#0f1318", plot_bgcolor:"#0f1318", font:{color:"#e7ecf2"},
-      margin:{l:50,r:10,t:10,b:40}, xaxis:{title:headers[timeIdx], gridcolor:"#1b1f25", rangeslider: {visible: true, bgcolor: "#10161e", borderColor: "#1b1f25"}},
-      yaxis:{title:headers[i], gridcolor:"#1b1f25", automargin:true}, showlegend:false
-    }, {displaylogo:false, responsive:true});
+      margin:{l:50,r:10,t:10,b:28}, xaxis:{title:headers[timeIdx], gridcolor:"#1b1f25", rangeslider: {visible: false}},
+      yaxis:{title:headers[i], gridcolor:"#1b1f25", automargin:true}, showlegend:false,
+      height: 140
+    }, {displaylogo:false, responsive:true, staticPlot: true, displayModeBar: false, scrollZoom: false, doubleClick: false});
+
+    div.on("plotly_click", (ev) => {
+      if (!ev?.points?.length) return;
+      const p = ev.points[0];
+      // Force a hover at the snapped point (works with staticPlot)
+      Plotly.Fx.hover(div, [{ curveNumber: p.curveNumber, pointNumber: p.pointNumber }], ["xy"]);
+    });
   }
 }
 
