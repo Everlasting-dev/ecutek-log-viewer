@@ -127,14 +127,23 @@ function plot(showToasts=true, preserveRange=false){
 
   const traces=[];
   for(let i=0;i<ySlots.length;i++){
-    const {enabled,colIdx,scale,color}=ySlots[i];
-    if(!enabled || colIdx===-1) continue;
-    const y=cols[colIdx].map(v=>Number.isFinite(v)?(v*(scale||1)):v);
-    const label = headers[colIdx] + ((scale && Math.abs(scale-1) > 1e-6) ? ` (×${scale.toFixed(3)})` : "");
-    traces.push({ type:"scattergl", mode:"lines+markers", marker:{size:5},
+    const s = ySlots[i];
+    if(!s.enabled || s.colIdx===-1) continue;
+    const rawY    = cols[s.colIdx];                       // original CSV
+    const scale   = s.scale ?? 1;
+    const scaledY = rawY.map(v => Number.isFinite(v) ? v * scale : v);
+    const label = headers[s.colIdx] + (Math.abs(scale-1)>1e-6 ? ` (×${scale.toFixed(3)})` : "");
+    traces.push({
+      type: "scattergl",
+      mode: "lines+markers",
+      x: cols[xIdx],
+      y: scaledY,                 // visual scaling only
+      customdata: rawY,           // raw numbers for hover
       name: label,
-      x: cols[xIdx], y, line:{width:1,color},
-      hovertemplate:`%{x:.6g}<br>%{y:.6g}<extra>${headers[colIdx]}</extra>` });
+      line: { width: 1, color: s.color },
+      marker: { size: 5 },
+      hovertemplate: `%{x:.6g}<br>%{customdata:.3f}<extra>${headers[s.colIdx]}</extra>`
+    });
   }
   if(!traces.length){ if(showToasts) toastMsg("Enable at least one Y axis."); return; }
 
