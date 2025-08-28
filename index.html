@@ -6,6 +6,7 @@
   <title>EcuTek Log Viewer (TXT/CSV)</title>
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 </head>
 <body>
   <div class="topbar">
@@ -15,8 +16,8 @@
       </svg>
       EcuTek Log Viewer <span class="badge">BETA</span>
     </div>
-    <div class="actions">
-      <a class="btn" href="compare.html">Open Mega Plot</a>
+    <div class="actions" style="gap:12px;align-items:center;">
+      <a id="megaBtn" class="btn ghost" href="compare.html">Mega Plot</a>
     </div>
   </div>
 
@@ -27,19 +28,20 @@
           <input id="csvFile" type="file" accept=".csv,.txt,.log,text/csv,text/plain" />
           <span>Choose Log File (.txt/.csv)</span>
         </label>
-        <button id="genBtn" class="btn primary">Generate Plots</button>
+        <button id="genBtn" class="btn primary" disabled>Generate Plots</button>
         <button id="clearBtn" class="btn ghost">Clear</button>
       </div>
       <div id="dropzone" class="drop">Drag & drop files here</div>
       <div id="fileInfo" class="fileinfo"></div>
+      <div id="fileChips" class="filechips"></div>
       <div id="toast" class="toast hidden"></div>
     </div>
 
+    <div class="section-heading" style="margin-top:22px;">Time Graphs</div>
     <div class="plots" id="plots"></div>
   </div>
 
-  <div class="footer">Client-side parsing. Your file never leaves the device.</div>
-  <!-- Module so app.js can import parser.js -->
+  <div class="footer">Made by AK Everlasting Dev</div>
   <script type="module" src="app.js"></script>
 </body>
 </html>

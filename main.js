@@ -1,5 +1,6 @@
-// Single upload → two views (multi-plots + compare)
+// Multi-plot page: one chart per numeric column vs Time, caching for compare view
 // Comma CSV, comment lines start with '#'
+import { parseCSV, findTimeIndex, findRpmIndex, numericColumns } from "./parser.js";
 
 const $ = (id) => document.getElementById(id);
 const csvFile = $("csvFile");
@@ -36,35 +37,6 @@ function showToast(msg, type="error"){
 
 function fmtBytes(n){ const u=["B","KB","MB","GB"]; let i=0; while(n>=1024&&i<u.length-1){n/=1024;i++;} return `${n.toFixed(1)} ${u[i]}`; }
 
-// --- parsing ---
-function splitLines(text){ return text.split(/\r?\n/).filter(l => l && !l.startsWith("#")); }
-function parseCSV(text){
-  const lines = splitLines(text);
-  if (lines.length < 2) throw new Error("Empty CSV or missing rows.");
-  const hdrs = lines[0].split(",");
-  const c = hdrs.map(()=>[]);
-  for (let i=1;i<lines.length;i++){
-    const parts = lines[i].split(",");
-    if (parts.length !== hdrs.length) continue;
-    for (let j=0;j<parts.length;j++){
-      const v = Number(parts[j].replace(/,/g,""));
-      c[j].push(Number.isFinite(v)?v:NaN);
-    }
-  }
-  return { headers: hdrs, cols: c, rows: c[0]?.length ?? 0 };
-}
-function findTimeIndex(h){ return h.findIndex(x => /time|timestamp/i.test(x)); }
-function findRpmIndex(h){ const i=h.findIndex(x=>/\bRPM\b/i.test(x)); return i!==-1?i:h.findIndex(x=>/engine\s*speed/i.test(x)); }
-function numericColumns(h, c, min=5){
-  const out=[];
-  for (let k=0;k<h.length;k++){
-    let cnt=0; const v=c[k];
-    for (let i=0;i<v.length;i++) if (Number.isFinite(v[i])) cnt++;
-    if (cnt >= min) out.push(k);
-  }
-  return out;
-}
-
 // --- multi-plots ---
 function renderMultiPlots(){
   plotsEl.innerHTML = "";
@@ -91,7 +63,7 @@ function renderMultiPlots(){
 
     Plotly.newPlot(div, [{ x, y: cols[i], mode:"lines", name:headers[i], line:{width:1} }], {
       paper_bgcolor:"#0f1318", plot_bgcolor:"#0f1318", font:{color:"#e7ecf2"},
-      margin:{l:50,r:10,t:10,b:40}, xaxis:{title:headers[timeIdx], gridcolor:"#1b1f25"},
+      margin:{l:50,r:10,t:10,b:40}, xaxis:{title:headers[timeIdx], gridcolor:"#1b1f25", rangeslider: { visible: true, bgcolor:"#10161e", borderColor: "#1b1f25" },  type: "linear"},
       yaxis:{title:headers[i], gridcolor:"#1b1f25", automargin:true}, showlegend:false
     }, {displaylogo:false, responsive:true});
   }
@@ -128,7 +100,7 @@ function plotCompareNow(){
   const traces = yIdxs.map(i=>({ type:"scattergl", mode:"lines", name:headers[i], x:cols[xIdx], y:cols[i], line:{width:1} }));
   Plotly.react(chart, traces, {
     paper_bgcolor:"#0f1318", plot_bgcolor:"#0f1318", font:{color:"#e7ecf2"},
-    margin:{l:60,r:10,t:10,b:40}, xaxis:{title:headers[xIdx], gridcolor:"#1b1f25"},
+    margin:{l:60,r:10,t:10,b:40}, xaxis:{title:headers[xIdx], gridcolor:"#1b1f25", rangeslider: { visible: true, bgcolor:"#10161e", borderColor: "#1b1f25" },  type: "linear"},
     yaxis:{gridcolor:"#1b1f25", automargin:true}, showlegend:true, legend:{orientation:"h", y:-0.2}
   }, {displaylogo:false, responsive:true});
 }
