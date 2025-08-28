@@ -9,6 +9,7 @@ const plotBtn  = $("plotBtn");
 const clearBtn = $("clearBtn");
 const chart    = $("chart");
 const toast    = $("toast");
+const chartMini= $("chartMini");
 
 let headers=[], cols=[], timeIdx=-1, rpmIdx=-1, xIdx=NaN, snapIndex=null;
 
@@ -108,8 +109,8 @@ function buildUI(){
     tick.addEventListener("change", ()=>{ ySlots[i].enabled=tick.checked; plot(false,true); });
     color.addEventListener("input", ()=>{ ySlots[i].color=color.value; plot(false,true); });
     sel.addEventListener("change", ()=>{ ySlots[i].colIdx=Number(sel.value); ySlots[i].scale=1.0; plot(false,true); });
-    up.addEventListener("click", ()=>{ const ix=ySlots[i].colIdx; if(ix<0) return; ySlots[i].scale=scaleUp(ySlots[i].scale || 1); plot(false,true); });
-    dn.addEventListener("click", ()=>{ const ix=ySlots[i].colIdx; if(ix<0) return; ySlots[i].scale=scaleDown(ySlots[i].scale || 1); plot(false,true); });
+    up.addEventListener("click", ()=>{ const ix=ySlots[i].colIdx; if(ix<0) return; ySlots[i].scale = scaleUp(ySlots[i].scale || 1); plot(false,true); });
+    dn.addEventListener("click", ()=>{ const ix=ySlots[i].colIdx; if(ix<0) return; ySlots[i].scale = scaleDown(ySlots[i].scale || 1); plot(false,true); });
     reset.addEventListener("click", ()=>{ ySlots[i].scale=1.0; plot(false,true); });
 
     row.append(left,color,sel,valwrap,btns);
@@ -129,20 +130,19 @@ function plot(showToasts=true, preserveRange=false){
   for(let i=0;i<ySlots.length;i++){
     const s = ySlots[i];
     if(!s.enabled || s.colIdx===-1) continue;
-    const rawY    = cols[s.colIdx];                       // original CSV
+    const rawY    = cols[s.colIdx];                       // original CSV (raw)
     const scale   = s.scale ?? 1;
-    const scaledY = rawY.map(v => Number.isFinite(v) ? v * scale : v);
-    const label = headers[s.colIdx] + (Math.abs(scale-1)>1e-6 ? ` (×${scale.toFixed(3)})` : "");
+    const scaledY = rawY.map(v => Number.isFinite(v) ? (v * scale) : v);
+    const label = headers[s.colIdx] + (Math.abs(scale-1)>1e-9 ? ` (×${scale.toFixed(3)})` : "");
     traces.push({
       type: "scattergl",
-      mode: "lines+markers",
+      mode: "lines",
       x: cols[xIdx],
-      y: scaledY,                 // visual scaling only
+      y: scaledY,                  // visual scaling only
       customdata: rawY,           // raw numbers for hover
       name: label,
       line: { width: 1, color: s.color },
-      marker: { size: 5 },
-      hovertemplate: `%{x:.6g}<br>%{customdata:.3f}<extra>${headers[s.colIdx]}</extra>`
+      hovertemplate: `${headers[xIdx]}: %{x:.3f}<br>${headers[s.colIdx]} (raw): %{customdata:.3f}<extra></extra>`
     });
   }
   if(!traces.length){ if(showToasts) toastMsg("Enable at least one Y axis."); return; }
@@ -150,12 +150,29 @@ function plot(showToasts=true, preserveRange=false){
   Plotly.react(chart,traces,{
     paper_bgcolor:"#0f1318", plot_bgcolor:"#0f1318", font:{color:"#e7ecf2", size:14},
     margin:{l:60,r:10,t:10,b:44},
-    xaxis:{title:headers[xIdx]||"X", gridcolor:"#1b1f25", rangeslider:{visible:true,bgcolor:"#10161e"}, type:"linear", range: keepRange||undefined},
+    xaxis:{title:headers[xIdx]||"X", gridcolor:"#1b1f25", rangeslider:{visible:false}, type:"linear", range: keepRange||undefined},
     yaxis:{gridcolor:"#1b1f25", automargin:true},
     hovermode:"x unified", showlegend:true, legend:{orientation:"h", y:-0.2}
   }, {displaylogo:false, responsive:true});
 
   if(keepRange) Plotly.relayout(chart, {"xaxis.range": keepRange});
+
+  // Build/update compact time slider chart above main
+  if (chartMini && Array.isArray(cols[xIdx]) && cols[xIdx].length){
+    // choose first enabled raw series for overview, else fallback to zeros
+    let overviewIdx = -1;
+    for (let i=0;i<ySlots.length;i++){ if(ySlots[i].enabled && ySlots[i].colIdx!==-1){ overviewIdx = ySlots[i].colIdx; break; } }
+    const miniY = overviewIdx!==-1 ? cols[overviewIdx] : cols[xIdx].map(()=>0);
+    const miniTrace = [{ type:"scattergl", mode:"lines", x: cols[xIdx]||[], y: miniY, line:{width:1, color:'#5a6b7f'} }];
+    Plotly.react(chartMini, miniTrace, {
+      paper_bgcolor:"#0f1318", plot_bgcolor:"#0f1318", font:{color:"#9aa7b2", size:12},
+      margin:{l:50,r:10,t:6,b:20},
+      height:90,
+      xaxis:{ gridcolor:"#1b1f25", rangeslider:{visible:true, bgcolor:"#10161e", thickness:0.15},
+              range: (keepRange||chart.layout?.xaxis?.range)||undefined },
+      yaxis:{ visible:false }
+    }, {displaylogo:false, responsive:true});
+  }
   updateReadouts();
   // auto-fit Y to current X window
   if (autoY) rescaleYToWindow(chart.layout?.xaxis?.range || null);
@@ -194,12 +211,22 @@ function wireChartEvents(){
     for(const p of ev.points){const d=Math.abs(p.x-ev.event.x); if(d<bestD){bestD=d; best=p;}};;
     snapIndex=best.pointNumber; updateReadouts();
   });
+  let syncingMain=false, syncingMini=false;
   chart.on("plotly_relayout", (ev) => {
     // Only care about X changes
-    if (ev && ( "xaxis.range[0]" in ev || "xaxis.range" in ev || "xaxis.autorange" in ev || "xaxis.range[1]" in ev )) {
+    if (!syncingMain && ev && ( "xaxis.range[0]" in ev || "xaxis.range" in ev || "xaxis.autorange" in ev || "xaxis.range[1]" in ev )) {
       rescaleDebounced();
+      const r = chart.layout?.xaxis?.range; if (chartMini && r){ syncingMini=true; Plotly.relayout(chartMini, {"xaxis.range": r}).then(()=>{ syncingMini=false; }); }
     }
   });
+
+  if (chartMini){
+    chartMini.on("plotly_relayout", (ev) => {
+      if (!syncingMini && ev && ( "xaxis.range[0]" in ev || "xaxis.range" in ev || "xaxis.autorange" in ev || "xaxis.range[1]" in ev )) {
+        const r = chartMini.layout?.xaxis?.range; if (r){ syncingMain=true; Plotly.relayout(chart, {"xaxis.range": r}).then(()=>{ syncingMain=false; }); }
+      }
+    });
+  }
 }
 
 /* auto-select */

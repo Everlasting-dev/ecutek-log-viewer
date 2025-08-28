@@ -1,0 +1,87 @@
+# Cursor Rules for EcuTek Log Viewer
+
+## Project Overview
+- Plotly-based CSV log viewer with multi-plot and comparison views
+- Client-side parsing, no server dependencies
+- ES6 modules, modern JavaScript
+- Version: 1.0.0
+
+## File Structure & Purpose
+- `app.js` - Multi-plot view (index.html) - stateful S-object approach
+- `compare.js` - Comparison view (compare.html) - ySlots array management  
+- `parser.js` - CSV parsing utilities - findTimeIndex, numericColumns
+- `style.css` - Styling - dark theme, responsive design
+- `index.html` - Main page - minimal structure
+- `compare.html` - Mega plot page - minimal structure
+
+## Code Style
+- Use ES6+ features (const/let, arrow functions, template literals)
+- Prefer functional programming where possible
+- Keep functions small and focused
+- Use descriptive variable names
+- Add comments for complex logic
+
+## Key Patterns
+### State Management
+- `app.js`: S object: { headers, cols, timeIdx, name, size, ready }
+- `compare.js`: ySlots array: [{ enabled, colIdx, scale, color, valEl }]
+
+### UI Patterns
+- Event-driven UI updates
+- sessionStorage for caching
+- Plotly for charts with custom configs
+- Toast notifications for user feedback
+
+## Testing Checklist
+- CSV upload and parsing
+- Time axis detection
+- Plot generation
+- Scaling controls (Mega plot)
+- Time slider functionality
+- Mobile responsiveness
+- Cache persistence
+
+## Quality Gates
+### Minis (app.js)
+- xaxis = Time
+- hover OFF
+- no Time-vs-Time
+- scrollZoom OFF
+
+### Mega (compare.js)
+- raw values in hover
+- scaling visual only
+- time slider works without crashes
+
+### General
+- sessionStorage keys intact
+- Mobile tested (iPhone)
+- Preserve existing functionality
+
+## Common Issues
+### Plotly
+- Performance warnings (clear() with no buffers)
+- Circular relayout loops between charts
+
+### Data
+- Missing data validation
+- Empty files, malformed CSV
+
+### Mobile
+- Touch events
+- Responsive design
+
+## AI Review Focus
+- Regressions in time axis handling
+- Mini plot functionality
+- Mega plot scaling and hover
+- Cache persistence
+- Mobile compatibility
+
+## When Suggesting Changes
+- Preserve existing functionality
+- Consider mobile experience
+- Maintain performance
+- Test edge cases (empty files, malformed CSV)
+- Keep UI consistent
+- Output: concise bullets + exact patches
