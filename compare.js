@@ -233,23 +233,19 @@ function tryLoadCached(){
 /* file flow */
 function wireInitialEventListeners(){
   csvFile.addEventListener("change",(e)=>{
-    const f=e.target.files[0]||null; if(!f){ fileInfo.classList.add("hidden"); console.log("No file selected."); return; }
-    console.log("File selected:", f.name, f.size);
+    const f=e.target.files[0]||null; if(!f){ fileInfo.classList.add("hidden"); return; }
     const rd=new FileReader();
     rd.onerror=()=>toastMsg("Failed to read file.");
     rd.onload=(ev)=>{
       const text=String(ev.target.result||""); cacheCSV(text,f.name,f.size);
       fileInfo.classList.remove("hidden"); fileInfo.textContent=`Selected: ${f.name} · ${fmtBytes(f.size)}`;
-      console.log("File read successfully. Attempting to parse...");
       try{
         const parsed=parseCSV(text); headers=parsed.headers; cols=parsed.cols;
         timeIdx=findTimeIndex(headers); rpmIdx=findRpmIndex(headers);
-        console.log("CSV Parsed. Headers:", headers, "Time Index:", timeIdx, "RPM Index:", rpmIdx);
         xIdx=Number.isFinite(timeIdx)?timeIdx:NaN;
         ySlots.forEach(s=>{ s.enabled=false; s.colIdx=-1; s.scale=1.0; s.color="#00aaff"; s.valEl=null; });
         autoSelectYs(); buildUI(); chart.innerHTML=""; toastMsg("Parsed. Configure axes, then Generate Plot.","ok");
-        console.log("UI built and plot enabled (if X-axis available).");
-      }catch(err){ toastMsg(err.message||"Parse error."); console.error("Parse error:", err); }
+      }catch(err){ toastMsg(err.message||"Parse error."); }
     };
     rd.readAsText(f);
   });

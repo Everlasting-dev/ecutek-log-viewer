@@ -33,7 +33,6 @@ function stageParsed(text, name, size){
   els.fileInfo.classList.remove("hidden");
   els.fileInfo.textContent = `Selected: ${S.name} · ${fmt(S.size)}`;
   els.genBtn.disabled = false;
-
   // file chip
   if (els.fileChips){
     els.fileChips.innerHTML = "";
