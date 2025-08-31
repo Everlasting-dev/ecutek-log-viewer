@@ -1,0 +1,4 @@
+Replies short, technical. EcuTek CSV/Plotly.
+Files of interest: index.html, compare.html, app.js, compare.js, parser.js, style.css.
+X axis = Time; skip Time-vs-Time; minis: hover off + no scrollZoom; mega: unified hover with RAW values.
+Keep sessionStorage (csvText/csvName/csvSize). Mobile-first. No library swaps.
