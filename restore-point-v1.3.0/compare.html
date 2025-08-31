@@ -1,0 +1,179 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>EcuTek Log Viewer (Compare)</title>
+  <link rel="stylesheet" href="style.css?v=1.3.0" />
+  <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+</head>
+<body class="compare-page">
+  <!-- Loading Screen -->
+  <div id="loadingScreen" class="loading-screen">
+    <div class="ascii-loading">
+      <div class="matrix"></div>
+      <div class="loading-text">ECU-TEK LOG VIEWER</div>
+      <div class="hint">loading…</div>
+    </div>
+  </div>
+
+  <!-- Taskbar -->
+  <div class="taskbar">
+    <div class="taskbar-content">
+      <div class="taskbar-left">
+        <div class="brand">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z" />
+          </svg>
+          EcuTek Log Viewer <span class="badge">COMPARE</span>
+        </div>
+        
+        <nav class="nav-menu">
+          <a href="#" class="nav-item active">Dashboard</a>
+          <div class="dropdown">
+            <a href="#" class="nav-item">File</a>
+            <div class="dropdown-content">
+              <a href="#" class="dropdown-item">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/>
+                </svg>
+                Open CSV File
+              </a>
+              <a href="#" class="dropdown-item">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                </svg>
+                Export Data
+              </a>
+              <div class="dropdown-divider"></div>
+              <a href="#" class="dropdown-item">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                </svg>
+                Recent Files
+              </a>
+            </div>
+          </div>
+          
+          <div class="dropdown">
+            <a href="#" class="nav-item">View</a>
+            <div class="dropdown-content">
+              <a href="#" class="dropdown-item">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                </svg>
+                Mega Plot
+              </a>
+              <a href="#" class="dropdown-item">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/>
+                </svg>
+                Multi Plot
+              </a>
+              <div class="dropdown-divider"></div>
+              <a href="about.html" class="dropdown-item">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                </svg>
+                About
+              </a>
+            </div>
+          </div>
+          
+          <div class="dropdown">
+            <a href="#" class="nav-item">Tools</a>
+            <div class="dropdown-content">
+              <a href="#" class="dropdown-item">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                </svg>
+                Data Analysis
+              </a>
+              <a href="#" class="dropdown-item">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+                </svg>
+                Statistics
+              </a>
+              <a href="#" class="dropdown-item">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                </svg>
+                Performance Metrics
+              </a>
+            </div>
+          </div>
+          
+          <div class="dropdown">
+            <a href="#" class="nav-item">Help</a>
+            <div class="dropdown-content">
+              <a href="#" class="dropdown-item">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/>
+                </svg>
+                Documentation
+              </a>
+              <a href="about.html" class="dropdown-item">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                </svg>
+                About
+              </a>
+            </div>
+          </div>
+        </nav>
+      </div>
+      
+      <div class="taskbar-right">
+        <div class="theme-toggle" id="themeToggle">
+          <svg class="theme-icon" id="themeIcon" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-3.03 0-5.5-2.47-5.5-5.5 0-1.82.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/>
+          </svg>
+          <span id="themeText">Dark</span>
+        </div>
+        
+
+      </div>
+    </div>
+  </div>
+
+
+
+  <div class="wrap">
+    <div class="card uploader">
+      <div class="pickers">
+        <label class="filebtn">
+          <input id="csvFile" type="file" accept=".csv,.txt,.log,text/csv,text/plain" />
+          <span>Choose Log File (.txt/.csv)</span>
+        </label>
+        <button id="clearBtn" class="btn ghost">Clear</button>
+      </div>
+      <div class="toolbar">
+        <button id="genBtnCompare" class="btn primary">Generate Plot</button>
+      </div>
+      <div id="fileInfo" class="fileinfo"></div>
+
+      <div id="toast" class="toast hidden"></div>
+    </div>
+
+    <div class="card">
+      <div id="axisPanel" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="plots">
+      <div class="plot-card">
+        <div class="plot-title">Comparison Plot</div>
+        <div class="plot-frame">
+          <div id="chart" class="plot big"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">Client‑side parsing. Your file never leaves the device. · v1.3.0</div>
+  <button id="toTop" class="totop" title="Back to top">↑ Top</button>
+  <!-- ES module so compare.js can import parser.js -->
+  <script type="module" src="compare.js?v=1.3.0"></script>
+</body>
+</html>

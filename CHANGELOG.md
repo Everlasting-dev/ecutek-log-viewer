@@ -2,6 +2,22 @@
 
 ## Version History
 
+### v1.3.0 – Mobile optimizations and cursor improvements
+**Date:** September 2025  
+**Status:** ✅ Released
+
+#### ✨ Features
+- Portrait side drawer (swipe from left) with taskbar links
+- Dotted blue cursor in Multi and Mega plots: tap-to-snap + drag-to-scroll
+
+#### 🐛 Fixes
+- Keep plots static while dragging cursor (no accidental pan)
+- Clamp snapping within data range; improved touch handling on iOS
+- Mini box shows RAW values via `customdata`
+
+#### 📦 Misc
+- Added restore point folder `restore-point-v1.3.0/`
+
 ### v1.0.1 (Current) - 🔧 Log Scale & Metadata Fixes
 **Date:** [Current Date]  
 **Status:** ✅ Complete
