@@ -224,6 +224,8 @@ document.addEventListener("DOMContentLoaded", () => {
   
   // Initialize dropdown interactions
   initDropdowns();
+  // Init drawer
+  initDrawer();
   
   // Start ASCII animation
   createAsciiAnimation();
@@ -251,3 +253,31 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 });
+
+// Drawer init (minimal copy)
+function initDrawer(){
+  const drawer = document.getElementById('drawer');
+  const scrim = document.getElementById('drawerScrim');
+  const edge = document.getElementById('edgeHint');
+  if (!drawer || !scrim || !edge) return;
+  const open = ()=>{ drawer.classList.add('open'); scrim.classList.add('show'); drawer.setAttribute('aria-hidden','false'); };
+  const close = ()=>{ drawer.classList.remove('open'); scrim.classList.remove('show'); drawer.setAttribute('aria-hidden','true'); };
+  scrim.addEventListener('click', close);
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape') close(); });
+  let startX=null, active=false;
+  const start=(x)=>{ startX=x; active=true; };
+  const move=(x)=>{ if(!active) return; if (x-startX>40) { open(); active=false; } };
+  const onTouchStart=e=>{ if (window.matchMedia('(orientation:portrait)').matches) start(e.touches[0].clientX); };
+  const onTouchMove =e=>{ if (window.matchMedia('(orientation:portrait)').matches) move(e.touches[0].clientX); };
+  const onMouseDown =e=>{ if (window.matchMedia('(orientation:portrait)').matches && e.clientX<14) start(e.clientX); };
+  const onMouseMove =e=>{ move(e.clientX); };
+  const end=()=>{ active=false; };
+  edge.addEventListener('touchstart', onTouchStart, {passive:true});
+  edge.addEventListener('touchmove',  onTouchMove,  {passive:true});
+  edge.addEventListener('mousedown',  onMouseDown);
+  window.addEventListener('mousemove', onMouseMove);
+  window.addEventListener('mouseup', end);
+  let dragStartX=null;
+  drawer.addEventListener('touchstart', e=>{ dragStartX=e.touches[0].clientX; }, {passive:true});
+  drawer.addEventListener('touchmove',  e=>{ const dx=e.touches[0].clientX-dragStartX; if (dx< -40) close(); }, {passive:true});
+}

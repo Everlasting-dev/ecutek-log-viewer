@@ -390,6 +390,26 @@ body{ margin:0; background:var(--bg); color:var(--fg);
   }
 }
 
+/* Mobile drawer (portrait) */
+.drawer{ position:fixed; top:0; left:0; height:100%; width:260px; background:var(--panel);
+  border-right:1px solid var(--line); box-shadow: var(--shadow); transform:translateX(-100%);
+  transition: transform .25s ease; z-index: 60; padding:14px; display:flex; flex-direction:column; gap:6px; }
+.drawer.open{ transform:translateX(0); }
+.drawer a{ color:var(--fg); text-decoration:none; padding:10px 8px; border-radius:8px; }
+.drawer a:hover{ background:var(--hover-bg); }
+.drawer .title{ font-weight:800; margin-bottom:6px; color:var(--fg); }
+
+.drawer-scrim{ position:fixed; inset:0; background:rgba(0,0,0,.35); backdrop-filter: blur(1px); z-index:55; display:none; }
+.drawer-scrim.show{ display:block; }
+
+.edge-hint{ position:fixed; left:0; top:50%; transform:translateY(-50%); width:4px; height:64px; border-radius:0 4px 4px 0;
+  background: linear-gradient(180deg, var(--accent-2), transparent); opacity:.6; z-index:65; display:none; }
+.edge-hint.hidden{ display:none; }
+
+@media (orientation:portrait){
+  .edge-hint{ display:block; }
+}
+
 /* Loading screen */
 .loading-screen {
   position: fixed;
