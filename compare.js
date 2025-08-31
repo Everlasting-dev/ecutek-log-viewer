@@ -26,23 +26,33 @@ function updateCursor(gd,x,data){
 }
 
 function wireCursor(gd, data){
-  // tap/click to snap (uses plotly's resolved data point)
+  let dragging = false;
+  let lastX = null;        // data-space x under the finger
+  let suppressClick = false;
+
+  // remove any old handlers
   gd.removeAllListeners?.('plotly_click');
+
+  // ignore the synthetic click after a drag
   gd.on('plotly_click', ev => {
+    if (suppressClick) return;                       // <- stop post-drag click
     const x = ev?.points?.[0]?.x;
     if (Number.isFinite(x)) {
-      const idx = nearestIndex(data.time, x);
-      showPointInfoAt(idx);
+      const i = nearestIndex(data.time, x);
+      showPointInfoAt(i);
+      lastX = x;
     }
   });
 
-  const rect = gd.querySelector('.plotly .nsewdrag');  // the transparent drag layer
-  if(!rect) return;
+  const layer = gd.querySelector('.plotly .nsewdrag');
+  if (!layer) return;
 
-  rect.style.touchAction = 'none';   // disable browser/pinch gestures
+  // hard-disable browser scroll/zoom gestures over the plot
+  layer.style.touchAction = 'none';
+  (gd.parentElement || gd).style.overscrollBehavior = 'contain';
 
-  const fl = () => gd._fullLayout;
-  const clampX = (x) => {
+  const f = () => gd._fullLayout;
+  const clamp = (x) => {
     const xs = data.time;
     if (!xs?.length) return x;
     if (x <= xs[0]) return xs[0];
@@ -51,18 +61,47 @@ function wireCursor(gd, data){
   };
 
   const move = (e) => {
-    e.preventDefault(); e.stopPropagation();            // <-- stop plot panning
+    // must be non-passive to actually stop scroll on iOS
+    e.preventDefault();
+    e.stopPropagation();
     const p = e.touches ? e.touches[0] : e;
     const bb = gd.getBoundingClientRect();
-    const f = fl(); if (!f || !f.xaxis || !f.margin) return;
-    const xpx = p.clientX - bb.left - f.margin.l;       // px inside plotting area
-    const x   = clampX(f.xaxis.p2d(xpx));               // convert px→data, clamp
-    const i   = nearestIndex(data.time, x);
-    showPointInfoAt(i);                                  // moves dotted line + box
+    const fl = f(); if (!fl || !fl.xaxis || !fl.margin) return;
+    const xpx = p.clientX - bb.left - fl.margin.l;   // px inside plot area
+    const x   = clamp(fl.xaxis.p2d(xpx));           // px -> data, clamped
+    lastX = x;
+    const i = nearestIndex(data.time, x);
+    showPointInfoAt(i);                              // updates dotted line + box
   };
 
-  rect.addEventListener('pointerdown', e => { rect.setPointerCapture?.(e.pointerId); move(e); });
-  rect.addEventListener('pointermove',  e => move(e));
+  const onDown = (e) => {
+    dragging = true;
+    suppressClick = true;
+    layer.setPointerCapture?.(e.pointerId);
+    move(e);
+  };
+  const onUp = (e) => {
+    // keep the line at the last position (don’t jump)
+    if (lastX != null) {
+      const i = nearestIndex(data.time, lastX);
+      showPointInfoAt(i);
+    }
+    dragging = false;
+    // allow clicks again on next tick
+    setTimeout(() => { suppressClick = false; }, 0);
+  };
+  const onCancel = () => { dragging = false; /* keep lastX; don’t reset */ };
+
+  // Pointer events
+  layer.addEventListener('pointerdown', onDown,   { passive:false });
+  layer.addEventListener('pointermove',  (e) => { if (dragging) move(e); }, { passive:false });
+  layer.addEventListener('pointerup',    onUp,    { passive:false });
+  layer.addEventListener('pointercancel',onCancel,{ passive:false });
+
+  // iOS fallback
+  layer.addEventListener('touchstart', onDown,   { passive:false });
+  layer.addEventListener('touchmove',  (e)=>{ if (dragging) move(e); }, { passive:false });
+  layer.addEventListener('touchend',   onUp,     { passive:false });
 }
 
 // ASCII Dot-Matrix Animation
@@ -503,8 +542,7 @@ function plot(showToasts=true, preserveRange=false){
       // Remove existing click handler
       chartContainer.removeEventListener("click", handleContainerClick);
       
-      // Add new click handler
-      chartContainer.addEventListener("click", handleContainerClick);
+      // Do not re-add container click; snapping is handled by wireCursor
     }
 
     // Add cursor after plot & enable snapping
