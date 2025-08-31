@@ -441,6 +441,28 @@ function plot(showToasts=true, preserveRange=false){
       // Add new click handler
       chartContainer.addEventListener("click", handleContainerClick);
     }
+
+    // Follow finger/mouse: continuous snap while dragging
+    const dragRect = chart.querySelector('.plotly .nsewdrag') || chart;
+    const fl = chart && chart._fullLayout;
+    let dragging = false;
+    function xDataFromEvent(ev){
+      if (!fl || !fl.xaxis || !fl.margin) return null;
+      const p = ev.touches ? ev.touches[0] : ev;
+      const bb = chart.getBoundingClientRect();
+      const xpx = p.clientX - bb.left - fl.margin.l; // px in plot area
+      return fl.xaxis.p2d(xpx);
+    }
+    function snapAt(ev){
+      const xd = xDataFromEvent(ev);
+      if (xd==null) return;
+      const idx = nearestIndexByX(xd);
+      if (Number.isFinite(idx)) showPointInfoAt(idx);
+    }
+    dragRect.addEventListener('pointerdown', e=>{ dragging=true; dragRect.setPointerCapture?.(e.pointerId); snapAt(e); });
+    dragRect.addEventListener('pointermove', e=>{ if (dragging) snapAt(e); });
+    dragRect.addEventListener('pointerup',   ()=>{ dragging=false; });
+    dragRect.addEventListener('pointercancel', ()=>{ dragging=false; });
   });
 
   updateReadouts();
