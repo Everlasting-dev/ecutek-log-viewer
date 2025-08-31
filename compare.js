@@ -183,8 +183,6 @@ function bindChartHandlers(){
   
   // Single click handler that works for all clicks
   chart.on("plotly_click", (ev) => {
-    console.log("Plot clicked:", ev);
-    
     let targetIdx = null;
     
     // If click is on a data point, use that index
@@ -193,17 +191,15 @@ function bindChartHandlers(){
     }
     // If click is anywhere else on the plot, find nearest point
     else if (ev?.xval !== undefined) {
-      const x = chart.data?.[0]?.x;
-      if (x?.length) {
-        const targetX = ev.xval;
-        let bestIdx = 0;
-        let bestDist = Infinity;
+      const x = chart.data?.[0]?.x; if (x?.length){
+        const bb = chart.getBoundingClientRect();
+        const fl = chart && chart._fullLayout; if (!fl || !fl.xaxis || !fl.margin) return;
+        const xpx = ev.event?.clientX ? (ev.event.clientX - bb.left - fl.margin.l) : 0;
+        const targetX = Number.isFinite(xpx) ? fl.xaxis.p2d(xpx) : ev.xval;
+        let bestIdx = 0, bestDist = Infinity;
         for (let i = 0; i < x.length; i++) {
           const dist = Math.abs(x[i] - targetX);
-          if (dist < bestDist) {
-            bestDist = dist;
-            bestIdx = i;
-          }
+          if (dist < bestDist) { bestDist = dist; bestIdx = i; }
         }
         targetIdx = bestIdx;
       }
@@ -455,12 +451,12 @@ function plot(showToasts=true, preserveRange=false){
 function handleContainerClick(event) {
   // Only handle clicks on the chart area, not on controls
   if (event.target.closest('.plot-frame') || event.target.closest('.plot')) {
-    const rect = chart.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-    
-    // Convert screen coordinates to data coordinates
-    const xData = chart.layout.xaxis.range[0] + (x / rect.width) * (chart.layout.xaxis.range[1] - chart.layout.xaxis.range[0]);
+    const bb = chart.getBoundingClientRect();
+    const fl = chart && chart._fullLayout;
+    if (!fl || !fl.xaxis || !fl.margin) return;
+    // Convert clientX to plot-area pixels (exclude left margin), then to data
+    const xpx = event.clientX - bb.left - fl.margin.l;
+    const xData = fl.xaxis.p2d(xpx);
     
     // Find nearest data point
     const dataX = chart.data[0]?.x;
