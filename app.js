@@ -73,9 +73,33 @@ function initTheme() {
       document.documentElement.setAttribute("data-theme", newTheme);
       localStorage.setItem("theme", newTheme);
       updateThemeUI(newTheme);
+      
+      // Update plots to match theme
+      const isLight = newTheme === "light";
+      const plotElements = document.querySelectorAll('.plot');
+      if (plotElements.length > 0) {
+        applyTheme(isLight, Array.from(plotElements));
+      }
+      
+      // Force drop zone and chips to re-evaluate CSS variables
+      const dz = document.getElementById('dropzone');
+      if (dz){ dz.style.transition = 'background-color .2s ease, border-color .2s ease'; dz.offsetHeight; }
     });
   }
 }
+// Apply Plotly theme/colors for current tokens (paper/plot)
+function applyTheme(isLight, targets){
+  const template = isLight ? 'plotly_white' : 'plotly_dark';
+  const cs = getComputedStyle(document.documentElement);
+  const paper = cs.getPropertyValue('--plot-paper').trim();
+  const plot  = cs.getPropertyValue('--plot-bg').trim();
+  const text  = cs.getPropertyValue('--text').trim();
+  targets.forEach(gd=>{
+    if (!gd || !gd._fullLayout) return;
+    Plotly.relayout(gd, { template, paper_bgcolor: paper, plot_bgcolor: plot, 'font.color': text, 'xaxis.color': text, 'yaxis.color': text });
+  });
+}
+window.applyTheme = applyTheme;
 
 function updateThemeUI(theme) {
   const themeIcon = document.getElementById("themeIcon");
@@ -291,6 +315,12 @@ function renderPlots(){
     els.plots.innerHTML = "";
     const x = S.cols[S.timeIdx];
 
+    const cs = getComputedStyle(document.documentElement);
+    const paper = cs.getPropertyValue('--plot-paper').trim() || "#ffffff";
+    const plot  = cs.getPropertyValue('--plot-bg').trim() || "#ffffff";
+    const text  = cs.getPropertyValue('--text').trim() || "#0f141a";
+    const template = (document.documentElement.getAttribute('data-theme') === 'light') ? 'plotly_white' : 'plotly_dark';
+
     for (let i=0;i<S.headers.length;i++){
       if (i === S.timeIdx) continue;                 // no Time vs Time
       const valid = S.cols[i].reduce((a,v)=>a+(Number.isFinite(v)?1:0),0);
@@ -302,11 +332,12 @@ function renderPlots(){
       const div=document.createElement("div"); div.className="plot";
       frame.appendChild(div); card.appendChild(title); card.appendChild(frame); els.plots.appendChild(card);
 
-      Plotly.newPlot(div, [{x, y:S.cols[i], mode:"lines", name:S.headers[i], line:{width:1, color:'#00ff66'}}],
-        { paper_bgcolor:"#0f1318", plot_bgcolor:"#0f1318", font:{color:"#e7ecf2"},
-          margin:{l:50,r:10,t:10,b:40}, xaxis:{title:S.headers[S.timeIdx], gridcolor:"#1b1f25"},
-          yaxis:{title:S.headers[i], gridcolor:"#1b1f25", automargin:true}, showlegend:false },
-        { displaylogo:false, responsive:true, scrollZoom:false, staticPlot:true, doubleClick:false });
+      Plotly.newPlot(div, [{x, y:S.cols[i], mode:"lines", name:S.headers[i], line:{width:1}}],
+        { template, paper_bgcolor:paper, plot_bgcolor:plot, font:{color:text},
+          margin:{l:50,r:10,t:10,b:40}, xaxis:{title:S.headers[S.timeIdx]},
+          yaxis:{title:S.headers[i], automargin:true}, showlegend:false },
+        { displaylogo:false, responsive:true, scrollZoom:false, staticPlot:true, doubleClick:false })
+        .then(()=> applyTheme(document.documentElement.getAttribute('data-theme')==='light', [div]));
     }
     
     hideLoading();
