@@ -108,6 +108,10 @@ body{ margin:0; background:var(--bg); color:var(--fg);
   background:var(--hover-bg);
 }
 
+.theme-icon{
+  width:18px; height:18px; color:var(--muted);
+}
+
 
 
 /* Top bar (legacy - keeping for compatibility) */
