@@ -402,12 +402,13 @@ body{ margin:0; background:var(--bg); color:var(--fg);
 .drawer-scrim{ position:fixed; inset:0; background:rgba(0,0,0,.35); backdrop-filter: blur(1px); z-index:55; display:none; }
 .drawer-scrim.show{ display:block; }
 
-.edge-hint{ position:fixed; left:0; top:50%; transform:translateY(-50%); width:4px; height:64px; border-radius:0 4px 4px 0;
-  background: linear-gradient(180deg, var(--accent-2), transparent); opacity:.6; z-index:65; display:none; }
+.edge-hint{ position:fixed; left:0; top:0; height:100%; width:28px; border-radius:0 4px 4px 0;
+  background: linear-gradient(180deg, rgba(67,179,255,.35), transparent); opacity:.4; z-index:65; display:none; touch-action: pan-y; }
 .edge-hint.hidden{ display:none; }
 
 @media (orientation:portrait){
   .edge-hint{ display:block; }
+  .nav-menu{ display:none; }
 }
 
 /* Loading screen */

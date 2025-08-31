@@ -630,7 +630,10 @@ function tryLoadCached(){
       xMax = x.length ? x[x.length-1] : 100;
     }
     ySlots.forEach(s=>{ s.enabled=false; s.colIdx=-1; s.scale=1; s.color="#00aaff"; s.ui={}; });
-    autoSelectYs(); buildUI(); chart.innerHTML=""; toastMsg("Loaded cached CSV. Configure axes, then Generate Plot.","ok");
+    autoSelectYs(); buildUI();
+    // draw initial plot automatically
+    plot(true,false);
+    toastMsg("Loaded cached CSV.","ok");
     return true;
   }catch(e){ console.warn("cache parse fail",e); return false; }
 }
@@ -861,6 +864,13 @@ function initDrawer(){
   edge.addEventListener('mousedown',  onMouseDown);
   window.addEventListener('mousemove', onMouseMove);
   window.addEventListener('mouseup', end);
+  // Global touch fallback for PWA/app mode
+  document.addEventListener('touchstart', e=>{
+    if (!window.matchMedia('(orientation:portrait)').matches) return;
+    const x = e.touches[0].clientX;
+    if (x < 20) start(x);
+  }, {passive:true});
+  document.addEventListener('touchmove', e=>{ if (active) move(e.touches[0].clientX); }, {passive:true});
   let dragStartX=null;
   drawer.addEventListener('touchstart', e=>{ dragStartX=e.touches[0].clientX; }, {passive:true});
   drawer.addEventListener('touchmove',  e=>{ const dx=e.touches[0].clientX-dragStartX; if (dx< -40) close(); }, {passive:true});

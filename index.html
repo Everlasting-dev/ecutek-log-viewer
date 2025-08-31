@@ -144,9 +144,39 @@
     <!-- Mobile drawer and scrim -->
     <div id="drawer" class="drawer" aria-hidden="true">
       <div class="title">Navigation</div>
-      <a href="index.html">Dashboard</a>
-      <a href="compare.html">Mega Plot</a>
-      <a href="about.html">About</a>
+      <nav class="nav-menu" style="display:flex; flex-direction:column; gap:4px;">
+        <a href="#" class="nav-item active">Dashboard</a>
+        <div class="dropdown">
+          <a href="#" class="nav-item">File</a>
+          <div class="dropdown-content" style="position:static; transform:none; opacity:1; visibility:visible; box-shadow:none; border:none; background:transparent;">
+            <a href="#" class="dropdown-item">Open CSV File</a>
+            <a href="#" class="dropdown-item">Export Data</a>
+          </div>
+        </div>
+        <div class="dropdown">
+          <a href="#" class="nav-item">View</a>
+          <div class="dropdown-content" style="position:static; transform:none; opacity:1; visibility:visible; box-shadow:none; border:none; background:transparent;">
+            <a href="#" class="dropdown-item">Multi Plot</a>
+            <a href="#" class="dropdown-item">Mega Plot</a>
+            <a href="about.html" class="dropdown-item">About</a>
+          </div>
+        </div>
+        <div class="dropdown">
+          <a href="#" class="nav-item">Tools</a>
+          <div class="dropdown-content" style="position:static; transform:none; opacity:1; visibility:visible; box-shadow:none; border:none; background:transparent;">
+            <a href="#" class="dropdown-item">Data Analysis</a>
+            <a href="#" class="dropdown-item">Statistics</a>
+            <a href="#" class="dropdown-item">Performance Metrics</a>
+          </div>
+        </div>
+        <div class="dropdown">
+          <a href="#" class="nav-item">Help</a>
+          <div class="dropdown-content" style="position:static; transform:none; opacity:1; visibility:visible; box-shadow:none; border:none; background:transparent;">
+            <a href="#" class="dropdown-item">Documentation</a>
+            <a href="about.html" class="dropdown-item">About</a>
+          </div>
+        </div>
+      </nav>
     </div>
     <div id="drawerScrim" class="drawer-scrim" tabindex="-1"></div>
     <div id="edgeHint" class="edge-hint"></div>

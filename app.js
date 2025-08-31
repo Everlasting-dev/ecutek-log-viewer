@@ -119,6 +119,14 @@ function initDrawer(){
   window.addEventListener('mousemove', onMouseMove);
   window.addEventListener('mouseup', end);
 
+  // Global touch start fallback (in PWA/app mode where edge hint may not receive events)
+  document.addEventListener('touchstart', e=>{
+    if (!window.matchMedia('(orientation:portrait)').matches) return;
+    const x = e.touches[0].clientX;
+    if (x < 20) start(x);
+  }, {passive:true});
+  document.addEventListener('touchmove', e=>{ if (active) move(e.touches[0].clientX); }, {passive:true});
+
   // Close with right swipe inside drawer
   let dragStartX=null;
   drawer.addEventListener('touchstart', e=>{ dragStartX=e.touches[0].clientX; }, {passive:true});
