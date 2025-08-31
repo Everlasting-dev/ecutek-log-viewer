@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>About – EcuTek Log Viewer</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .page-title{font-size:28px;font-weight:800;text-align:center;margin:18px 0 6px}
+    .page-subtitle{color:var(--muted);text-align:center;margin:0 0 14px}
+    .kv{display:grid;grid-template-columns:160px 1fr;gap:8px 16px}
+    @media (max-width:600px){.kv{grid-template-columns:1fr}}
+    .kv dt{color:#b8c6d6;font-weight:600}
+    .kv dd{margin:0}
+    .feature-list{margin:0;padding-left:18px}
+    .about-section + .about-section{margin-top:14px}
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
+      </svg>
+      EcuTek Log Viewer <span class="badge">ABOUT</span>
+    </div>
+    <div class="actions"></div>
+  </div>
+
+  <div class="wrap">
+    <div class="card">
+      <h1 class="page-title">LOG VIEWER <span class="badge">BETA</span></h1>
+      <p class="page-subtitle">Client-side CSV parsing and plotting for ECU tuning logs.</p>
+
+      <section class="about-section">
+        <h2 style="margin:0 0 6px">What is it?</h2>
+        <p style="margin:0;color:var(--muted)">
+          A <strong>client-side</strong> CSV/TXT log viewer for EcuTek style exports. Real-time graphs for RPM, boost, AFR, throttle, ignition, etc.
+          All parsing & rendering happens in your browser. <strong>No uploads.</strong>
+        </p>
+      </section>
+
+      <section class="about-section">
+        <h2 style="margin:0 0 6px">Key features</h2>
+        <ul class="feature-list" style="color:var(--muted)">
+          <li><strong>Multi Plot:</strong> multiple Y-axes vs Time</li>
+          <li><strong>Mega Plot:</strong> compare/offset/scale with point tracking</li>
+          <li><strong>100% Local:</strong> zero server processing</li>
+          <li><strong>Responsive:</strong> desktop & mobile</li>
+          <li><strong>Dark UI:</strong> matches your theme</li>
+          <li><strong>Session cache:</strong> switch pages without re-upload</li>
+        </ul>
+      </section>
+
+      <section class="about-section">
+        <h2 style="margin:0 0 6px">Supported formats</h2>
+        <p style="margin:0;color:var(--muted)">
+          EcuTek CSV/TXT with a header row and time-series columns (e.g., <em>Time</em>, <em>RPM</em>, <em>Boost</em>, <em>AFR</em>, <em>Throttle</em>, <em>Ignition</em>).
+        </p>
+      </section>
+
+      <section class="about-section">
+        <h2 style="margin:0 0 6px">Tech stack</h2>
+        <p style="margin:0;color:var(--muted)">
+          Vanilla JS + HTML5 + CSS3. <strong>Plotly.js</strong> for charts, <strong>PapaParse</strong> for CSV. Optimized for large logs—no backend.
+        </p>
+      </section>
+
+      <section class="about-section">
+        <h2 style="margin:0 0 6px">Privacy</h2>
+        <p style="margin:0;color:var(--muted)">
+          Logs are processed locally. <strong>No network requests</strong> for file handling; your data stays on your device.
+        </p>
+      </section>
+
+      <section class="about-section">
+        <h2 style="margin:0 0 6px">Release</h2>
+        <dl class="kv" style="color:var(--muted)">
+          <dt>Current Version</dt><dd>v1.0.0</dd>
+          <dt>Last Updated</dt><dd>January 2025</dd>
+          <dt>Browser Support</dt><dd>Chrome 80+, Firefox 75+, Safari 13+, Edge 80+</dd>
+          <dt>Contact</dt><dd><a href="mailto:akram@example.com">akram@example.com</a></dd>
+          <dt>License</dt><dd>MIT</dd>
+        </dl>
+      </section>
+    </div>
+  </div>
+
+  <div class="footer">Client-side parsing. Your file never leaves the device. · v1.0.0</div>
+</body>
+</html>
+
