@@ -524,6 +524,13 @@ function plot(showToasts=true, preserveRange=false){
     if (parsedData) {
       addCursor(chart);
       wireCursor(chart, parsedData);
+      // Live readout update on cursor move
+      if (chart._cursorHandler) chart.removeEventListener('cursor-update', chart._cursorHandler);
+      chart._cursorHandler = (ev)=>{
+        const idx = ev?.detail?.index;
+        if (Number.isFinite(idx)) showPointInfoAt(idx);
+      };
+      chart.addEventListener('cursor-update', chart._cursorHandler);
     }
     
     // Ensure chart has proper styling
