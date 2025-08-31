@@ -11,7 +11,11 @@ let cursorShape = {
 };
 
 function nearestIndex(arr,x){
+  if (!Array.isArray(arr) || arr.length === 0) return 0;
+  if (!Number.isFinite(x)) return 0;
   let lo=0, hi=arr.length-1;
+  if (x <= arr[0]) return 0;
+  if (x >= arr[hi]) return hi;
   while(hi-lo>1){ 
     const m=(lo+hi)>>1; 
     if(arr[m]<x) lo=m; else hi=m; 
@@ -22,6 +26,8 @@ function nearestIndex(arr,x){
 function addCursor(gd){ Plotly.relayout(gd, { shapes:[cursorShape] }); }
 
 function updateCursor(gd,x,data){
+  if (!data || !Array.isArray(data.time) || data.time.length === 0) return;
+  if (!Number.isFinite(x)) return;
   Plotly.relayout(gd, { 'shapes[0].x0':x, 'shapes[0].x1':x });
   const i = nearestIndex(data.time, x);
   gd.dispatchEvent(new CustomEvent('cursor-update', { detail:{ index:i, t:data.time[i] } }));
@@ -38,8 +44,10 @@ function wireCursor(gd,data){
   const move = e => {
     const p = e.touches ? e.touches[0] : e;
     const bb = gd.getBoundingClientRect();
+    const fl = gd && gd._fullLayout;
+    if (!fl || !fl.xaxis || !fl.margin) return;
     const xpx = p.clientX - bb.left;
-    const x = gd._fullLayout.xaxis.p2d(xpx - gd._fullLayout.margin.l);
+    const x = fl.xaxis.p2d(xpx - fl.margin.l);
     updateCursor(gd, x, data);
   };
   rect.addEventListener('pointerdown', e => { move(e); rect.setPointerCapture(e.pointerId); });
