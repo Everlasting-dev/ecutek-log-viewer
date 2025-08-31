@@ -1,6 +1,49 @@
 ﻿// Compare view: aligned 5-col UI, value-only chips with ▲▼, fixed 50% step, preserve X-range, auto-select Ys.
 import { parseCSV, findTimeIndex, findRpmIndex, numericColumns } from "./parser.js";
 
+// ============================================================================
+// Cursor helpers – dotted blue line, tap-to-snap + drag-to-scroll
+// ============================================================================
+
+let cursorShape = {
+  type:'line', xref:'x', yref:'paper', y0:0, y1:1,
+  x0:0, x1:0, line:{color:'#43B3FF', width:2, dash:'dot'}
+};
+
+function nearestIndex(arr,x){
+  if (!Array.isArray(arr) || arr.length === 0) return 0;
+  let lo=0, hi=arr.length-1;
+  while(hi-lo>1){ const m=(lo+hi)>>1; if(arr[m]<x) lo=m; else hi=m; }
+  return (x-arr[lo] <= arr[hi]-x) ? lo : hi;
+}
+
+function addCursor(gd){ Plotly.relayout(gd, { shapes:[cursorShape] }); }
+
+function updateCursor(gd,x,data){
+  Plotly.relayout(gd, { 'shapes[0].x0':x, 'shapes[0].x1':x });
+  const i = nearestIndex(data.time, x);
+  gd.dispatchEvent(new CustomEvent('cursor-update', { detail:{ index:i, t:data.time[i] } }));
+}
+
+function wireCursor(gd,data){
+  // tap/click to snap
+  gd.on('plotly_click', ev => updateCursor(gd, ev.points[0]?.x ?? ev.xval, data));
+
+  // drag anywhere to move
+  const rect = gd.querySelector('.plotly .nsewdrag');
+  if(!rect) return;
+  rect.style.touchAction = 'none'; // stop pinch-zoom
+  const move = e => {
+    const p = e.touches ? e.touches[0] : e;
+    const bb = gd.getBoundingClientRect();
+    const xpx = p.clientX - bb.left;
+    const x = gd._fullLayout.xaxis.p2d(xpx - gd._fullLayout.margin.l);
+    updateCursor(gd, x, data);
+  };
+  rect.addEventListener('pointerdown', e => { move(e); rect.setPointerCapture(e.pointerId); });
+  rect.addEventListener('pointermove', move);
+}
+
 // ASCII Dot-Matrix Animation
 const el = document.getElementById('led');
 const ROWS = 8, COLS = 8;
@@ -374,7 +417,7 @@ function plot(showToasts=true, preserveRange=false){
   const lineColor = computedStyle.getPropertyValue('--line').trim();
   const fgColor = computedStyle.getPropertyValue('--fg').trim();
 
-  Plotly.react(chart,traces,{
+  const layout = {
     paper_bgcolor:cardBg, plot_bgcolor:cardBg, font:{color:fgColor, size:14},
     margin:{l:60,r:10,t:60,b:44},
     xaxis:{
@@ -407,7 +450,9 @@ function plot(showToasts=true, preserveRange=false){
     modebar: {
       remove: ["zoom2d", "pan2d", "select2d", "lasso2d", "zoomIn2d", "zoomOut2d", "autoScale2d", "resetScale2d"]
     }
-  }, {
+  };
+  layout.dragmode = 'pan';
+  Plotly.newPlot(chart,traces,layout,{
     displaylogo:false,
     responsive:true,
     scrollZoom:false,
@@ -441,6 +486,10 @@ function plot(showToasts=true, preserveRange=false){
       // Add new click handler
       chartContainer.addEventListener("click", handleContainerClick);
     }
+
+    // Add cursor after plot & enable snapping
+    addCursor(chart);
+    wireCursor(chart, { time: cols[xIdx] });
 
     // Follow finger/mouse: continuous snap while dragging
     const dragRect = chart.querySelector('.plotly .nsewdrag') || chart;

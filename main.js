@@ -2,6 +2,40 @@
 // Comma CSV, comment lines start with '#'
 import { parseCSV, findTimeIndex, findRpmIndex, numericColumns } from "./parser.js";
 
+// ============================================================================
+// Cursor helpers – dotted blue line, tap-to-snap + drag-to-scroll (for multi-plots)
+// ============================================================================
+
+let cursorShape = {
+  type:'line', xref:'x', yref:'paper', y0:0, y1:1,
+  x0:0, x1:0, line:{color:'#43B3FF', width:2, dash:'dot'}
+};
+
+function nearestIndex(arr,x){
+  if (!Array.isArray(arr) || arr.length === 0) return 0;
+  let lo=0, hi=arr.length-1;
+  while(hi-lo>1){ const m=(lo+hi)>>1; if(arr[m]<x) lo=m; else hi=m; }
+  return (x-arr[lo] <= arr[hi]-x) ? lo : hi;
+}
+
+function addCursor(gd){ Plotly.relayout(gd, { shapes:[cursorShape] }); }
+function updateCursor(gd,x,data){
+  Plotly.relayout(gd, { 'shapes[0].x0':x, 'shapes[0].x1':x });
+  const i = nearestIndex(data.time, x);
+  gd.dispatchEvent(new CustomEvent('cursor-update', { detail:{ index:i, t:data.time[i] } }));
+}
+function wireCursor(gd,data){
+  gd.on('plotly_click', ev => updateCursor(gd, ev.points[0]?.x ?? ev.xval, data));
+  const rect = gd.querySelector('.plotly .nsewdrag'); if(!rect) return; rect.style.touchAction='none';
+  const move = e => {
+    const p=e.touches?e.touches[0]:e; const bb=gd.getBoundingClientRect();
+    const xpx=p.clientX-bb.left; const x=gd._fullLayout.xaxis.p2d(xpx-gd._fullLayout.margin.l);
+    updateCursor(gd,x,data);
+  };
+  rect.addEventListener('pointerdown', e=>{ move(e); rect.setPointerCapture(e.pointerId); });
+  rect.addEventListener('pointermove', move);
+}
+
 const $ = (id) => document.getElementById(id);
 const csvFile = $("csvFile");
 const plotsEl = $("plots");
@@ -61,11 +95,13 @@ function renderMultiPlots(){
     card.appendChild(frame);
     plotsEl.appendChild(card);
 
-    Plotly.newPlot(div, [{ x, y: cols[i], mode:"lines", name:headers[i], line:{width:1} }], {
-      paper_bgcolor:"#0f1318", plot_bgcolor:"#0f1318", font:{color:"#e7ecf2"},
+    const traces = [{ x, y: cols[i], mode:"lines", name:headers[i], line:{width:1} }];
+    const layout = { paper_bgcolor:"#0f1318", plot_bgcolor:"#0f1318", font:{color:"#e7ecf2"},
       margin:{l:50,r:10,t:10,b:40}, xaxis:{title:headers[timeIdx], gridcolor:"#1b1f25", rangeslider: { visible: true, bgcolor:"#10161e", borderColor: "#1b1f25" },  type: "linear"},
-      yaxis:{title:headers[i], gridcolor:"#1b1f25", automargin:true}, showlegend:false
-    }, {displaylogo:false, responsive:true});
+      yaxis:{title:headers[i], gridcolor:"#1b1f25", automargin:true}, showlegend:false };
+    layout.dragmode='pan';
+    Plotly.newPlot(div, traces, layout, {displaylogo:false, responsive:true})
+      .then(()=>{ addCursor(div); wireCursor(div, { time:x }); });
   }
 }
 
