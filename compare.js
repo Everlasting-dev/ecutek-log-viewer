@@ -417,7 +417,9 @@ function plot(showToasts=true, preserveRange=false){
     const s = ySlots[i];
     if(!s.enabled || s.colIdx===-1) continue;
     const param = headers[s.colIdx];
-    const rawY    = parsedData ? parsedData.raw[param] : cols[s.colIdx];
+    const rawY = (parsedData && parsedData.raw && Array.isArray(parsedData.raw[param]))
+      ? parsedData.raw[param]
+      : cols[s.colIdx];
     const scale   = s.scale ?? 1;
     const scaledY = rawY.map(v => Number.isFinite(v) ? (v * scale) : v);
     
@@ -443,6 +445,17 @@ function plot(showToasts=true, preserveRange=false){
     });
   }
   if(!traces.length){ if(showToasts) toastMsg("Enable at least one Y axis."); return; }
+
+  // Guard: if any trace has no y data due to missing raw mapping, fall back to cols
+  for (let t of traces){
+    if (!Array.isArray(t.y) || !t.y.length){
+      const idx = headers.indexOf(t.name);
+      if (idx >= 0) {
+        t.y = cols[idx];
+        t.customdata = cols[idx];
+      }
+    }
+  }
 
   // Ensure chart element exists
   if (!chart) {
