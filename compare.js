@@ -1,81 +1,8 @@
 ﻿// Compare view: aligned 5-col UI, value-only chips with ▲▼, fixed 50% step, preserve X-range, auto-select Ys.
-import { parseCSV, findTimeIndex, findRpmIndex, numericColumns } from "./parser.js?v=1.3.1";
+import { parseCSV, findTimeIndex, findRpmIndex, numericColumns } from "./parser.js";
 
-// ============================================================================
-// CURSOR HELPERS
-// ============================================================================
-
-let cursorShape = {
-  type:'line', xref:'x', yref:'paper', y0:0, y1:1,
-  x0:0, x1:0, line:{color:'#43B3FF', width:2, dash:'dot'}
-};
-
-function nearestIndex(arr,x){
-  if (!Array.isArray(arr) || arr.length === 0) return 0;
-  if (!Number.isFinite(x)) return 0;
-  let lo=0, hi=arr.length-1;
-  if (x <= arr[0]) return 0;
-  if (x >= arr[hi]) return hi;
-  while(hi-lo>1){ 
-    const m=(lo+hi)>>1; 
-    if(arr[m]<x) lo=m; else hi=m; 
-  }
-  return (x-arr[lo] <= arr[hi]-x) ? lo : hi;
-}
-
-function addCursor(gd){ Plotly.relayout(gd, { shapes:[cursorShape] }); }
-
-function updateCursor(gd,x,data){
-  if (!data || !Array.isArray(data.time) || data.time.length === 0) return;
-  if (!Number.isFinite(x)) return;
-  Plotly.relayout(gd, { 'shapes[0].x0':x, 'shapes[0].x1':x });
-  const i = nearestIndex(data.time, x);
-  gd.dispatchEvent(new CustomEvent('cursor-update', { detail:{ index:i, t:data.time[i] } }));
-}
-
-function wireCursor(gd,data){
-  // tap/click to snap
-  gd.on('plotly_click', ev => updateCursor(gd, ev.points[0].x, data));
-
-  // drag anywhere to move
-  const rect = gd.querySelector('.plotly .nsewdrag');
-  if(!rect) return;
-  rect.style.touchAction = 'none'; // stop pinch-zoom
-  const move = e => {
-    const p = e.touches ? e.touches[0] : e;
-    const bb = gd.getBoundingClientRect();
-    const fl = gd && gd._fullLayout;
-    if (!fl || !fl.xaxis || !fl.margin) return;
-    const xpx = p.clientX - bb.left;
-    const x = fl.xaxis.p2d(xpx - fl.margin.l);
-    updateCursor(gd, x, data);
-  };
-  rect.addEventListener('pointerdown', e => { move(e); rect.setPointerCapture(e.pointerId); });
-  rect.addEventListener('pointermove', move);
-}
-
-// ============================================================================
-// THEME HELPERS
-// ============================================================================
-
-function applyTheme(isLight, targets){
-  document.documentElement.classList.toggle('light', isLight);
-  const template = isLight ? 'plotly_white' : 'plotly_dark';
-  const paper = getComputedStyle(document.documentElement).getPropertyValue('--plot-paper').trim();
-  const plot  = getComputedStyle(document.documentElement).getPropertyValue('--plot-bg').trim();
-  targets.forEach(gd => {
-    if (!gd) return;
-    Plotly.relayout(gd, { template, paper_bgcolor: paper, plot_bgcolor: plot });
-  });
-}
-
-// Expose globally for theme toggling
-window.applyTheme = applyTheme;
-
-// ============================================================================
 // ASCII Dot-Matrix Animation
-// ============================================================================
-const el = document.querySelector('.ascii-loading .matrix');
+const el = document.getElementById('led');
 const ROWS = 8, COLS = 8;
 const SCALE = [' ', '.', ':', '*', 'o', 'O', '#', '@'];
 const CELL_W = 2;
@@ -132,7 +59,6 @@ const loadingScreen = $("loadingScreen");
 let headers=[], cols=[], timeIdx=-1, rpmIdx=-1, xIdx=NaN, snapIndex=null;
 let xMin = 0, xMax = 0;
 let lastIdx = null;
-let parsedData = null; // Store the parsed data with series and raw
 
 const SLOT_COUNT = 5;
 const ySlots = Array.from({length: SLOT_COUNT}, () => ({
@@ -232,11 +158,7 @@ function showPointInfoAt(idx){
     .filter(tr => tr && tr.visible !== "legendonly")
     .map(tr=>{
       const c = tr.line?.color || "#7f7f7f";
-      // Prefer RAW from customdata if available; fallback to y
-      const rawVal = Array.isArray(tr.customdata) && Number.isFinite(tr.customdata[idx])
-        ? tr.customdata[idx]
-        : (Number.isFinite(tr.y?.[idx]) ? tr.y[idx] : NaN);
-      const y = Number.isFinite(rawVal) ? rawVal.toFixed(3) : "—";
+      const y = Number.isFinite(tr.y?.[idx]) ? tr.y[idx].toFixed(3) : "—";
       return `${tr.name}<br>${y}`;
     }).join("<br><br>");
   Plotly.relayout(chart, {
@@ -424,19 +346,9 @@ function plot(showToasts=true, preserveRange=false){
   for(let i=0;i<ySlots.length;i++){
     const s = ySlots[i];
     if(!s.enabled || s.colIdx===-1) continue;
-    const param = headers[s.colIdx];
-    const rawY = (parsedData && parsedData.raw && Array.isArray(parsedData.raw[param]))
-      ? parsedData.raw[param]
-      : cols[s.colIdx];
+    const rawY    = cols[s.colIdx];
     const scale   = s.scale ?? 1;
     const scaledY = rawY.map(v => Number.isFinite(v) ? (v * scale) : v);
-    
-    // Debug: Check if raw data exists and is different from scaled
-    if (parsedData && parsedData.raw && parsedData.raw[param]) {
-      console.log(`Param: ${param}, Raw[0]: ${parsedData.raw[param][0]}, Scaled[0]: ${scaledY[0]}, Scale: ${scale}`);
-    }
-    
-
     const label = headers[s.colIdx];
     
     const typ = cols[s.colIdx].length > 5000 ? "scattergl" : "scatter";
@@ -444,26 +356,15 @@ function plot(showToasts=true, preserveRange=false){
     traces.push({
       type: typ,
       mode: "lines",
-      x: parsedData ? parsedData.time : cols[xIdx],
+      x: cols[xIdx],
       y: scaledY,
       customdata: rawY,
       name: label,
       line: { width: 1, color: s.color },
-      hovertemplate: '%{fullData.name}<br>' + 't=%{x:.3f}s<br>' + 'raw=%{customdata}<extra></extra>'
+      hoverinfo: "skip"
     });
   }
   if(!traces.length){ if(showToasts) toastMsg("Enable at least one Y axis."); return; }
-
-  // Guard: if any trace has no y data due to missing raw mapping, fall back to cols
-  for (let t of traces){
-    if (!Array.isArray(t.y) || !t.y.length){
-      const idx = headers.indexOf(t.name);
-      if (idx >= 0) {
-        t.y = cols[idx];
-        t.customdata = cols[idx];
-      }
-    }
-  }
 
   // Ensure chart element exists
   if (!chart) {
@@ -527,19 +428,6 @@ function plot(showToasts=true, preserveRange=false){
     showPointInfoAt(targetIdx);
     updateReadoutsAt(targetIdx);
     syncAllScaleBoxes();
-    
-    // Add cursor functionality
-    if (parsedData) {
-      addCursor(chart);
-      wireCursor(chart, parsedData);
-      // Live readout update on cursor move
-      if (chart._cursorHandler) chart.removeEventListener('cursor-update', chart._cursorHandler);
-      chart._cursorHandler = (ev)=>{
-        const idx = ev?.detail?.index;
-        if (Number.isFinite(idx)) showPointInfoAt(idx);
-      };
-      chart.addEventListener('cursor-update', chart._cursorHandler);
-    }
     
     // Ensure chart has proper styling
     chart.style.position = "relative";
@@ -648,8 +536,8 @@ function tryLoadCached(){
   const size=Number(sessionStorage.getItem("csvSize")||0);
   fileInfo.classList.remove("hidden"); fileInfo.textContent=`Selected (cached): ${name} · ${fmtBytes(size)}`;
   try{
-    parsedData=parseCSV(text); headers=parsedData.headers; cols=parsedData.cols;
-    timeIdx=parsedData.timeIdx; rpmIdx=findRpmIndex(headers);
+    const parsed=parseCSV(text); headers=parsed.headers; cols=parsed.cols;
+    timeIdx=parsed.timeIdx; rpmIdx=findRpmIndex(headers);
     xIdx=Number.isFinite(timeIdx)?timeIdx:NaN;
 
     if (Number.isFinite(xIdx)){
@@ -658,10 +546,7 @@ function tryLoadCached(){
       xMax = x.length ? x[x.length-1] : 100;
     }
     ySlots.forEach(s=>{ s.enabled=false; s.colIdx=-1; s.scale=1; s.color="#00aaff"; s.ui={}; });
-    autoSelectYs(); buildUI();
-    // draw initial plot automatically
-    plot(true,false);
-    toastMsg("Loaded cached CSV.","ok");
+    autoSelectYs(); buildUI(); chart.innerHTML=""; toastMsg("Loaded cached CSV. Configure axes, then Generate Plot.","ok");
     return true;
   }catch(e){ console.warn("cache parse fail",e); return false; }
 }
@@ -677,30 +562,28 @@ function wireInitialEventListeners(){
       
       showLoading();
       
-             setTimeout(() => {
-         try{
-           parsedData=parseCSV(text); headers=parsedData.headers; cols=parsedData.cols;
-           timeIdx=parsedData.timeIdx; rpmIdx=findRpmIndex(headers);
-           xIdx=Number.isFinite(timeIdx)?timeIdx:NaN;
-           if (Number.isFinite(xIdx)){
-             const x = cols[xIdx].filter(Number.isFinite);
-             xMin = x.length ? x[0] : 0;
-             xMax = x.length ? x[x.length-1] : 100;
-           }
-           ySlots.forEach(s=>{ s.enabled=false; s.colIdx=-1; s.scale=1; s.color="#00aaff"; s.ui={}; });
-           
-           hideLoading();
-           
-           fileInfo.classList.remove("hidden"); fileInfo.textContent=`Selected: ${f.name} · ${fmtBytes(f.size)}`;
-           autoSelectYs(); buildUI();
-           plot(true,false);
-           toastMsg("Parsed.","ok");
-           
-         }catch(err){ 
-           hideLoading();
-           toastMsg(err.message||"Parse error."); 
-         }
-       }, 500);
+      setTimeout(() => {
+        try{
+          const parsed=parseCSV(text); headers=parsed.headers; cols=parsed.cols;
+          timeIdx=parsed.timeIdx; rpmIdx=findRpmIndex(headers);
+          xIdx=Number.isFinite(timeIdx)?timeIdx:NaN;
+          if (Number.isFinite(xIdx)){
+            const x = cols[xIdx].filter(Number.isFinite);
+            xMin = x.length ? x[0] : 0;
+            xMax = x.length ? x[x.length-1] : 100;
+          }
+          ySlots.forEach(s=>{ s.enabled=false; s.colIdx=-1; s.scale=1; s.color="#00aaff"; s.ui={}; });
+          
+          hideLoading();
+          
+          fileInfo.classList.remove("hidden"); fileInfo.textContent=`Selected: ${f.name} · ${fmtBytes(f.size)}`;
+          autoSelectYs(); buildUI(); chart.innerHTML=""; toastMsg("Parsed. Configure axes, then Generate Plot.","ok");
+          
+        }catch(err){ 
+          hideLoading();
+          toastMsg(err.message||"Parse error."); 
+        }
+      }, 500);
     };
     rd.readAsText(f);
   });
@@ -716,7 +599,7 @@ function wireInitialEventListeners(){
   clearBtn.addEventListener("click", ()=>{
     ySlots.forEach(s=>{ s.enabled=false; s.colIdx=-1; s.scale=1; s.color="#00aaff"; s.ui={}; });
     axisPanel.innerHTML=""; chart.innerHTML=""; fileInfo.classList.add("hidden");
-    headers=[]; cols=[]; timeIdx=rpmIdx=-1; xIdx=NaN; snapIndex=null; parsedData=null; toastMsg("Cleared page state. Cached CSV retained.","ok");
+    headers=[]; cols=[]; timeIdx=rpmIdx=-1; xIdx=NaN; snapIndex=null; toastMsg("Cleared page state. Cached CSV retained.","ok");
   });
 }
 
@@ -807,10 +690,6 @@ function initTheme() {
       document.documentElement.setAttribute("data-theme", newTheme);
       localStorage.setItem("theme", newTheme);
       updateThemeUI(newTheme);
-      
-      // Apply theme to plots
-      const isLight = newTheme === "light";
-      applyTheme(isLight, [chart]);
     });
   } else {
     console.error("Theme toggle button not found!");
@@ -835,7 +714,56 @@ function hideStartupLoading() {
   }
 }
 
-
+// ASCII Dot-Matrix Loading Animation
+function createAsciiAnimation() {
+  const asciiContainer = document.querySelector('.ascii-loading .matrix');
+  if (!asciiContainer) return;
+  
+  const ROWS = 8, COLS = 8;
+  const SCALE = [' ', '.', ':', '*', 'o', 'O', '#', '@'];
+  const CELL_W = 2;
+  const SPEED = 2.2;
+  const FREQ = 1.2;
+  const GLOW = 0.85;
+  
+  function render(t) {
+    let out = '';
+    const cx = (COLS - 1) / 2, cy = (ROWS - 1) / 2;
+    
+    for (let y = 0; y < ROWS; y++) {
+      let line = '';
+      for (let x = 0; x < COLS; x++) {
+        const dx = x - cx, dy = y - cy;
+        const dist = Math.hypot(dx, dy);
+        const phase = dist * FREQ - t * SPEED;
+        let b = (Math.sin(phase) * 0.5 + 0.5) ** 1.35;
+        b = Math.min(1, Math.max(0, b * GLOW));
+        const idx = Math.min(SCALE.length - 1, Math.floor(b * (SCALE.length - 1)));
+        const ch = SCALE[idx];
+        line += ch + ' '.repeat(CELL_W - 1);
+      }
+      out += line + '\n';
+    }
+    return out;
+  }
+  
+  let start = null;
+  function tick(now) {
+    if (!start) start = now;
+    const t = (now - start) / 1000;
+    
+    if (asciiContainer) {
+      asciiContainer.textContent = render(t);
+    }
+    
+    // Continue animation for 3.5 seconds
+    if (t < 3.5) {
+      requestAnimationFrame(tick);
+    }
+  }
+  
+  requestAnimationFrame(tick);
+}
 
 document.addEventListener("DOMContentLoaded", ()=>{ 
   // Show startup loading screen
@@ -848,11 +776,12 @@ document.addEventListener("DOMContentLoaded", ()=>{
   
   // Initialize theme system
   initTheme();
-  // Init mobile drawer
-  initDrawer();
   
   // Initialize dropdown interactions
   initDropdowns();
+  
+  // Start ASCII animation
+  createAsciiAnimation();
   
   // Add click handler to hide loading screen if stuck
   loadingScreen.addEventListener("click", () => {
@@ -871,40 +800,6 @@ document.addEventListener("DOMContentLoaded", ()=>{
   tryLoadCached(); 
   wireInitialEventListeners(); 
 });
-// Drawer init (same as app.js minimal copy)
-function initDrawer(){
-  const drawer = document.getElementById('drawer');
-  const scrim = document.getElementById('drawerScrim');
-  const edge = document.getElementById('edgeHint');
-  if (!drawer || !scrim || !edge) return;
-  const open = ()=>{ drawer.classList.add('open'); scrim.classList.add('show'); drawer.setAttribute('aria-hidden','false'); };
-  const close = ()=>{ drawer.classList.remove('open'); scrim.classList.remove('show'); drawer.setAttribute('aria-hidden','true'); };
-  scrim.addEventListener('click', close);
-  document.addEventListener('keydown', e=>{ if(e.key==='Escape') close(); });
-  let startX=null, active=false;
-  const start=(x)=>{ startX=x; active=true; };
-  const move=(x)=>{ if(!active) return; if (x-startX>40) { open(); active=false; } };
-  const end=()=>{ active=false; };
-  const onTouchStart=e=>{ if (window.matchMedia('(orientation:portrait)').matches) start(e.touches[0].clientX); };
-  const onTouchMove =e=>{ if (window.matchMedia('(orientation:portrait)').matches) move(e.touches[0].clientX); };
-  const onMouseDown =e=>{ if (window.matchMedia('(orientation:portrait)').matches && e.clientX<14) start(e.clientX); };
-  const onMouseMove =e=>{ move(e.clientX); };
-  edge.addEventListener('touchstart', onTouchStart, {passive:true});
-  edge.addEventListener('touchmove',  onTouchMove,  {passive:true});
-  edge.addEventListener('mousedown',  onMouseDown);
-  window.addEventListener('mousemove', onMouseMove);
-  window.addEventListener('mouseup', end);
-  // Global touch fallback for PWA/app mode
-  document.addEventListener('touchstart', e=>{
-    if (!window.matchMedia('(orientation:portrait)').matches) return;
-    const x = e.touches[0].clientX;
-    if (x < 20) start(x);
-  }, {passive:true});
-  document.addEventListener('touchmove', e=>{ if (active) move(e.touches[0].clientX); }, {passive:true});
-  let dragStartX=null;
-  drawer.addEventListener('touchstart', e=>{ dragStartX=e.touches[0].clientX; }, {passive:true});
-  drawer.addEventListener('touchmove',  e=>{ const dx=e.touches[0].clientX-dragStartX; if (dx< -40) close(); }, {passive:true});
-}
 
 
 
