@@ -25,23 +25,44 @@ function updateCursor(gd,x,data){
   gd.dispatchEvent(new CustomEvent('cursor-update', { detail:{ index:i, t:data.time[i] } }));
 }
 
-function wireCursor(gd,data){
-  // tap/click to snap
-  gd.on('plotly_click', ev => updateCursor(gd, ev.points[0]?.x ?? ev.xval, data));
+function wireCursor(gd, data){
+  // tap/click to snap (uses plotly's resolved data point)
+  gd.removeAllListeners?.('plotly_click');
+  gd.on('plotly_click', ev => {
+    const x = ev?.points?.[0]?.x;
+    if (Number.isFinite(x)) {
+      const idx = nearestIndex(data.time, x);
+      showPointInfoAt(idx);
+    }
+  });
 
-  // drag anywhere to move
-  const rect = gd.querySelector('.plotly .nsewdrag');
+  const rect = gd.querySelector('.plotly .nsewdrag');  // the transparent drag layer
   if(!rect) return;
-  rect.style.touchAction = 'none'; // stop pinch-zoom
-  const move = e => {
+
+  rect.style.touchAction = 'none';   // disable browser/pinch gestures
+
+  const fl = () => gd._fullLayout;
+  const clampX = (x) => {
+    const xs = data.time;
+    if (!xs?.length) return x;
+    if (x <= xs[0]) return xs[0];
+    if (x >= xs[xs.length-1]) return xs[xs.length-1];
+    return x;
+  };
+
+  const move = (e) => {
+    e.preventDefault(); e.stopPropagation();            // <-- stop plot panning
     const p = e.touches ? e.touches[0] : e;
     const bb = gd.getBoundingClientRect();
-    const xpx = p.clientX - bb.left;
-    const x = gd._fullLayout.xaxis.p2d(xpx - gd._fullLayout.margin.l);
-    updateCursor(gd, x, data);
+    const f = fl(); if (!f || !f.xaxis || !f.margin) return;
+    const xpx = p.clientX - bb.left - f.margin.l;       // px inside plotting area
+    const x   = clampX(f.xaxis.p2d(xpx));               // convert px→data, clamp
+    const i   = nearestIndex(data.time, x);
+    showPointInfoAt(i);                                  // moves dotted line + box
   };
-  rect.addEventListener('pointerdown', e => { move(e); rect.setPointerCapture(e.pointerId); });
-  rect.addEventListener('pointermove', move);
+
+  rect.addEventListener('pointerdown', e => { rect.setPointerCapture?.(e.pointerId); move(e); });
+  rect.addEventListener('pointermove',  e => move(e));
 }
 
 // ASCII Dot-Matrix Animation
@@ -200,9 +221,9 @@ function showPointInfoAt(idx){
   const rows = (chart.data||[])
     .filter(tr => tr && tr.visible !== "legendonly")
     .map(tr=>{
-      const c = tr.line?.color || "#7f7f7f";
-      const y = Number.isFinite(tr.y?.[idx]) ? tr.y[idx].toFixed(3) : "—";
-      return `${tr.name}<br>${y}`;
+      const raw = tr.customdata?.[idx];
+      const yRaw = Number.isFinite(raw) ? Number(raw).toFixed(3) : "—";
+      return `${tr.name}<br>${yRaw}`;   // RAW displayed
     }).join("<br><br>");
   Plotly.relayout(chart, {
     shapes:[{type:"line", x0:t, x1:t, y0:0, y1:1, xref:"x", yref:"paper",
@@ -451,7 +472,6 @@ function plot(showToasts=true, preserveRange=false){
       remove: ["zoom2d", "pan2d", "select2d", "lasso2d", "zoomIn2d", "zoomOut2d", "autoScale2d", "resetScale2d"]
     }
   };
-  layout.dragmode = 'pan';
   Plotly.newPlot(chart,traces,layout,{
     displaylogo:false,
     responsive:true,
