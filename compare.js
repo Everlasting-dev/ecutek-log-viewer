@@ -1,5 +1,5 @@
 ﻿// Compare view: aligned 5-col UI, value-only chips with ▲▼, fixed 50% step, preserve X-range, auto-select Ys.
-import { parseCSV, findTimeIndex, findRpmIndex, numericColumns } from "./parser.js";
+import { parseCSV, findTimeIndex, findRpmIndex, numericColumns } from "./parser.js?v=1.3.1";
 
 // ============================================================================
 // CURSOR HELPERS
