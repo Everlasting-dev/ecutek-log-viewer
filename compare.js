@@ -664,7 +664,9 @@ function wireInitialEventListeners(){
            hideLoading();
            
            fileInfo.classList.remove("hidden"); fileInfo.textContent=`Selected: ${f.name} · ${fmtBytes(f.size)}`;
-           autoSelectYs(); buildUI(); chart.innerHTML=""; toastMsg("Parsed. Configure axes, then Generate Plot.","ok");
+           autoSelectYs(); buildUI();
+           plot(true,false);
+           toastMsg("Parsed.","ok");
            
          }catch(err){ 
            hideLoading();
