@@ -648,3 +648,17 @@ body{ margin:0; background:var(--bg); color:var(--fg);
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+
+/* Mode toggle pill */
+.mode-toggle{
+  display:inline-flex; align-items:center; gap:8px;
+  padding:8px 10px; border:1px solid var(--line);
+  border-radius:999px; background:#121821; color:var(--fg);
+  cursor:pointer; user-select:none; font-weight:700; font-size:12px;
+}
+.mode-toggle .icon{font-size:14px; line-height:1}
+.mode-toggle:hover{background:#151d28; border-color:#2a3542}
+.topbar .right{display:flex; gap:10px; align-items:center}
+@media (max-width:600px){
+  .mode-toggle span{display:none;} /* keep icon only on small screens */
+}
