@@ -379,23 +379,39 @@ function renderPlots(){
       const div=document.createElement("div"); div.className="plot";
       frame.appendChild(div); card.appendChild(title); card.appendChild(frame);
 
-      // Readout line below plot
-      const info=document.createElement("div"); info.className="plot-readout";
-      const units = extractUnits(S.headers[i]);
-      info.textContent = `${S.headers[i]}${units?` (${units})`:""}: —`;
-      card.appendChild(info);
+      // Readout line below plot (under-plot only)
+      const readout = document.createElement("div");
+      readout.className = "plot-readout";
+      readout.style.color = "#9aa7b2";
+      readout.style.marginTop = "6px";
+      const xLabel = S.headers[S.timeIdx] || "X";
+      readout.textContent = `${S.headers[i]}: —  @  ${xLabel}=—`;
+      card.appendChild(readout);
       els.plots.appendChild(card);
 
       Plotly.newPlot(
         div,
-        [{
-          x,
-          y: S.cols[i],
-          mode: "lines",
-          name: S.headers[i],
-          line: { width: 1, color: "#34a0ff" },
-          hovertemplate: '%{y:.3f}<extra>'+S.headers[i]+'</extra>'
-        }],
+        [
+          {
+            x,
+            y: S.cols[i],
+            type: "scattergl",
+            mode: "lines",
+            name: S.headers[i],
+            line: { width: 1, color: "#00ff66" },
+            hoverinfo: "skip"
+          },
+          {
+            x: [],
+            y: [],
+            type: "scatter",
+            mode: "markers",
+            name: "probe",
+            marker: { size: 6, symbol: "circle", color: "#00ff66" },
+            hoverinfo: "skip",
+            showlegend: false
+          }
+        ],
         {
           paper_bgcolor: "#0f1318",
           plot_bgcolor: "#0f1318",
@@ -403,20 +419,18 @@ function renderPlots(){
           margin: { l: 50, r: 10, t: 10, b: 40 },
           xaxis: { title: S.headers[S.timeIdx] || "X", gridcolor: "#1b1f25" },
           yaxis: { title: S.headers[i], gridcolor: "#1b1f25", automargin: true },
-          hovermode: 'x',
-          hoverdistance: 20,
-          spikedistance: 20,
+          hovermode: false,
           dragmode: false
         },
-        {
-          displaylogo: false,
-          responsive: true,
-          scrollZoom: false,
-          doubleClick: false
-        }
+        { displaylogo: false, responsive: true, scrollZoom: false, doubleClick: false }
       ).then(() => {
-        // enable tap cursor for this mini plot
-        enableTapCursor(div, S.headers[i], S.headers[S.timeIdx]);
+        // click/tap to place blob + update readout
+        div.on("plotly_click", (ev) => {
+          const p = ev.points && ev.points[0];
+          if (!p) return;
+          Plotly.restyle(div, { x: [[p.x]], y: [[p.y]] }, [1]);
+          readout.textContent = `${S.headers[i]}: ${Number(p.y).toFixed(3)}  @  ${xLabel}=${Number(p.x).toFixed(3)}`;
+        });
       });
     }
     
