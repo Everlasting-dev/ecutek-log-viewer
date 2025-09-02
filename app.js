@@ -328,6 +328,17 @@ function strideDownsample(xArr, yArr, maxPoints){
   return { x: xd, y: yd };
 }
 
+// Find nearest index in xs to target x
+function nearestIndexByX(xs, target){
+  if (!Array.isArray(xs) || !xs.length) return 0;
+  let bestI = 0, bestD = Infinity;
+  for (let i = 0; i < xs.length; i++) {
+    const d = Math.abs(xs[i] - target);
+    if (d < bestD) { bestD = d; bestI = i; }
+  }
+  return bestI;
+}
+
 // Enable touch/mouse tap-and-drag cursor with dotted vertical line and fixed annotation
 function enableTapCursor(plotDiv, traceName, xTitle){
   function draw(x, y){
@@ -381,6 +392,7 @@ function renderPlots(){
     const text  = cs.getPropertyValue('--text').trim() || "#0f141a";
     const template = (document.documentElement.getAttribute('data-theme') === 'light') ? 'plotly_white' : 'plotly_dark';
 
+    const miniPlots = [];
     for (let i=0;i<S.headers.length;i++){
       if (i === S.timeIdx) continue;                 // no Time vs Time
       const valid = S.cols[i].reduce((a,v)=>a+(Number.isFinite(v)?1:0),0);
@@ -397,8 +409,7 @@ function renderPlots(){
       readout.className = "plot-readout";
       readout.style.color = "#9aa7b2";
       readout.style.marginTop = "6px";
-      const xLabel = S.headers[S.timeIdx] || "X";
-      readout.textContent = `${S.headers[i]}: —  @  ${xLabel}=—`;
+      readout.textContent = `${S.headers[i]}: —`;
       card.appendChild(readout);
       els.plots.appendChild(card);
 
@@ -416,6 +427,16 @@ function renderPlots(){
           name: S.headers[i],
           line: { width: 1, color: "#00ff66" },
           hoverinfo: "skip"
+        },
+        {
+          x: [],
+          y: [],
+          type: "scatter",
+          mode: "markers",
+          name: "probe",
+          marker: { size: 5, symbol: "circle", color: "#00ff66" },
+          hoverinfo: "skip",
+          showlegend: false
         }],
         {
           paper_bgcolor: "#0f1318",
@@ -429,13 +450,19 @@ function renderPlots(){
         },
         { displaylogo: false, displayModeBar: false, responsive: true, scrollZoom: false, doubleClick: false }
       ).then(() => {
-        // Click/tap -> update only the readout (no on-plot visuals)
+        // Store refs for cross-plot updates
+        miniPlots.push({ div, readout, i });
+        // Local click forwards to global update
         div.on("plotly_click", (ev) => {
           const p = ev.points && ev.points[0];
           if (!p) return;
-          const yv = Number(p.y);
-          const xv = Number(p.x);
-          readout.textContent = `${S.headers[i]}: ${Number.isFinite(yv)?yv.toFixed(3):"—"}  @  ${xLabel}=${Number.isFinite(xv)?xv.toFixed(3):"—"}`;
+          const idx = nearestIndexByX(x, Number(p.x));
+          // Update all plots' probe + readout at this time index
+          miniPlots.forEach(mp => {
+            const yv = S.cols[mp.i][idx];
+            Plotly.restyle(mp.div, { x: [[x[idx]]], y: [[Number.isFinite(yv)?yv:null]] }, [1]);
+            mp.readout.textContent = `${S.headers[mp.i]}: ${Number.isFinite(yv)?yv.toFixed(3):"—"}`;
+          });
         });
       });
     }
