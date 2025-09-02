@@ -463,18 +463,26 @@ function renderPlots(){
         miniPlots.push({ div, readout, i });
         // Local click forwards to global update (tolerant to clicking anywhere on plot area)
         div.on("plotly_click", (ev) => {
+          const p = ev.points && ev.points[0];
+          if (p && Number.isFinite(p.x)) {
+            const idx = nearestIndexByX(x, Number(p.x));
+            broadcastAtIndex(idx);
+          }
+        });
+
+        // Fallback: pointer events on drag layer so background clicks work
+        const layer = div.querySelector('.plotly .nsewdrag') || div;
+        const onPoint = (e) => {
           const fl = div && div._fullLayout; if (!fl || !fl.xaxis || !fl.margin) return;
           const bb = div.getBoundingClientRect();
-          let clientX = ev?.event?.clientX ?? ev?.clientX ?? null;
-          if (clientX == null && ev?.event?.changedTouches && ev.event.changedTouches[0]) {
-            clientX = ev.event.changedTouches[0].clientX;
-          }
-          if (clientX == null) return;
+          const clientX = (e.touches? e.touches[0].clientX : e.clientX);
           const xpx = clientX - bb.left - fl.margin.l;
           const xVal = fl.xaxis.p2d(xpx);
           const idx = nearestIndexByX(x, xVal);
           broadcastAtIndex(idx);
-        });
+        };
+        layer.addEventListener('pointerdown', onPoint, { passive:true });
+        layer.addEventListener('touchstart', onPoint, { passive:true });
       });
     }
     
