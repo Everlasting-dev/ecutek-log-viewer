@@ -423,7 +423,10 @@ function renderPlots(){
       els.plots.appendChild(card);
 
       // Optional small downsample to keep DOM light (SVG lines)
-      const ds = strideDownsample(x, S.cols[i], 8000);
+      const containerWidth = Math.max(320, frame.clientWidth || 640);
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      const maxPts = Math.floor(containerWidth * dpr * 0.8); // ~1 point per px
+      const ds = strideDownsample(x, S.cols[i], Math.max(2000, maxPts));
       const xData = ds.x, yData = ds.y;
 
       Plotly.newPlot(
