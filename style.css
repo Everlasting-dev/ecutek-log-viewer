@@ -7,6 +7,15 @@
   --plot-paper: #0b0f14; --plot-bg: #0b0f14; --text: #e6eef7;
 }
 
+/* Router theme button + nav styles */
+.nav-btn,#btn-theme{
+  background:var(--input-bg); color:var(--fg);
+  border:0; border-radius:10px; padding:.6rem .9rem; font-weight:600;
+}
+#btn-theme::before{ content:"☾"; }
+[data-theme="light"] #btn-theme::before{ content:"☀"; }
+a,button{ -webkit-tap-highlight-color: transparent; }
+
 /* Light theme */
 [data-theme="light"] {
   --bg: #f8fafc; --panel: #ffffff; --muted: #64748b; --fg: #1e293b;
