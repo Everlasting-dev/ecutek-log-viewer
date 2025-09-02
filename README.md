@@ -4,23 +4,23 @@ A modern, client-side web application for viewing and analyzing EcuTek CSV log f
 
 ## 🚀 Features
 
-- **Multi-Plot View** - Individual parameter visualization with mini plots
-- **Mega Plot View** - Unified comparison interface with time slider
+- **Time Plot View** - Individual parameter visualization with mini plots
+- **Analysis View** - Unified comparison interface with cursor snapping
 - **Log Scale Support** - True logarithmic scaling with multiplicative controls
-- **File Upload** - Drag & drop + file picker support
+- **File Upload** - File picker (drag & drop removed)
 - **Session Storage** - Persistent file caching between sessions
 - **Mobile-First Design** - Responsive layout optimized for all devices
 - **Metadata Display** - Vehicle, VIN, ECU Call IDs, and Programming Dongle info
-- **Real-time Plotting** - Interactive charts with hover tooltips and annotations
+- **Real-time Plotting** - Click-to-select with readouts; unified RAW readout in analysis
 
 ## 📁 Project Structure
 
 ```
 ecutek-log-viewer/
-├── index.html          # Multi-plot interface (main page)
-├── compare.html        # Mega plot interface (comparison page)
-├── app.js             # Multi-plot logic and file handling
-├── compare.js         # Mega plot logic and comparison features
+├── index.html          # Time Plot interface (main page)
+├── compare.html        # Analysis interface (comparison page)
+├── app.js             # Time Plot logic and file handling
+├── compare.js         # Analysis logic and comparison features
 ├── parser.js          # CSV parsing utilities and data processing
 ├── style.css          # Styling and responsive design
 ├── main.js            # Additional utilities (if present)
@@ -67,31 +67,30 @@ http-server -p 8000
 2. **Open your browser** and navigate to:
    - `http://localhost:8000` (for Python/Node.js servers)
    - `http://127.0.0.1:5500` (for Live Server)
-3. **Upload EcuTek CSV files** using the file picker or drag & drop
-4. **Switch between views** using the dropdown menu:
-   - **Multi Plot**: Individual parameter visualization
-   - **Mega Plot**: Unified comparison interface
+3. **Upload EcuTek CSV files** using the file picker
+4. **Switch between views** using the dropdown (or mobile links in the taskbar):
+   - **Time Plot**: Individual parameter visualization
+   - **Analysis**: Unified comparison interface
 
 ## 📊 Usage
 
 ### File Upload
 - **Supported formats**: `.csv`, `.txt`, `.log`
-- **Drag & drop** files directly onto the upload area
 - **File picker** - Click "Choose Log File" to browse
 - **Session persistence** - Files are cached in browser storage
 
-### Multi-Plot View (`index.html`)
+### Time Plot View (`index.html`)
 - **Individual parameter plots** with mini charts
-- **Hover tooltips** showing raw sensor values
-- **Time-based X-axis** with automatic detection
+- **Click-to-select**: highlight node and show RAW value below plot
+- **No in-plot hover**, no scrollZoom; X-axis = Time; skips Time-vs-Time
 - **Parameter filtering** - skips invalid/empty data columns
 
-### Mega Plot View (`compare.html`)
+### Analysis View (`compare.html`)
 - **Unified comparison interface** for multiple parameters
-- **Time slider** for range selection
-- **Log scale controls** with multiplicative scaling
-- **Series info box** with min/max values
-- **Click-to-snap** functionality for precise time selection
+- **Cursor snapping** and click-to-snap; unified readout with RAW values
+- **Multiplicative scaling** controls (log-step adjustments)
+- **Auto Y rescale within current X window; X range preserved**
+- **Presets**: preloads Engine Speed, Fuel Pressure, Fuel Trim Short Term, MAP
 
 ### Log Scale Features
 - **True logarithmic scaling** with base-10 decades
@@ -115,13 +114,13 @@ http-server -p 8000
 - Vehicle metadata parsing (VIN, ECU Call IDs, etc.)
 
 #### `app.js`
-- Multi-plot view logic
+- Time Plot view logic
 - File upload handling
 - Session storage management
 - Plot generation and rendering
 
 #### `compare.js`
-- Mega plot view logic
+- Analysis view logic
 - Time slider implementation
 - Log scale controls
 - Series comparison features
@@ -153,9 +152,9 @@ http-server -p 8000
 - **Accessibility** - Keyboard navigation and screen reader support
 
 ### Visualization
-- **Interactive plots** - Zoom, pan, hover, and click interactions
+- **Interactive plots** - Click selection and cursor snapping
 - **Color coding** - Consistent parameter colors across views
-- **Annotations** - Peak detection and value highlighting
+- **Readouts** - Time Plot shows value under each plot; Analysis shows unified RAW values box
 - **Time synchronization** - Coordinated time ranges across plots
 
 ## 🐛 Troubleshooting
@@ -171,6 +170,7 @@ http-server -p 8000
 - Verify CSV has numeric data columns
 - Check browser console for error messages
 - Ensure local server is running correctly
+ - Confirm a Time column exists (X-axis is Time)
 
 **Performance issues:**
 - Large files (>10MB) may load slowly
@@ -181,6 +181,9 @@ http-server -p 8000
 - Check for CORS issues when running locally
 - Ensure all JavaScript files are loading correctly
 - Verify Plotly.js and PapaParse CDN links are accessible
+
+### Loading Screen
+- Displayed only on initial page load/refresh. Switching between Time Plot and Analysis suppresses the startup loading screen.
 
 ## 📈 Development
 
