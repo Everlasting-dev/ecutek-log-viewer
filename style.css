@@ -401,6 +401,13 @@ body{ margin:0; background:var(--bg); color:var(--fg);
     font-size: 10px;
     padding: 1px 6px;
   }
+
+  /* Analysis (compare) mobile optimizations */
+  .compare-page .card{ padding:8px; }
+  .compare-page .plots{ gap:8px; }
+  .compare-page .plot-frame{ padding:6px; }
+  .compare-page #chart.plot{ height:65vh !important; }
+  .compare-page .slot{ grid-template-columns: 96px 40px 1fr 74px auto auto auto; gap:8px; }
 }
 
 /* Loading screen */

@@ -532,6 +532,7 @@ function plot(showToasts=true, preserveRange=false){
     // Ensure chart has proper styling
     chart.style.position = "relative";
     chart.style.cursor = "crosshair";
+    chart.style.touchAction = "none"; // better on mobile
     
     // Add container click handler as fallback
     const chartContainer = chart.parentElement;
