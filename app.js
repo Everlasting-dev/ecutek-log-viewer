@@ -454,6 +454,7 @@ function renderPlots(){
           margin: { l: 50, r: 10, t: 10, b: 40 },
           xaxis: { title: S.headers[S.timeIdx] || "X", gridcolor: "#1b1f25" },
           yaxis: { title: S.headers[i], gridcolor: "#1b1f25", automargin: true },
+          showlegend: false,
           hovermode: false,
           dragmode: false
         },
