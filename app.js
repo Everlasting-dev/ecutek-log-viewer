@@ -393,6 +393,15 @@ function renderPlots(){
     const template = (document.documentElement.getAttribute('data-theme') === 'light') ? 'plotly_white' : 'plotly_dark';
 
     const miniPlots = [];
+    function broadcastAtIndex(idx){
+      if (!Number.isFinite(idx)) return;
+      for (const mp of miniPlots){
+        const yv = S.cols[mp.i][idx];
+        // update probe marker position (trace index 1)
+        Plotly.restyle(mp.div, { x: [[x[idx]]], y: [[Number.isFinite(yv)?yv:null]] }, [1]);
+        mp.readout.textContent = `${S.headers[mp.i]}: ${Number.isFinite(yv)?yv.toFixed(3):"—"}`;
+      }
+    }
     for (let i=0;i<S.headers.length;i++){
       if (i === S.timeIdx) continue;                 // no Time vs Time
       const valid = S.cols[i].reduce((a,v)=>a+(Number.isFinite(v)?1:0),0);
@@ -452,17 +461,19 @@ function renderPlots(){
       ).then(() => {
         // Store refs for cross-plot updates
         miniPlots.push({ div, readout, i });
-        // Local click forwards to global update
+        // Local click forwards to global update (tolerant to clicking anywhere on plot area)
         div.on("plotly_click", (ev) => {
-          const p = ev.points && ev.points[0];
-          if (!p) return;
-          const idx = nearestIndexByX(x, Number(p.x));
-          // Update all plots' probe + readout at this time index
-          miniPlots.forEach(mp => {
-            const yv = S.cols[mp.i][idx];
-            Plotly.restyle(mp.div, { x: [[x[idx]]], y: [[Number.isFinite(yv)?yv:null]] }, [1]);
-            mp.readout.textContent = `${S.headers[mp.i]}: ${Number.isFinite(yv)?yv.toFixed(3):"—"}`;
-          });
+          const fl = div && div._fullLayout; if (!fl || !fl.xaxis || !fl.margin) return;
+          const bb = div.getBoundingClientRect();
+          let clientX = ev?.event?.clientX ?? ev?.clientX ?? null;
+          if (clientX == null && ev?.event?.changedTouches && ev.event.changedTouches[0]) {
+            clientX = ev.event.changedTouches[0].clientX;
+          }
+          if (clientX == null) return;
+          const xpx = clientX - bb.left - fl.margin.l;
+          const xVal = fl.xaxis.p2d(xpx);
+          const idx = nearestIndexByX(x, xVal);
+          broadcastAtIndex(idx);
         });
       });
     }
