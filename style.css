@@ -432,6 +432,9 @@ body{ margin:0; background:var(--bg); color:var(--fg);
   pointer-events: none;
 }
 
+/* Simple splash fade */
+#splash.hidden { opacity: 0; pointer-events: none; transition: opacity .25s ease; }
+
 /* ASCII Art Loading Screen */
 .ascii-loading {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;

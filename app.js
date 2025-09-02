@@ -201,6 +201,10 @@ function hideStartupLoading() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Simple splash control – hide after 1.5s
+  const SPLASH_MS = 1500;
+  const splashEl = document.querySelector('#splash');
+  if (splashEl) setTimeout(() => splashEl.classList.add('hidden'), SPLASH_MS);
   // Show startup loading screen unless suppressed for intra-app navigation
   const suppress = sessionStorage.getItem('suppressStartupLoading') === '1';
   if (!suppress) {
