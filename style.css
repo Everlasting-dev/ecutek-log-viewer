@@ -660,5 +660,5 @@ body{ margin:0; background:var(--bg); color:var(--fg);
 .mode-toggle:hover{background:#151d28; border-color:#2a3542}
 .topbar .right{display:flex; gap:10px; align-items:center}
 @media (max-width:600px){
-  .mode-toggle span{display:none;} /* keep icon only on small screens */
+  .mode-toggle .label{display:none;} /* keep icon only on small screens */
 }

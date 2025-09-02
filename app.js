@@ -369,6 +369,15 @@ function renderPlots(){
             const val = Number.isFinite(rawY[xi]) ? rawY[xi].toFixed(3) : "—";
             info.textContent = `${S.headers[i]}${units?` (${units})`:""}: ${val}`;
           });
+
+          // initialize selection to last valid point so readout isn't blank
+          let initIdx = rawY.length - 1;
+          while (initIdx > 0 && !Number.isFinite(rawY[initIdx])) initIdx--;
+          if (Number.isFinite(rawY[initIdx])) {
+            Plotly.restyle(div, { x:[[x[initIdx]]], y:[[rawY[initIdx]]] }, [1]);
+            const val0 = rawY[initIdx].toFixed(3);
+            info.textContent = `${S.headers[i]}${units?` (${units})`:""}: ${val0}`;
+          }
         });
     }
     
