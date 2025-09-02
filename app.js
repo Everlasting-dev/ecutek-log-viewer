@@ -315,6 +315,44 @@ function extractUnits(label){
   return m ? m[1] : "";
 }
 
+// Enable touch/mouse tap-and-drag cursor with dotted vertical line and fixed annotation
+function enableTapCursor(plotDiv, traceName, xTitle){
+  function draw(x, y){
+    Plotly.relayout(plotDiv, {
+      shapes: [{
+        type: 'line',
+        xref: 'x', yref: 'paper',
+        x0: x, x1: x, y0: 0, y1: 1,
+        line: { color: '#34a0ff', width: 1, dash: 'dot' }
+      }],
+      annotations: [{
+        xref: 'x', yref: 'paper',
+        x: x, y: 1.12,
+        showarrow: false,
+        bgcolor: '#10161e',
+        bordercolor: '#1b1f25',
+        borderwidth: 1,
+        font: { size: 12, color: '#e7ecf2' },
+        text: `${traceName}: ${Number.isFinite(y)?y.toFixed(3):'—'}<br>${xTitle||'X'}=${Number.isFinite(x)?x.toFixed(3):'—'}`
+      }]
+    });
+  }
+
+  // Follow finger/mouse while moving
+  plotDiv.on('plotly_hover', (ev) => {
+    const p = ev.points && ev.points[0];
+    if (p) draw(p.x, p.y);
+  });
+
+  // Tap/click to set and keep position
+  plotDiv.on('plotly_click', (ev) => {
+    const p = ev.points && ev.points[0];
+    if (p) draw(p.x, p.y);
+  });
+
+  // Do NOT clear on unhover; persist last position (prevents snap-to-0)
+}
+
 function renderPlots(){
   if (!S.ready){ toast("Upload a file first."); return; }
   
@@ -348,37 +386,38 @@ function renderPlots(){
       card.appendChild(info);
       els.plots.appendChild(card);
 
-      const rawY = S.cols[i];
-      const markerTrace = { x: [], y: [], mode:"markers", name:"selected", marker:{size:7,color:template==='plotly_white'?"#1f77b4":"#34a0ff"}, hoverinfo:"skip", showlegend:false };
-      const lineTrace = { x, y: rawY, mode:"lines", name:S.headers[i], line:{width:1}, hoverinfo:"skip" };
-
-      const layout = { template, paper_bgcolor:paper, plot_bgcolor:plot, font:{color:text},
-        margin:{l:50,r:10,t:10,b:40}, xaxis:{title:S.headers[S.timeIdx]},
-        yaxis:{title:S.headers[i], automargin:true}, showlegend:false, hovermode:false };
-      const config = { displaylogo:false, responsive:true, scrollZoom:false, staticPlot:false, doubleClick:false };
-
-      Plotly.newPlot(div, [lineTrace, markerTrace], layout, config)
-        .then(()=>{
-          applyTheme(document.documentElement.getAttribute('data-theme')==='light', [div]);
-          // click to set selected point and update readout
-          div.removeAllListeners?.('plotly_click');
-          div.on('plotly_click', (ev)=>{
-            const pt = ev?.points?.[0]; if(!pt) return;
-            const xi = pt.pointIndex;
-            Plotly.restyle(div, { x:[[x[xi]]], y:[[rawY[xi]]] }, [1]);
-            const val = Number.isFinite(rawY[xi]) ? rawY[xi].toFixed(3) : "—";
-            info.textContent = `${S.headers[i]}${units?` (${units})`:""}: ${val}`;
-          });
-
-          // initialize selection to last valid point so readout isn't blank
-          let initIdx = rawY.length - 1;
-          while (initIdx > 0 && !Number.isFinite(rawY[initIdx])) initIdx--;
-          if (Number.isFinite(rawY[initIdx])) {
-            Plotly.restyle(div, { x:[[x[initIdx]]], y:[[rawY[initIdx]]] }, [1]);
-            const val0 = rawY[initIdx].toFixed(3);
-            info.textContent = `${S.headers[i]}${units?` (${units})`:""}: ${val0}`;
-          }
-        });
+      Plotly.newPlot(
+        div,
+        [{
+          x,
+          y: S.cols[i],
+          mode: "lines",
+          name: S.headers[i],
+          line: { width: 1, color: "#34a0ff" },
+          hovertemplate: '%{y:.3f}<extra>'+S.headers[i]+'</extra>'
+        }],
+        {
+          paper_bgcolor: "#0f1318",
+          plot_bgcolor: "#0f1318",
+          font: { color: "#e7ecf2" },
+          margin: { l: 50, r: 10, t: 10, b: 40 },
+          xaxis: { title: S.headers[S.timeIdx] || "X", gridcolor: "#1b1f25" },
+          yaxis: { title: S.headers[i], gridcolor: "#1b1f25", automargin: true },
+          hovermode: 'x',
+          hoverdistance: 20,
+          spikedistance: 20,
+          dragmode: false
+        },
+        {
+          displaylogo: false,
+          responsive: true,
+          scrollZoom: false,
+          doubleClick: false
+        }
+      ).then(() => {
+        // enable tap cursor for this mini plot
+        enableTapCursor(div, S.headers[i], S.headers[S.timeIdx]);
+      });
     }
     
     hideLoading();
