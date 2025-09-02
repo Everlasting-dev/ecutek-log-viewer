@@ -179,9 +179,19 @@
       const btn = document.getElementById('modeToggle');
       if(!btn) return;
       btn.querySelector('.icon').textContent = '■';
-      btn.querySelector('span:last-child').textContent = 'SINGLE';
+      btn.querySelector('span.label').textContent = 'SINGLE';
       btn.title = 'Switch to Multi Plot';
-      btn.addEventListener('click', ()=> { window.location.href = 'compare.html'; });
+      btn.addEventListener('click', ()=> {
+        try { sessionStorage.setItem('suppressStartupLoading','1'); } catch(_){}
+        // PWA-safe navigation: check if standalone and use same-tab navigation
+        const isStandalone = window.navigator.standalone === true ||
+          window.matchMedia('(display-mode: standalone)').matches;
+        if (isStandalone) {
+          window.location.replace('compare.html'); // no history entry, stays in PWA
+        } else {
+          window.location.href = 'compare.html';
+        }
+      });
     })();
   </script>
 </body>

@@ -179,15 +179,26 @@
   <button id="toTop" class="totop" title="Back to top">↑ Top</button>
   <!-- ES module so compare.js can import parser.js -->
   <script type="module" src="compare.js?v=1.3.0"></script>
+  <script src="router.js?v=1.0"></script>
   <script>
     // Mode toggle for MULTI (compare.html) -> SINGLE (index.html)
     (function(){
       const btn = document.getElementById('modeToggle');
       if(!btn) return;
       btn.querySelector('.icon').textContent = '▦';
-      btn.querySelector('span:last-child').textContent = 'MULTI';
+      btn.querySelector('span.label').textContent = 'MULTI';
       btn.title = 'Switch to Single Plot';
-      btn.addEventListener('click', ()=> { window.location.href = 'index.html'; });
+      btn.addEventListener('click', ()=> {
+        try { sessionStorage.setItem('suppressStartupLoading','1'); } catch(_){}
+        // PWA-safe navigation: check if standalone and use same-tab navigation
+        const isStandalone = window.navigator.standalone === true ||
+          window.matchMedia('(display-mode: standalone)').matches;
+        if (isStandalone) {
+          window.location.replace('index.html'); // no history entry, stays in PWA
+        } else {
+          window.location.href = 'index.html';
+        }
+      });
     })();
   </script>
 </body>
