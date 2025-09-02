@@ -638,7 +638,8 @@ function updateReadoutsAt(idx){
 
 /* auto-select */
 function autoSelectYs(){
-  const prefs=[/boost/i,/afr/i,/throttle|pedal/i,/load/i,/ign/i];
+  // Preload preferred axes: engine speed, fuel pressure, fuel trim short terms, manifold absolute pressure
+  const prefs=[/engine\s*speed|\bRPM\b/i,/fuel\s*pressure/i,/fuel\s*trim.*short/i,/manifold\s*absolute\s*pressure|\bMAP\b/i];
   const used=new Set(); let slot=0;
   for(const rx of prefs){
     const ix=headers.findIndex((h,i)=>rx.test(h)&&i!==timeIdx&&i!==rpmIdx);
@@ -749,10 +750,11 @@ function initDropdowns() {
         case "Export Data":
           toastMsg("Export functionality coming soon!", "ok");
           break;
-        case "Mega Plot":
-          // Already on mega plot
+        case "Analysis":
+          // Already on analysis
           break;
-        case "Multi Plot":
+        case "Time Plot":
+          try { sessionStorage.setItem('suppressStartupLoading','1'); } catch(_){}
           window.location.href = "index.html";
           break;
         case "About":
@@ -891,13 +893,15 @@ function createAsciiAnimation() {
 }
 
 document.addEventListener("DOMContentLoaded", ()=>{ 
-  // Show startup loading screen
-  showStartupLoading();
-  
-  // Hide loading screen after 3-4 seconds
-  setTimeout(() => {
+  // Show startup loading screen unless suppressed for intra-app navigation
+  const suppress = sessionStorage.getItem('suppressStartupLoading') === '1';
+  if (!suppress) {
+    showStartupLoading();
+    setTimeout(() => { hideStartupLoading(); }, 3500);
+  } else {
     hideStartupLoading();
-  }, 3500);
+    try { sessionStorage.removeItem('suppressStartupLoading'); } catch(_){}
+  }
   
   // Initialize theme system
   initTheme();

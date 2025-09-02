@@ -46,6 +46,11 @@ body{ margin:0; background:var(--bg); color:var(--fg);
   display:flex; align-items:center; gap:12px;
 }
 
+/* Mobile quick switch */
+.mobile-switch{ display:flex; align-items:center; gap:6px; margin-left:8px; }
+.mobile-switch a{ color:var(--muted); text-decoration:none; font-weight:700; }
+.mobile-switch a:hover{ color:var(--fg); }
+
 /* Brand section */
 .brand{display:flex; align-items:center; gap:10px; font-weight:700; letter-spacing:.2px}
 .brand svg{color:var(--accent)}
@@ -193,6 +198,9 @@ body{ margin:0; background:var(--bg); color:var(--fg);
 .plot-title{padding:10px 12px; border-bottom:1px solid var(--line); color:var(--fg); font-weight:600; background:var(--panel)}
 .plot-frame{padding:10px}
 .plot{height:150px; width:100%}
+
+/* Readout line for mini plots */
+.plot-readout{ padding:8px 12px; border-top:1px solid var(--line); color:var(--muted); font-family:monospace; }
 
 /* Compare page overrides: full-width + taller chart */
 .compare-page .plots{ grid-template-columns: 1fr !important; }

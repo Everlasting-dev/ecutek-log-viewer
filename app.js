@@ -137,10 +137,11 @@ function initDropdowns() {
         case "Export Data":
           toast("Export functionality coming soon!", "ok");
           break;
-        case "Multi Plot":
-          // Already on multi plot
+        case "Time Plot":
+          // Already on time plot
           break;
-        case "Mega Plot":
+        case "Analysis":
+          try { sessionStorage.setItem('suppressStartupLoading','1'); } catch(_){}
           window.location.href = "compare.html";
           break;
         case "Compare Mode":
@@ -200,13 +201,15 @@ function hideStartupLoading() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Show startup loading screen
-  showStartupLoading();
-  
-  // Hide loading screen after 3-4 seconds
-  setTimeout(() => {
+  // Show startup loading screen unless suppressed for intra-app navigation
+  const suppress = sessionStorage.getItem('suppressStartupLoading') === '1';
+  if (!suppress) {
+    showStartupLoading();
+    setTimeout(() => { hideStartupLoading(); }, 3500);
+  } else {
     hideStartupLoading();
-  }, 3500);
+    try { sessionStorage.removeItem('suppressStartupLoading'); } catch(_){}
+  }
   
   // Initialize theme system
   initTheme();
@@ -306,6 +309,12 @@ function stageParsed(text, name, size){
   }, 700);
 }
 
+// Extract units in parentheses from a header label
+function extractUnits(label){
+  const m = /\(([^)]+)\)/.exec(String(label||""));
+  return m ? m[1] : "";
+}
+
 function renderPlots(){
   if (!S.ready){ toast("Upload a file first."); return; }
   
@@ -330,14 +339,37 @@ function renderPlots(){
       const title=document.createElement("div"); title.className="plot-title"; title.textContent=S.headers[i];
       const frame=document.createElement("div"); frame.className="plot-frame";
       const div=document.createElement("div"); div.className="plot";
-      frame.appendChild(div); card.appendChild(title); card.appendChild(frame); els.plots.appendChild(card);
+      frame.appendChild(div); card.appendChild(title); card.appendChild(frame);
 
-      Plotly.newPlot(div, [{x, y:S.cols[i], mode:"lines", name:S.headers[i], line:{width:1}}],
-        { template, paper_bgcolor:paper, plot_bgcolor:plot, font:{color:text},
-          margin:{l:50,r:10,t:10,b:40}, xaxis:{title:S.headers[S.timeIdx]},
-          yaxis:{title:S.headers[i], automargin:true}, showlegend:false },
-        { displaylogo:false, responsive:true, scrollZoom:false, staticPlot:true, doubleClick:false })
-        .then(()=> applyTheme(document.documentElement.getAttribute('data-theme')==='light', [div]));
+      // Readout line below plot
+      const info=document.createElement("div"); info.className="plot-readout";
+      const units = extractUnits(S.headers[i]);
+      info.textContent = `${S.headers[i]}${units?` (${units})`:""}: —`;
+      card.appendChild(info);
+      els.plots.appendChild(card);
+
+      const rawY = S.cols[i];
+      const markerTrace = { x: [], y: [], mode:"markers", name:"selected", marker:{size:7,color:template==='plotly_white'?"#1f77b4":"#34a0ff"}, hoverinfo:"skip", showlegend:false };
+      const lineTrace = { x, y: rawY, mode:"lines", name:S.headers[i], line:{width:1}, hoverinfo:"skip" };
+
+      const layout = { template, paper_bgcolor:paper, plot_bgcolor:plot, font:{color:text},
+        margin:{l:50,r:10,t:10,b:40}, xaxis:{title:S.headers[S.timeIdx]},
+        yaxis:{title:S.headers[i], automargin:true}, showlegend:false, hovermode:false };
+      const config = { displaylogo:false, responsive:true, scrollZoom:false, staticPlot:false, doubleClick:false };
+
+      Plotly.newPlot(div, [lineTrace, markerTrace], layout, config)
+        .then(()=>{
+          applyTheme(document.documentElement.getAttribute('data-theme')==='light', [div]);
+          // click to set selected point and update readout
+          div.removeAllListeners?.('plotly_click');
+          div.on('plotly_click', (ev)=>{
+            const pt = ev?.points?.[0]; if(!pt) return;
+            const xi = pt.pointIndex;
+            Plotly.restyle(div, { x:[[x[xi]]], y:[[rawY[xi]]] }, [1]);
+            const val = Number.isFinite(rawY[xi]) ? rawY[xi].toFixed(3) : "—";
+            info.textContent = `${S.headers[i]}${units?` (${units})`:""}: ${val}`;
+          });
+        });
     }
     
     hideLoading();
@@ -383,27 +415,29 @@ if (els.viewSwitcher) {
   });
 }
 
-["dragenter","dragover"].forEach(ev=>{
-  els.dropzone.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); els.dropzone.classList.add("dragover"); });
-});
-["dragleave","drop"].forEach(ev=>{
-  els.dropzone.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); els.dropzone.classList.remove("dragover"); });
-});
-els.dropzone.addEventListener("drop", e=>{
-  const f=e.dataTransfer.files?.[0];
-  if (!f || !/\.(csv|txt|log)$/i.test(f.name)) return toast("Drop a .csv/.txt/.log file.");
-  const r=new FileReader();
-  r.onerror=()=>{
-    hideLoading();
-    toast("Failed to read file.");
-  };
-  r.onload=ev=>{ 
-    const text=String(ev.target.result||""); 
-    cacheSet(text,f.name,f.size);
-    stageParsed(text,f.name,f.size);
-  };
-  r.readAsText(f);
-});
+if (els.dropzone) {
+  ["dragenter","dragover"].forEach(ev=>{
+    els.dropzone.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); els.dropzone.classList.add("dragover"); });
+  });
+  ["dragleave","drop"].forEach(ev=>{
+    els.dropzone.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); els.dropzone.classList.remove("dragover"); });
+  });
+  els.dropzone.addEventListener("drop", e=>{
+    const f=e.dataTransfer.files?.[0];
+    if (!f || !/\.(csv|txt|log)$/i.test(f.name)) return toast("Drop a .csv/.txt/.log file.");
+    const r=new FileReader();
+    r.onerror=()=>{
+      hideLoading();
+      toast("Failed to read file.");
+    };
+    r.onload=ev=>{ 
+      const text=String(ev.target.result||""); 
+      cacheSet(text,f.name,f.size);
+      stageParsed(text,f.name,f.size);
+    };
+    r.readAsText(f);
+  });
+}
 
 document.addEventListener("DOMContentLoaded", ()=>{
   // Add click handler to hide loading screen if stuck
