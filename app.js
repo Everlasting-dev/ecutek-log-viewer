@@ -315,6 +315,19 @@ function extractUnits(label){
   return m ? m[1] : "";
 }
 
+// Simple stride downsample to limit DOM point count for SVG plots
+function strideDownsample(xArr, yArr, maxPoints){
+  const xs = Array.isArray(xArr) ? xArr : [];
+  const ys = Array.isArray(yArr) ? yArr : [];
+  const n = Math.min(xs.length, ys.length);
+  if (n <= 0) return { x: [], y: [] };
+  if (!Number.isFinite(maxPoints) || maxPoints <= 0 || n <= maxPoints) return { x: xs.slice(0, n), y: ys.slice(0, n) };
+  const step = Math.ceil(n / maxPoints);
+  const xd = []; const yd = [];
+  for (let i = 0; i < n; i += step){ xd.push(xs[i]); yd.push(ys[i]); }
+  return { x: xd, y: yd };
+}
+
 // Enable touch/mouse tap-and-drag cursor with dotted vertical line and fixed annotation
 function enableTapCursor(plotDiv, traceName, xTitle){
   function draw(x, y){
@@ -379,7 +392,7 @@ function renderPlots(){
       const div=document.createElement("div"); div.className="plot";
       frame.appendChild(div); card.appendChild(title); card.appendChild(frame);
 
-      // Readout line below plot (under-plot only)
+      // Readout line below plot
       const readout = document.createElement("div");
       readout.className = "plot-readout";
       readout.style.color = "#9aa7b2";
@@ -389,29 +402,21 @@ function renderPlots(){
       card.appendChild(readout);
       els.plots.appendChild(card);
 
+      // Optional small downsample to keep DOM light (SVG lines)
+      const ds = strideDownsample(x, S.cols[i], 8000);
+      const xData = ds.x, yData = ds.y;
+
       Plotly.newPlot(
         div,
-        [
-          {
-            x,
-            y: S.cols[i],
-            type: "scattergl",
-            mode: "lines",
-            name: S.headers[i],
-            line: { width: 1, color: "#00ff66" },
-            hoverinfo: "skip"
-          },
-          {
-            x: [],
-            y: [],
-            type: "scatter",
-            mode: "markers",
-            name: "probe",
-            marker: { size: 6, symbol: "circle", color: "#00ff66" },
-            hoverinfo: "skip",
-            showlegend: false
-          }
-        ],
+        [{
+          x: xData,
+          y: yData,
+          type: "scatter",
+          mode: "lines",
+          name: S.headers[i],
+          line: { width: 1, color: "#00ff66" },
+          hoverinfo: "skip"
+        }],
         {
           paper_bgcolor: "#0f1318",
           plot_bgcolor: "#0f1318",
@@ -422,14 +427,15 @@ function renderPlots(){
           hovermode: false,
           dragmode: false
         },
-        { displaylogo: false, responsive: true, scrollZoom: false, doubleClick: false }
+        { displaylogo: false, displayModeBar: false, responsive: true, scrollZoom: false, doubleClick: false }
       ).then(() => {
-        // click/tap to place blob + update readout
+        // Click/tap -> update only the readout (no on-plot visuals)
         div.on("plotly_click", (ev) => {
           const p = ev.points && ev.points[0];
           if (!p) return;
-          Plotly.restyle(div, { x: [[p.x]], y: [[p.y]] }, [1]);
-          readout.textContent = `${S.headers[i]}: ${Number(p.y).toFixed(3)}  @  ${xLabel}=${Number(p.x).toFixed(3)}`;
+          const yv = Number(p.y);
+          const xv = Number(p.x);
+          readout.textContent = `${S.headers[i]}: ${Number.isFinite(yv)?yv.toFixed(3):"—"}  @  ${xLabel}=${Number.isFinite(xv)?xv.toFixed(3):"—"}`;
         });
       });
     }
