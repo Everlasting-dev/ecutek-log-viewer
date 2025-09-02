@@ -15,6 +15,10 @@ window.addEventListener('popstate', e => showView((e.state && e.state.v) || 'hom
 
 // intercept internal links when standalone
 document.addEventListener('click', (e) => {
+  // ignore controls entirely
+  const tag = e.target.tagName;
+  if (tag === 'BUTTON' || tag === 'INPUT' || tag === 'LABEL' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+
   const a = e.target.closest('a[href]');
   if (!a) return;
   const url = new URL(a.href, location.href);
@@ -53,4 +57,9 @@ window.open = function(url, target, features){
 
 // expose goto for modules
 window.goto = goto;
+
+// initialize view on load
+document.addEventListener('DOMContentLoaded', () => {
+  showView('home');
+});
 

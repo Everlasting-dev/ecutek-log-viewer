@@ -441,8 +441,9 @@ body{ margin:0; background:var(--bg); color:var(--fg);
   pointer-events: none;
 }
 
-/* Simple splash fade */
-#splash.hidden { opacity: 0; pointer-events: none; transition: opacity .25s ease; }
+/* make hidden actually remove from layout & hit-testing */
+[hidden]{ display:none !important; }
+#splash.hidden{ opacity:0; pointer-events:none; display:none; transition: opacity .25s ease; } /* add display:none */
 
 /* ASCII Art Loading Screen */
 .ascii-loading {
