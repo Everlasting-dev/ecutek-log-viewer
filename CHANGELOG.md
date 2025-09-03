@@ -2,6 +2,25 @@
 
 ## Version History
 
+### v1.3.1 – Performance improvements and mobile UX enhancements
+**Date:** October 2025  
+**Status:** 🚀 Alpha Release
+
+#### ✨ Features
+- **Faster Startup**: Reduced loading screen time from 3.5s to 1.5s for improved user experience
+- **iOS Navigation Fix**: Enhanced mobile navigation with safe-area-inset support for iOS devices
+- **Portrait Mode Optimization**: Better navigation bar positioning to avoid status bar conflicts
+
+#### 🐛 Fixes
+- Fixed taskbar positioning conflicts with iOS status bar in portrait mode
+- Improved mobile navigation accessibility and touch targets
+- Enhanced ASCII animation timing to match faster loading screen
+
+#### 🔧 Technical
+- Added CSS safe-area-inset support for modern iOS devices
+- Optimized loading screen timing across all main files (app.js, compare.js, about.js)
+- Improved mobile-first responsive design
+
 ### v1.3.0 – Mobile optimizations and cursor improvements
 **Date:** September 2025  
 **Status:** ✅ Released

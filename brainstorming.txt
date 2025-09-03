@@ -1,7 +1,7 @@
 ECUTEK LOG VIEWER - BRAINSTORMING IDEAS
 ==========================================
 
-CURRENT VERSION: v1.0.0
+CURRENT VERSION: v1.3.1
 LAST UPDATED: [Current Date]
 
 🎯 CORE IMPROVEMENTS

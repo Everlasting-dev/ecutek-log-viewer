@@ -217,5 +217,5 @@ For issues, questions, or feature requests:
 
 ---
 
-**Made by AK Everlasting Dev · v1.3.0**
+**Made by AK Everlasting Dev · v1.3.1**
 
