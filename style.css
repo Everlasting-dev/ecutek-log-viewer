@@ -385,8 +385,16 @@ body{ margin:0; background:var(--bg); color:var(--fg);
 
 /* Mobile responsiveness for taskbar */
 @media (max-width: 768px) {
+  /* Add safe area support for iOS devices */
+  .taskbar {
+    /* Add safe area padding at top for iOS notch/status bar */
+    padding-top: env(safe-area-inset-top);
+    /* Slightly lower position to avoid iOS status bar conflicts */
+    top: 8px;
+  }
+  
   .taskbar-content {
-    padding: 0 12px;
+    padding: 0 max(12px, env(safe-area-inset-left)) 0 max(12px, env(safe-area-inset-right));
     height: 50px;
   }
   
@@ -417,6 +425,19 @@ body{ margin:0; background:var(--bg); color:var(--fg);
   .compare-page .plot-frame{ padding:6px; }
   .compare-page #chart.plot{ height:65vh !important; }
   .compare-page .slot{ grid-template-columns: 96px 40px 1fr 74px auto auto auto; gap:8px; }
+}
+
+/* Additional iOS portrait mode specific adjustments */
+@media (max-width: 768px) and (orientation: portrait) {
+  .taskbar {
+    /* More clearance for portrait mode where status bar is more intrusive */
+    top: 12px;
+  }
+  
+  /* Ensure content doesn't get hidden under taskbar */
+  .wrap {
+    margin-top: 24px;
+  }
 }
 
 /* Loading screen */
