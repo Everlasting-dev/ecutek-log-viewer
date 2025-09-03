@@ -884,8 +884,8 @@ function createAsciiAnimation() {
       asciiContainer.textContent = render(t);
     }
     
-    // Continue animation for 3.5 seconds
-    if (t < 3.5) {
+    // Continue animation for 1.5 seconds
+    if (t < 1.5) {
       requestAnimationFrame(tick);
     }
   }
@@ -898,7 +898,7 @@ document.addEventListener("DOMContentLoaded", ()=>{
   const suppress = sessionStorage.getItem('suppressStartupLoading') === '1';
   if (!suppress) {
     showStartupLoading();
-    setTimeout(() => { hideStartupLoading(); }, 3500);
+    setTimeout(() => { hideStartupLoading(); }, 1500);
   } else {
     hideStartupLoading();
     try { sessionStorage.removeItem('suppressStartupLoading'); } catch(_){}
