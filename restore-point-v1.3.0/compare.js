@@ -158,22 +158,311 @@ const chart    = $("chart");
 const toast    = $("toast");
 
 const loadingScreen = $("loadingScreen");
+const scaleHelpBtn = $("scaleHelpBtn");
+const scaleHelpModal = $("scaleHelpModal");
+const scaleHelpClose = $("scaleHelpClose");
+const autoScaleBtn = $("autoScaleBtn");
+const changelogBtn = $("changelogBtn");
+const changelogModal = $("changelogModal");
+const changelogClose = $("changelogClose");
+const hintsBtn = $("hintsBtn");
+const hintsModal = $("hintsModal");
+const hintsClose = $("hintsClose");
+
+// Time range slider elements
+const timeMinSlider = $("timeMinSlider");
+const timeMaxSlider = $("timeMaxSlider");
+const timeMinInput = $("timeMinInput");
+const timeMaxInput = $("timeMaxInput");
+const timeMinDisplay = $("timeMinDisplay");
+const timeMaxDisplay = $("timeMaxDisplay");
+const resetTimeRange = $("resetTimeRange");
+const fullTimeRange = $("fullTimeRange");
+const smoothSelect = $("smoothSelect");
+const highlightToggle = $("highlightToggle");
+const highlightColumn = $("highlightColumn");
+const highlightModeSel = $("highlightMode");
+const highlightThresholdInput = $("highlightThreshold");
+const compareFileInfo = $("compareFileInfo");
+const csvCompareFile = $("csvCompareFile");
 
 let headers=[], cols=[], timeIdx=-1, rpmIdx=-1, xIdx=NaN, snapIndex=null;
 let xMin = 0, xMax = 0;
 let lastIdx = null;
 
+// Time range filtering
+let timeRangeMin = 0;
+let timeRangeMax = 0;
+let timeRangeEnabled = false;
+let activeTimeSeries = [];
+let activeIndexMap = [];
+let smoothingWindow = 0;
+let highlightSettings = {
+  enabled:false,
+  columnIdx:-1,
+  mode:'above',
+  threshold:0
+};
+let compareLog = null;
+const AUTO_SCALE_TARGET = 200;
+const EPS = 1e-3;
+
+if (smoothSelect) smoothSelect.value = String(smoothingWindow);
+if (highlightThresholdInput) highlightThresholdInput.value = highlightSettings.threshold;
+refreshHighlightOptions();
+syncHighlightControls();
+
 const SLOT_COUNT = 5;
 const ySlots = Array.from({length: SLOT_COUNT}, () => ({
-  enabled:false, colIdx:-1, color:"#00aaff", scale:1, ui:{}
+  enabled:false, colIdx:-1, color:"#00aaff", scale:0, ui:{}  // scale now stores exponent (power): x^scale
 }));
 const autoY = true;
 
 /* utils */
 const debounce = (fn, ms=60) => { let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; };
-function logStepFactor(){
-  const dlog = 0.10;
-  return Math.pow(10, dlog);
+// Power-based scaling: apply x^exponent to values
+function applyPowerScaling(v, exponent) {
+  if (!Number.isFinite(v) || !Number.isFinite(exponent)) return v;
+  // Special case: exponent 0 means no scaling (return value as-is, not x^0=1)
+  if (exponent === 0) return v;
+  if (v === 0 && exponent < 0) return Infinity; // 0^(-n) = Infinity
+  if (v < 0 && exponent !== Math.floor(exponent)) return NaN; // Negative base with fractional exponent
+  try {
+    // For integer exponents, handle sign correctly
+    const absResult = Math.pow(Math.abs(v), exponent);
+    // Preserve sign: if v is negative and exponent is odd, result is negative
+    return absResult * (v < 0 && exponent % 2 !== 0 ? -1 : 1);
+  } catch (e) {
+    return NaN;
+  }
+}
+
+function formatExponent(value){
+  const num = Number(value) || 0;
+  const formatted = num.toFixed(3).replace(/\.?0+$/,'');
+  return formatted === '' ? '0' : formatted;
+}
+
+function getScaleStep(evt){
+  if (evt?.altKey && evt?.shiftKey) return 0.001;
+  if (evt?.altKey) return 0.01;
+  if (evt?.shiftKey) return 0.1;
+  return 1;
+}
+
+function openScaleHelp(){
+  if (scaleHelpModal) {
+    scaleHelpModal.classList.remove("hidden");
+  }
+}
+
+function applySmoothing(series, window){
+  if (!Array.isArray(series) || !series.length || window < 3) return series.slice();
+  const half = Math.floor(window / 2);
+  const result = [];
+  for (let i = 0; i < series.length; i++){
+    let sum = 0;
+    let count = 0;
+    for (let j = i - half; j <= i + half; j++){
+      if (j >= 0 && j < series.length && Number.isFinite(series[j])){
+        sum += series[j];
+        count++;
+      }
+    }
+    result.push(count ? sum / count : series[i]);
+  }
+  return result;
+}
+
+function prepareSeries(raw, exponent){
+  const base = Array.isArray(raw) ? raw : [];
+  const smoothed = smoothingWindow >=3 ? applySmoothing(base, smoothingWindow) : base.slice();
+  return smoothed.map(v => applyPowerScaling(v, exponent));
+}
+
+function refreshHighlightOptions(){
+  if (!highlightColumn) return;
+  highlightColumn.innerHTML = "";
+  if (!headers.length){
+    const placeholder = document.createElement("option");
+    placeholder.value = "-1";
+    placeholder.textContent = "Load a file to enable highlighting";
+    placeholder.disabled = true;
+    placeholder.selected = true;
+    highlightColumn.appendChild(placeholder);
+    return;
+  }
+  if (!headers[highlightSettings.columnIdx]) {
+    highlightSettings.columnIdx = -1;
+  }
+  const placeholder = document.createElement("option");
+  placeholder.value = "-1";
+  placeholder.textContent = "Select column";
+  if (highlightSettings.columnIdx === -1) placeholder.selected = true;
+  highlightColumn.appendChild(placeholder);
+  const enabledCols = new Set(ySlots.filter(s=>s.enabled && s.colIdx >= 0).map(s=>s.colIdx));
+  enabledCols.forEach(idx => {
+    const h = headers[idx];
+    const option = document.createElement("option");
+    option.value = String(idx);
+    option.textContent = h;
+    if (idx === highlightSettings.columnIdx) option.selected = true;
+    highlightColumn.appendChild(option);
+  });
+
+  if (!enabledCols.has(highlightSettings.columnIdx)) {
+    highlightSettings.columnIdx = -1;
+    highlightColumn.value = "-1";
+  }
+}
+
+function updateCompareInfo(){
+  if (!compareFileInfo) return;
+  if (compareLog){
+    compareFileInfo.classList.remove("hidden");
+    compareFileInfo.textContent = `Comparison loaded: ${compareLog.name} (${compareLog.rows} rows)`;
+  } else {
+    compareFileInfo.classList.add("hidden");
+    compareFileInfo.textContent = "";
+  }
+}
+
+function loadComparisonFile(file){
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try{
+      const text = String(ev.target.result || "");
+      const parsed = parseCSV(text);
+      const refTimeIdx = findTimeIndex(parsed.headers);
+      if (!Number.isFinite(refTimeIdx) || refTimeIdx < 0){
+        toastMsg("Comparison log missing a Time column.", "error");
+        return;
+      }
+      compareLog = {
+        name: file.name,
+        headers: parsed.headers,
+        cols: parsed.cols,
+        timeIdx: refTimeIdx,
+        rows: parsed.rows
+      };
+      updateCompareInfo();
+      toastMsg("Comparison log ready.", "ok");
+      plot(false, true);
+    }catch(err){
+      compareLog = null;
+      updateCompareInfo();
+      toastMsg(err.message || "Failed to parse comparison log.", "error");
+    }
+  };
+  reader.onerror = () => {
+    compareLog = null;
+    updateCompareInfo();
+    toastMsg("Unable to read comparison file.", "error");
+  };
+  reader.readAsText(file);
+}
+
+function syncHighlightControls(){
+  if (highlightToggle) highlightToggle.checked = !!highlightSettings.enabled;
+  const disabled = !highlightSettings.enabled;
+  if (highlightColumn) highlightColumn.disabled = disabled;
+  if (highlightModeSel) highlightModeSel.disabled = disabled;
+  if (highlightThresholdInput) highlightThresholdInput.disabled = disabled;
+  if (highlightThresholdInput && Number.isFinite(highlightSettings.threshold)){
+    highlightThresholdInput.value = highlightSettings.threshold;
+  }
+  if (highlightModeSel) highlightModeSel.value = highlightSettings.mode;
+}
+
+function closeScaleHelp(){
+  if (scaleHelpModal) {
+    scaleHelpModal.classList.add("hidden");
+  }
+}
+
+function openChangelog(){
+  if (changelogModal) {
+    changelogModal.classList.remove("hidden");
+  }
+}
+
+function closeChangelog(){
+  if (changelogModal) {
+    changelogModal.classList.add("hidden");
+  }
+}
+
+function openHints(){
+  if (hintsModal) {
+    hintsModal.classList.remove("hidden");
+  }
+}
+
+function closeHints(){
+  if (hintsModal) {
+    hintsModal.classList.add("hidden");
+  }
+}
+
+function autoScaleTraces(){
+  if (!headers.length || !Number.isFinite(xIdx)) {
+    toastMsg("Load a log before auto-scaling.","error");
+    return;
+  }
+  const xs = cols[xIdx];
+  if (!xs || !xs.length){
+    toastMsg("No time data available.","error");
+    return;
+  }
+  let changed = false;
+
+  for (let i = 0; i < ySlots.length; i++){
+    const slot = ySlots[i];
+    if (!slot.enabled || slot.colIdx === -1) continue;
+    const raw = cols[slot.colIdx];
+    if (!raw) continue;
+
+    const magnitudes = [];
+    let hasNegative = false;
+    for (let j = 0; j < xs.length; j++){
+      const t = xs[j];
+      if (timeRangeEnabled && (t < timeRangeMin || t > timeRangeMax)) continue;
+      const v = raw[j];
+      if (!Number.isFinite(v)) continue;
+      if (v < 0) hasNegative = true;
+      const abs = Math.abs(v);
+      if (abs > 0) magnitudes.push(abs);
+    }
+    if (!magnitudes.length) continue;
+    magnitudes.sort((a,b)=>a-b);
+    const max = magnitudes[magnitudes.length - 1];
+    if (!Number.isFinite(max) || max <= 0) continue;
+
+    let exponent = Math.log(AUTO_SCALE_TARGET) / Math.log(max);
+    if (!Number.isFinite(exponent)) continue;
+    exponent = Math.max(-3, Math.min(3, exponent));
+
+    if (hasNegative && Math.abs(exponent % 1) > 1e-6){
+      exponent = Math.round(exponent);
+    }
+    exponent = Number(exponent.toFixed(3));
+    if (!Number.isFinite(exponent)) continue;
+
+    if ((slot.scale ?? 0) !== exponent){
+      slot.scale = exponent;
+      updateScaleBox(i);
+      changed = true;
+    }
+  }
+
+  if (changed){
+    plot(false, true);
+    if (Number.isFinite(lastIdx)) showPointInfoAt(lastIdx);
+    toastMsg("Scaling normalized.", "ok");
+  } else {
+    toastMsg("Nothing to auto-scale.", "error");
+  }
 }
 function toastMsg(msg, type="error"){ 
   toast.textContent=msg; toast.style.display="block";
@@ -181,10 +470,103 @@ function toastMsg(msg, type="error"){
   toast.style.borderColor=(type==="error")?"#742020":"#1a6a36";
   clearTimeout(toastMsg._t); toastMsg._t=setTimeout(()=>toast.style.display="none",2600); 
 }
-function fmtBytes(n){ 
-  const u=["B","KB","MB","GB"]; let i=0; 
-  while(n>=1024&&i<u.length-1){n/=1024;i++;} 
-  return `${n.toFixed(1)} ${u[i]}`; 
+function fmtBytes(n){
+  const u=["B","KB","MB","GB"]; let i=0;
+  while(n>=1024&&i<u.length-1){n/=1024;i++;}
+  return `${n.toFixed(1)} ${u[i]}`;
+}
+
+// Time range filtering functions
+function filterDataByTimeRange(xData, yData, customData) {
+  if (!timeRangeEnabled || !Array.isArray(xData) || xData.length === 0) {
+    return {
+      x: xData,
+      y: yData,
+      customdata: customData,
+      indices: xData?.map((_, idx) => idx) || []
+    };
+  }
+
+  const filtered = [];
+  const filteredY = [];
+  const filteredCustom = [];
+  const filteredIndices = [];
+
+  for (let i = 0; i < xData.length; i++) {
+    const x = xData[i];
+    if (Number.isFinite(x) && x >= timeRangeMin && x <= timeRangeMax) {
+      filtered.push(x);
+      filteredIndices.push(i);
+      if (Array.isArray(yData)) {
+        filteredY.push(yData[i]);
+      }
+      if (customData && customData[i] !== undefined) {
+        filteredCustom.push(customData[i]);
+      }
+    }
+  }
+
+  return {
+    x: filtered,
+    y: Array.isArray(yData) ? filteredY : undefined,
+    customdata: filteredCustom.length > 0 ? filteredCustom : undefined,
+    indices: filteredIndices
+  };
+}
+
+function updateTimeRangeDisplays() {
+  if (timeMinDisplay) timeMinDisplay.textContent = `${timeRangeMin.toFixed(1)}s`;
+  if (timeMaxDisplay) timeMaxDisplay.textContent = `${timeRangeMax.toFixed(1)}s`;
+}
+
+function refreshTimeRangeState(){
+  const full = Math.abs(timeRangeMin - xMin) < EPS && Math.abs(timeRangeMax - xMax) < EPS;
+  timeRangeEnabled = !full;
+}
+
+function initializeTimeRange() {
+  // Set initial values based on data
+  updateTimeRangeFromData();
+
+  // Set up slider ranges
+  if (timeMinSlider) {
+    timeMinSlider.min = xMin;
+    timeMinSlider.max = xMax;
+    timeMinSlider.value = timeRangeMin;
+  }
+  if (timeMaxSlider) {
+    timeMaxSlider.min = xMin;
+    timeMaxSlider.max = xMax;
+    timeMaxSlider.value = timeRangeMax;
+  }
+
+  // Set up input values
+  if (timeMinInput) timeMinInput.value = timeRangeMin.toFixed(1);
+  if (timeMaxInput) timeMaxInput.value = timeRangeMax.toFixed(1);
+
+  updateTimeRangeDisplays();
+}
+
+function updateTimeRangeFromData() {
+  if (cols.length === 0 || !Number.isFinite(xIdx)) return;
+
+  const xData = cols[xIdx].filter(Number.isFinite);
+  if (xData.length === 0) return;
+
+  xMin = Math.min(...xData);
+  xMax = Math.max(...xData);
+
+  // Initialize time range to full range if not already set or if data changed
+  if (!timeRangeEnabled || timeRangeMin >= timeRangeMax) {
+    timeRangeMin = xMin;
+    timeRangeMax = xMax;
+    timeRangeEnabled = true;
+  }
+
+  // Ensure time range stays within data bounds
+  timeRangeMin = Math.max(xMin, Math.min(timeRangeMin, xMax));
+  timeRangeMax = Math.max(xMin, Math.min(timeRangeMax, xMax));
+  refreshTimeRangeState();
 }
 
 // Loading screen functions
@@ -208,35 +590,50 @@ function hideLoading() {
   loadingScreen.classList.add("hidden");
 }
 
-function rescaleYToWindow(rangeOverride){
-  const xs = cols[xIdx]; if (!xs || !xs.length) return;
-  const xr = rangeOverride || (chart.layout?.xaxis?.range || null);
-  if (!xr || xr.length !== 2) return;
-  const [lo, hi] = xr;
+function rescaleYToWindow(){
+  const xs = activeTimeSeries.length ? activeTimeSeries : cols[xIdx];
+  if (!xs || !xs.length) return;
   let mn = +Infinity, mx = -Infinity;
 
   for (let s of ySlots){
     if (!s.enabled || s.colIdx === -1) continue;
     const ys = cols[s.colIdx];
+    const exponent = s.scale ?? 0;
     for (let i = 0; i < xs.length; i++){
-      const x = xs[i]; if (x < lo || x > hi) continue;
+      if (timeRangeEnabled && (xs[i] < timeRangeMin || xs[i] > timeRangeMax)) continue;
       const v = ys[i]; if (!Number.isFinite(v)) continue;
-      const y = v * (s.scale || 1);
-      if (y < mn) mn = y; if (y > mx) mx = y;
+      const y = applyPowerScaling(v, exponent);
+      if (Number.isFinite(y)) {
+        if (y < mn) mn = y; if (y > mx) mx = y;
+      }
     }
   }
+
   if (mn === +Infinity || mx === -Infinity) return;
   const pad = Math.max((mx - mn) * 0.05, 1e-6);
-  Plotly.relayout(chart, { "yaxis.autorange": false, "yaxis.range": [mn - pad, mx + pad] });
+
+  const updates = {
+    "yaxis.autorange": false,
+    "yaxis.range": [mn - pad, mx + pad],
+    "xaxis.autorange": false,
+    "xaxis.range": timeRangeEnabled ? [timeRangeMin, timeRangeMax] : chart.layout?.xaxis?.range || null
+  };
+
+  if (!timeRangeEnabled) {
+    updates["xaxis.autorange"] = true;
+  }
+
+  Plotly.relayout(chart, updates);
 }
 
 function updateScaleBox(i){
   const s = ySlots[i];
   if (s?.ui?.val) {
+    const exponent = s.scale ?? 0;
     if (s.ui.val.tagName === 'INPUT') {
-      s.ui.val.value = (s.scale ?? 1).toFixed(3);
+      s.ui.val.value = formatExponent(exponent);
     } else {
-      s.ui.val.textContent = (s.scale ?? 1).toFixed(3);
+      s.ui.val.textContent = formatExponent(exponent);
     }
   }
 }
@@ -368,14 +765,14 @@ function buildUI(){
     idxs.forEach(ix=>{ const o=document.createElement("option"); o.value=String(ix); o.textContent=headers[ix]; sel.appendChild(o); });
     sel.value=String(ySlots[i].colIdx);
 
-    // col4: scale value display
+    // col4: scale value display (exponent/power)
     const scaleVal = document.createElement("input");
     scaleVal.type = "number";
     scaleVal.className = "scale-val";
-    scaleVal.value = ySlots[i].scale.toFixed(3);
+    scaleVal.value = formatExponent(ySlots[i].scale ?? 0);
     scaleVal.step = "0.001";
-    scaleVal.min = "0.001";
-    scaleVal.max = "1000";
+    scaleVal.min = "-10";
+    scaleVal.max = "10";
     ySlots[i].ui.val = scaleVal;
     
     // col5: value display + arrows
@@ -392,31 +789,37 @@ function buildUI(){
     // events
     tick.addEventListener("change", ()=>{ ySlots[i].enabled=tick.checked; plot(false,true); });
     color.addEventListener("input", ()=>{ ySlots[i].color=color.value; plot(false,true); });
-    sel.addEventListener("change", ()=>{ ySlots[i].colIdx=Number(sel.value); ySlots[i].scale=1.0; plot(false,true); });
+    sel.addEventListener("change", ()=>{ ySlots[i].colIdx=Number(sel.value); ySlots[i].scale=0; plot(false,true); });
     scaleVal.addEventListener("input", ()=>{ 
-      const newScale = parseFloat(scaleVal.value);
-      if (Number.isFinite(newScale) && newScale > 0) {
-        ySlots[i].scale = newScale;
+      const newExponent = parseFloat(scaleVal.value);
+      if (Number.isFinite(newExponent) && newExponent >= -10 && newExponent <= 10) {
+        ySlots[i].scale = newExponent;
         plot(false,true);
         if (Number.isFinite(lastIdx)) showPointInfoAt(lastIdx);
+      } else {
+        scaleVal.value = formatExponent(ySlots[i].scale ?? 0);
       }
     });
-    up.addEventListener("click", ()=>{ 
+    up.addEventListener("click", (evt)=>{ 
       const ix=ySlots[i].colIdx; if(ix<0) return; 
-      ySlots[i].scale *= logStepFactor(); 
+      const currentExponent = ySlots[i].scale ?? 0;
+      const step = getScaleStep(evt);
+      ySlots[i].scale = Math.min(10, +(currentExponent + step).toFixed(3)); 
       updateScaleBox(i); 
       plot(false,true); 
       if (Number.isFinite(lastIdx)) showPointInfoAt(lastIdx);
     });
-    dn.addEventListener("click", ()=>{ 
+    dn.addEventListener("click", (evt)=>{ 
       const ix=ySlots[i].colIdx; if(ix<0) return; 
-      ySlots[i].scale /= logStepFactor(); 
+      const currentExponent = ySlots[i].scale ?? 0;
+      const step = getScaleStep(evt);
+      ySlots[i].scale = Math.max(-10, +(currentExponent - step).toFixed(3)); 
       updateScaleBox(i); 
       plot(false,true); 
       if (Number.isFinite(lastIdx)) showPointInfoAt(lastIdx);
     });
     reset.addEventListener("click", ()=>{ 
-      ySlots[i].scale = 1; 
+      ySlots[i].scale = 0; 
       updateScaleBox(i); 
       plot(false,true); 
       if (Number.isFinite(lastIdx)) showPointInfoAt(lastIdx);
@@ -442,27 +845,97 @@ function plot(showToasts=true, preserveRange=false){
 
   const traces=[];
   
+  let currentTimeSeries = [];
+  let currentIndexMap = [];
+
+  const highlightTraces = [];
+
   for(let i=0;i<ySlots.length;i++){
     const s = ySlots[i];
     if(!s.enabled || s.colIdx===-1) continue;
     const rawY    = cols[s.colIdx];
-    const scale   = s.scale ?? 1;
-    const scaledY = rawY.map(v => Number.isFinite(v) ? (v * scale) : v);
+    const exponent = s.scale ?? 0;
+    const scaledY = prepareSeries(rawY, exponent);
     const label = headers[s.colIdx];
-    
-    const typ = cols[s.colIdx].length > 5000 ? "scattergl" : "scatter";
-    
+
+    // Apply time range filtering
+    const filteredData = filterDataByTimeRange(cols[xIdx], scaledY, rawY);
+    if (!currentTimeSeries.length) {
+      currentTimeSeries = filteredData.x;
+      currentIndexMap = filteredData.indices || [];
+    }
+
+    const typ = filteredData.x.length > 5000 ? "scattergl" : "scatter";
+    const traceY = filteredData.y ?? scaledY;
+
     traces.push({
       type: typ,
       mode: "lines",
-      x: cols[xIdx],
-      y: scaledY,
-      customdata: rawY,
+      x: filteredData.x,
+      y: traceY,
+      customdata: filteredData.customdata,
       name: label,
       line: { width: 1, color: s.color },
       hoverinfo: "skip"
     });
+
+    if (compareLog && compareLog.headers?.includes(label) && compareLog.timeIdx >= 0){
+      const refIdx = compareLog.headers.indexOf(label);
+      const refYRaw = compareLog.cols?.[refIdx];
+      const refTime = compareLog.cols?.[compareLog.timeIdx];
+      if (refYRaw && refTime){
+        const refScaled = prepareSeries(refYRaw, exponent);
+        const refFiltered = filterDataByTimeRange(refTime, refScaled, refYRaw);
+        traces.push({
+          type: refFiltered.x.length > 5000 ? "scattergl" : "scatter",
+          mode: "lines",
+          x: refFiltered.x,
+          y: refFiltered.y ?? refScaled,
+          customdata: refFiltered.customdata,
+          name: `${label} (Ref)`,
+          line: { width: 1, dash: "dot", color: s.color },
+          hoverinfo: "skip",
+          opacity: 0.85
+        });
+      }
+    }
   }
+  if (highlightSettings.enabled && Number.isFinite(highlightSettings.threshold) && highlightSettings.columnIdx >=0){
+    const rawCol = cols[highlightSettings.columnIdx];
+    if (rawCol){
+      const slot = ySlots.find(s=>s.colIdx === highlightSettings.columnIdx);
+      const exponent = slot ? (slot.scale ?? 0) : 0;
+      const prepared = prepareSeries(rawCol, exponent);
+      const filtered = filterDataByTimeRange(cols[xIdx], prepared, rawCol);
+      const ptsX = [], ptsY = [], rawVals = [];
+      filtered.x.forEach((x, idx) => {
+        const rawVal = filtered.customdata ? filtered.customdata[idx] : prepared[idx];
+        if (!Number.isFinite(rawVal)) return;
+        const cond = highlightSettings.mode === "above"
+          ? rawVal >= highlightSettings.threshold
+          : rawVal <= highlightSettings.threshold;
+        if (cond){
+          ptsX.push(x);
+          const yVal = filtered.y ? filtered.y[idx] : prepared[idx];
+          ptsY.push(yVal);
+          rawVals.push(rawVal);
+        }
+      });
+      if (ptsX.length){
+        traces.push({
+          type: "scatter",
+          mode: "markers",
+          x: ptsX,
+          y: ptsY,
+          name: `${headers[highlightSettings.columnIdx]} Highlight`,
+          marker: { size: 8, color: "#ff944d", symbol: "diamond-open" },
+          customdata: rawVals,
+          hovertemplate: `${headers[highlightSettings.columnIdx]}<br>raw:%{customdata:.3f}<extra>Highlight</extra>`
+        });
+      }
+    }
+  }
+
   if(!traces.length){ if(showToasts) toastMsg("Enable at least one Y axis."); return; }
 
   // Ensure chart element exists
@@ -511,6 +984,11 @@ function plot(showToasts=true, preserveRange=false){
       remove: ["zoom2d", "pan2d", "select2d", "lasso2d", "zoomIn2d", "zoomOut2d", "autoScale2d", "resetScale2d"]
     }
   };
+  if (!currentTimeSeries.length) {
+    currentTimeSeries = cols[xIdx] ? [...cols[xIdx]] : [];
+    currentIndexMap = currentTimeSeries.map((_, idx) => idx);
+  }
+
   Plotly.newPlot(chart,traces,layout,{
     displaylogo:false,
     responsive:true,
@@ -521,6 +999,8 @@ function plot(showToasts=true, preserveRange=false){
       "zoom2d","pan2d","select2d","lasso2d","zoomIn2d","zoomOut2d","autoScale2d","resetScale2d"
     ]
   }).then(()=>{
+    activeTimeSeries = currentTimeSeries;
+    activeIndexMap = currentIndexMap;
     bindChartHandlers();
     const x = traces[0]?.x || [];
     const mid = Math.floor(x.length/2);
@@ -547,7 +1027,7 @@ function plot(showToasts=true, preserveRange=false){
 
     // Add cursor after plot & enable snapping
     addCursor(chart);
-    wireCursor(chart, { time: cols[xIdx] });
+    wireCursor(chart, { time: activeTimeSeries });
 
     // Follow finger/mouse: continuous snap while dragging
     const dragRect = chart.querySelector('.plotly .nsewdrag') || chart;
@@ -573,7 +1053,10 @@ function plot(showToasts=true, preserveRange=false){
   });
 
   updateReadouts();
-  if (autoY) rescaleYToWindow(chart.layout?.xaxis?.range || null);
+  if (autoY) rescaleYToWindow();
+  else if (timeRangeEnabled) {
+    Plotly.relayout(chart, { "xaxis.autorange": false, "xaxis.range": [timeRangeMin, timeRangeMax] });
+  }
 }
 
 // Container click handler function
@@ -606,14 +1089,14 @@ function handleContainerClick(event) {
 
 /* readouts */
 function nearestIndexByX(xTarget){
-  const xs=cols[xIdx]; if(!xs?.length) return null;
+  const xs=activeTimeSeries; if(!xs?.length) return null;
   let bestI=0,bestD=Infinity; for(let i=0;i<xs.length;i++){ const d=Math.abs(xs[i]-xTarget); if(d<bestD){bestD=d; bestI=i;} }
   return bestI;
 }
 
 function updateReadouts(){
   if(!Number.isFinite(xIdx)) return;
-  const xs=cols[xIdx]; if(!xs?.length) return;
+  const xs=activeTimeSeries; if(!xs?.length) return;
   let idx=snapIndex??(xs.length-1);
   const r=chart.layout?.xaxis?.range; if(r){ const [lo,hi]=r; if(xs[idx]<lo) idx=nearestIndexByX(lo); else if(xs[idx]>hi) idx=nearestIndexByX(hi); }
   snapIndex=idx;
@@ -622,7 +1105,8 @@ function updateReadouts(){
 
 function updateReadoutsAt(idx){
   if(!Number.isFinite(xIdx) || !Number.isFinite(idx)) return;
-  const xs=cols[xIdx]; if(!xs?.length) return;
+  const xs=activeTimeSeries; if(!xs?.length) return;
+  const origIdx = activeIndexMap[idx] ?? idx;
 
   // X value
   const xVal=axisPanel.querySelector(".slot .valbox"); if(xVal) xVal.textContent = Number(xs[idx]).toFixed(3);
@@ -631,7 +1115,7 @@ function updateReadoutsAt(idx){
   for(let i=0;i<ySlots.length;i++){
     const s=ySlots[i]; if(!s.valEl) continue;
     if(!s.enabled || s.colIdx===-1){ s.valEl.textContent=""; continue; }
-    const raw=cols[s.colIdx][idx];
+    const raw=cols[s.colIdx][origIdx];
     s.valEl.textContent = Number.isFinite(raw) ? raw.toFixed(3) : "";
   }
 }
@@ -670,8 +1154,12 @@ function tryLoadCached(){
       xMin = x.length ? x[0] : 0;
       xMax = x.length ? x[x.length-1] : 100;
     }
-    ySlots.forEach(s=>{ s.enabled=false; s.colIdx=-1; s.scale=1; s.color="#00aaff"; s.ui={}; });
-    autoSelectYs(); buildUI(); chart.innerHTML=""; toastMsg("Loaded cached CSV. Configure axes, then Generate Plot.","ok");
+    ySlots.forEach(s=>{ s.enabled=false; s.colIdx=-1; s.scale=0; s.color="#00aaff"; s.ui={}; });
+
+    // Initialize time range controls
+    initializeTimeRange();
+
+    autoSelectYs(); buildUI(); refreshHighlightOptions(); syncHighlightControls(); chart.innerHTML=""; toastMsg("Loaded cached CSV. Configure axes, then Generate Plot.","ok");
     return true;
   }catch(e){ console.warn("cache parse fail",e); return false; }
 }
@@ -697,12 +1185,15 @@ function wireInitialEventListeners(){
             xMin = x.length ? x[0] : 0;
             xMax = x.length ? x[x.length-1] : 100;
           }
-          ySlots.forEach(s=>{ s.enabled=false; s.colIdx=-1; s.scale=1; s.color="#00aaff"; s.ui={}; });
-          
+          ySlots.forEach(s=>{ s.enabled=false; s.colIdx=-1; s.scale=0; s.color="#00aaff"; s.ui={}; });
+
+          // Initialize time range controls
+          initializeTimeRange();
+
           hideLoading();
-          
+
           fileInfo.classList.remove("hidden"); fileInfo.textContent=`Selected: ${f.name} · ${fmtBytes(f.size)}`;
-          autoSelectYs(); buildUI(); chart.innerHTML=""; toastMsg("Parsed. Configure axes, then Generate Plot.","ok");
+          autoSelectYs(); buildUI(); refreshHighlightOptions(); syncHighlightControls(); chart.innerHTML=""; toastMsg("Parsed. Configure axes, then Generate Plot.","ok");
           
         }catch(err){ 
           hideLoading();
@@ -714,17 +1205,194 @@ function wireInitialEventListeners(){
   });
 
   genBtn.addEventListener("click", ()=>{ plot(true,false); updateReadouts(); });
-  
 
+  // Time range slider event handlers
+  if (timeMinSlider) {
+    timeMinSlider.addEventListener("input", (e) => {
+      const newMin = parseFloat(e.target.value);
+      if (Number.isFinite(newMin) && newMin >= xMin && newMin < timeRangeMax - 0.1) { // Small gap to prevent overlap
+        timeRangeMin = newMin;
+        if (timeMinInput) timeMinInput.value = newMin.toFixed(1);
+        updateTimeRangeDisplays();
+        refreshTimeRangeState();
+        plot(false, false);
+      } else {
+        // Reset slider if invalid
+        e.target.value = timeRangeMin;
+      }
+    });
+  }
+
+  if (timeMaxSlider) {
+    timeMaxSlider.addEventListener("input", (e) => {
+      const newMax = parseFloat(e.target.value);
+      if (Number.isFinite(newMax) && newMax <= xMax && newMax > timeRangeMin + 0.1) { // Small gap to prevent overlap
+        timeRangeMax = newMax;
+        if (timeMaxInput) timeMaxInput.value = newMax.toFixed(1);
+        updateTimeRangeDisplays();
+        refreshTimeRangeState();
+        plot(false, false);
+      } else {
+        // Reset slider if invalid
+        e.target.value = timeRangeMax;
+      }
+    });
+  }
+
+  if (timeMinInput) {
+    timeMinInput.addEventListener("input", (e) => {
+      const newMin = parseFloat(e.target.value);
+      if (Number.isFinite(newMin) && newMin >= xMin && newMin < timeRangeMax - 0.1) {
+        timeRangeMin = newMin;
+        if (timeMinSlider) timeMinSlider.value = newMin;
+        updateTimeRangeDisplays();
+        refreshTimeRangeState();
+        plot(false, false);
+      } else {
+        e.target.value = timeRangeMin.toFixed(1);
+      }
+    });
+  }
+
+  if (timeMaxInput) {
+    timeMaxInput.addEventListener("input", (e) => {
+      const newMax = parseFloat(e.target.value);
+      if (Number.isFinite(newMax) && newMax <= xMax && newMax > timeRangeMin + 0.1) {
+        timeRangeMax = newMax;
+        if (timeMaxSlider) timeMaxSlider.value = newMax;
+        updateTimeRangeDisplays();
+        refreshTimeRangeState();
+        plot(false, false);
+      } else {
+        e.target.value = timeRangeMax.toFixed(1);
+      }
+    });
+  }
+
+  if (resetTimeRange) {
+    resetTimeRange.addEventListener("click", () => {
+      timeRangeMin = xMin;
+      timeRangeMax = xMax;
+      initializeTimeRange();
+      refreshTimeRangeState();
+      plot(false, false);
+    });
+  }
+
+  if (fullTimeRange) {
+    fullTimeRange.addEventListener("click", () => {
+      timeRangeMin = xMin;
+      timeRangeMax = xMax;
+      initializeTimeRange();
+      refreshTimeRangeState();
+      plot(false, false);
+    });
+  }
+
+  if (smoothSelect) {
+    smoothSelect.addEventListener("change", () => {
+      smoothingWindow = Number(smoothSelect.value) || 0;
+      plot(false, true);
+    });
+  }
+  if (highlightToggle) {
+    highlightToggle.addEventListener("change", (e) => {
+      highlightSettings.enabled = e.target.checked;
+      syncHighlightControls();
+      plot(false, true);
+    });
+  }
+  if (highlightColumn) {
+    highlightColumn.addEventListener("change", (e) => {
+      highlightSettings.columnIdx = Number(e.target.value);
+      syncHighlightControls();
+      plot(false, true);
+    });
+  }
+  if (highlightModeSel) {
+    highlightModeSel.addEventListener("change", (e) => {
+      highlightSettings.mode = e.target.value;
+      syncHighlightControls();
+      plot(false, true);
+    });
+  }
+  if (highlightThresholdInput) {
+    highlightThresholdInput.addEventListener("input", (e) => {
+      const val = parseFloat(e.target.value);
+      if (Number.isFinite(val)) {
+        highlightSettings.threshold = val;
+        syncHighlightControls();
+        if (highlightSettings.enabled) plot(false, true);
+      }
+    });
+  }
+  if (csvCompareFile){
+    csvCompareFile.addEventListener("change", (e) => {
+      const file = e.target.files[0] || null;
+      if (!file){
+        compareLog = null;
+        updateCompareInfo();
+        plot(false, true);
+        return;
+      }
+      loadComparisonFile(file);
+    });
+  }
+
+  if (scaleHelpBtn) {
+    scaleHelpBtn.addEventListener("click", () => openScaleHelp());
+  }
+  if (scaleHelpClose) {
+    scaleHelpClose.addEventListener("click", () => closeScaleHelp());
+  }
+  if (scaleHelpModal) {
+    scaleHelpModal.addEventListener("click", (e) => {
+      if (e.target === scaleHelpModal) closeScaleHelp();
+    });
+  }
+  if (autoScaleBtn) {
+    autoScaleBtn.addEventListener("click", autoScaleTraces);
+  }
+  if (changelogBtn) {
+    changelogBtn.addEventListener("click", openChangelog);
+  }
+  if (changelogClose) {
+    changelogClose.addEventListener("click", closeChangelog);
+  }
+  if (changelogModal) {
+    changelogModal.addEventListener("click", (e) => {
+      if (e.target === changelogModal) closeChangelog();
+    });
+  }
+  if (hintsBtn) {
+    hintsBtn.addEventListener("click", openHints);
+  }
+  if (hintsClose) {
+    hintsClose.addEventListener("click", closeHints);
+  }
+  if (hintsModal) {
+    hintsModal.addEventListener("click", (e) => {
+      if (e.target === hintsModal) closeHints();
+    });
+  }
 
   // Back to top button
   const toTopBtn = document.getElementById("toTop");
   if (toTopBtn) toTopBtn.onclick = () => window.scrollTo({ top: 0, behavior: "smooth" });
   
   clearBtn.addEventListener("click", ()=>{
-    ySlots.forEach(s=>{ s.enabled=false; s.colIdx=-1; s.scale=1; s.color="#00aaff"; s.ui={}; });
+    ySlots.forEach(s=>{ s.enabled=false; s.colIdx=-1; s.scale=0; s.color="#00aaff"; s.ui={}; });
     axisPanel.innerHTML=""; chart.innerHTML=""; fileInfo.classList.add("hidden");
-    headers=[]; cols=[]; timeIdx=rpmIdx=-1; xIdx=NaN; snapIndex=null; toastMsg("Cleared page state. Cached CSV retained.","ok");
+    headers=[]; cols=[]; timeIdx=rpmIdx=-1; xIdx=NaN; snapIndex=null;
+    timeRangeMin = 0; timeRangeMax = 0; timeRangeEnabled = false;
+    activeTimeSeries = [];
+    activeIndexMap = [];
+    compareLog = null;
+    updateCompareInfo();
+    if (csvFile) csvFile.value = "";
+    if (csvCompareFile) csvCompareFile.value = "";
+    refreshHighlightOptions();
+    toastMsg("Cleared page state. Cached CSV retained.","ok");
   });
 }
 
@@ -749,10 +1417,10 @@ function initDropdowns() {
         case "Export Data":
           toastMsg("Export functionality coming soon!", "ok");
           break;
-        case "Mega Plot":
-          // Already on mega plot
+        case "Correlation Lab":
+          // Already on correlation lab
           break;
-        case "Multi Plot":
+        case "Signal Matrix":
           window.location.href = "index.html";
           break;
         case "About":
@@ -839,6 +1507,18 @@ function hideStartupLoading() {
   }
 }
 
+function handleStartupSplash(){
+  const navEntry = performance.getEntriesByType && performance.getEntriesByType("navigation")[0];
+  const shouldShow = !sessionStorage.getItem("splashShown") || (navEntry && navEntry.type === "reload");
+  if (shouldShow){
+    showStartupLoading();
+    sessionStorage.setItem("splashShown","1");
+    setTimeout(()=> hideStartupLoading(), 1500);
+  } else {
+    hideStartupLoading();
+  }
+}
+
 // ASCII Dot-Matrix Loading Animation
 function createAsciiAnimation() {
   const asciiContainer = document.querySelector('.ascii-loading .matrix');
@@ -891,13 +1571,7 @@ function createAsciiAnimation() {
 }
 
 document.addEventListener("DOMContentLoaded", ()=>{ 
-  // Show startup loading screen
-  showStartupLoading();
-  
-  // Hide loading screen after 3-4 seconds
-  setTimeout(() => {
-    hideStartupLoading();
-  }, 3500);
+  handleStartupSplash();
   
   // Initialize theme system
   initTheme();
@@ -916,9 +1590,17 @@ document.addEventListener("DOMContentLoaded", ()=>{
   
   // Add keyboard escape handler
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && !loadingScreen.classList.contains("hidden")) {
-      hideLoading();
-      toastMsg("Loading cancelled.", "error");
+    if (e.key === "Escape") {
+      if (!loadingScreen.classList.contains("hidden")) {
+        hideLoading();
+        toastMsg("Loading cancelled.", "error");
+      } else if (scaleHelpModal && !scaleHelpModal.classList.contains("hidden")) {
+        closeScaleHelp();
+      } else if (changelogModal && !changelogModal.classList.contains("hidden")) {
+        closeChangelog();
+      } else if (hintsModal && !hintsModal.classList.contains("hidden")) {
+        closeHints();
+      }
     }
   });
   

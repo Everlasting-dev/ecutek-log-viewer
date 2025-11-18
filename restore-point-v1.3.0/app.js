@@ -137,10 +137,10 @@ function initDropdowns() {
         case "Export Data":
           toast("Export functionality coming soon!", "ok");
           break;
-        case "Multi Plot":
+        case "Signal Matrix":
           // Already on multi plot
           break;
-        case "Mega Plot":
+        case "Correlation Lab":
           window.location.href = "compare.html";
           break;
         case "Compare Mode":
@@ -199,14 +199,20 @@ function hideStartupLoading() {
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  // Show startup loading screen
-  showStartupLoading();
-  
-  // Hide loading screen after 3-4 seconds
-  setTimeout(() => {
+function handleStartupSplash(){
+  const navEntry = performance.getEntriesByType && performance.getEntriesByType("navigation")[0];
+  const shouldShow = !sessionStorage.getItem("splashShown") || (navEntry && navEntry.type === "reload");
+  if (shouldShow){
+    showStartupLoading();
+    sessionStorage.setItem("splashShown","1");
+    setTimeout(()=> hideStartupLoading(), 1500);
+  } else {
     hideStartupLoading();
-  }, 3500);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  handleStartupSplash();
   
   // Initialize theme system
   initTheme();
@@ -216,6 +222,28 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Start ASCII animation
   createAsciiAnimation();
+
+  if (changelogBtn) changelogBtn.addEventListener("click", openChangelog);
+  if (changelogClose) changelogClose.addEventListener("click", closeChangelog);
+  if (changelogModal){
+    changelogModal.addEventListener("click", (e) => {
+      if (e.target === changelogModal) closeChangelog();
+    });
+  }
+  if (hintsBtn) hintsBtn.addEventListener("click", openHints);
+  if (hintsClose) hintsClose.addEventListener("click", closeHints);
+  if (hintsModal){
+    hintsModal.addEventListener("click", (e) => {
+      if (e.target === hintsModal) closeHints();
+    });
+  }
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && changelogModal && !changelogModal.classList.contains("hidden")) {
+      closeChangelog();
+    } else if (e.key === "Escape" && hintsModal && !hintsModal.classList.contains("hidden")) {
+      closeHints();
+    }
+  });
 });
 
 const els = {
@@ -231,6 +259,13 @@ const els = {
   loadingScreen: document.getElementById("loadingScreen"),
 };
 
+const changelogBtn = document.getElementById("changelogBtn");
+const changelogModal = document.getElementById("changelogModal");
+const changelogClose = document.getElementById("changelogClose");
+const hintsBtn = document.getElementById("hintsBtn");
+const hintsModal = document.getElementById("hintsModal");
+const hintsClose = document.getElementById("hintsClose");
+
 
 
 const S = { headers: [], cols: [], timeIdx: -1, name:"", size:0, ready:false };
@@ -245,6 +280,22 @@ const fmt = n=>{ if(!Number.isFinite(n))return""; const u=["B","KB","MB","GB"];l
 
 const cacheSet=(txt,name,size)=>{ sessionStorage.setItem("csvText",txt); sessionStorage.setItem("csvName",name||""); sessionStorage.setItem("csvSize",String(size||0)); };
 const cacheClr=()=>{ ["csvText","csvName","csvSize"].forEach(k=>sessionStorage.removeItem(k)); };
+
+function openChangelog(){
+  if (changelogModal) changelogModal.classList.remove("hidden");
+}
+
+function closeChangelog(){
+  if (changelogModal) changelogModal.classList.add("hidden");
+}
+
+function openHints(){
+  if (hintsModal) hintsModal.classList.remove("hidden");
+}
+
+function closeHints(){
+  if (hintsModal) hintsModal.classList.add("hidden");
+}
 
 // Loading screen functions
 let loadingTimeout = null;
@@ -306,6 +357,58 @@ function stageParsed(text, name, size){
   }, 700);
 }
 
+function nearestIndex(arr,val){
+  if(!Array.isArray(arr)||!arr.length) return null;
+  let lo=0, hi=arr.length-1;
+  while(hi-lo>1){
+    const mid=(lo+hi)>>1;
+    if(arr[mid] < val) lo=mid; else hi=mid;
+  }
+  return Math.abs(arr[lo]-val) <= Math.abs(arr[hi]-val) ? lo : hi;
+}
+
+function wirePlotSnap(div, xSeries, ySeries, readout, label){
+  if (!Array.isArray(xSeries) || !Array.isArray(ySeries)) return;
+  const formatReadout = (idx)=>{
+    if (idx == null) return;
+    const xv = xSeries[idx];
+    const yv = ySeries[idx];
+    if (Number.isFinite(xv) && Number.isFinite(yv)){
+      readout.textContent = `${label}: ${yv.toFixed(2)} @ ${xv.toFixed(2)}s`;
+    }
+  };
+  const update = (clientX)=>{
+    const fl = div._fullLayout; if (!fl || !fl.xaxis || !fl.margin) return;
+    const bb = div.getBoundingClientRect();
+    const xpx = clientX - bb.left - fl.margin.l;
+    const xVal = fl.xaxis.p2d(xpx);
+    if (!Number.isFinite(xVal)) return;
+    const idx = nearestIndex(xSeries, xVal);
+    if (idx == null) return;
+    const xv = xSeries[idx];
+    Plotly.relayout(div, {
+      shapes: [{
+        type:"line", xref:"x", yref:"paper",
+        x0:xv, x1:xv, y0:0, y1:1,
+        line:{color:"#43B3FF", width:1, dash:"dot"}
+      }]
+    });
+    formatReadout(idx);
+  };
+  let dragging=false;
+  div.addEventListener("pointerdown", (e)=>{
+    dragging=true;
+    update(e.clientX);
+    div.setPointerCapture?.(e.pointerId);
+  });
+  div.addEventListener("pointermove", (e)=>{
+    if (dragging) update(e.clientX);
+  });
+  ["pointerup","pointercancel","pointerleave"].forEach(evt=>{
+    div.addEventListener(evt, ()=>{ dragging=false; });
+  });
+}
+
 function renderPlots(){
   if (!S.ready){ toast("Upload a file first."); return; }
   
@@ -327,17 +430,24 @@ function renderPlots(){
       if (valid < 5) continue;
 
       const card=document.createElement("div"); card.className="card plot-card";
-      const title=document.createElement("div"); title.className="plot-title"; title.textContent=S.headers[i];
+      const title=document.createElement("div"); title.className="plot-title";
+      const titleText=document.createElement("span"); titleText.textContent=S.headers[i];
+      const titleReadout=document.createElement("span"); titleReadout.className="plot-readout"; titleReadout.textContent="—";
+      title.appendChild(titleText); title.appendChild(titleReadout);
       const frame=document.createElement("div"); frame.className="plot-frame";
       const div=document.createElement("div"); div.className="plot";
-      frame.appendChild(div); card.appendChild(title); card.appendChild(frame); els.plots.appendChild(card);
+      const footer=document.createElement("div"); footer.className="plot-footer"; footer.textContent="Click to inspect";
+      frame.appendChild(div); card.appendChild(title); card.appendChild(frame); card.appendChild(footer); els.plots.appendChild(card);
 
       Plotly.newPlot(div, [{x, y:S.cols[i], mode:"lines", name:S.headers[i], line:{width:1}}],
         { template, paper_bgcolor:paper, plot_bgcolor:plot, font:{color:text},
           margin:{l:50,r:10,t:10,b:40}, xaxis:{title:S.headers[S.timeIdx]},
-          yaxis:{title:S.headers[i], automargin:true}, showlegend:false },
+          yaxis:{title:S.headers[i], automargin:true}, showlegend:false, hovermode:false, dragmode:false },
         { displaylogo:false, responsive:true, scrollZoom:false, staticPlot:true, doubleClick:false })
-        .then(()=> applyTheme(document.documentElement.getAttribute('data-theme')==='light', [div]));
+        .then(()=>{ 
+          applyTheme(document.documentElement.getAttribute('data-theme')==='light', [div]);
+          wirePlotSnap(div, x, S.cols[i], footer, S.headers[i]);
+        });
     }
     
     hideLoading();

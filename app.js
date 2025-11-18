@@ -42,8 +42,8 @@ function createAsciiAnimation() {
       asciiContainer.textContent = render(t);
     }
     
-    // Continue animation for 1.5 seconds
-    if (t < 1.5) {
+    // Continue animation for 3.5 seconds
+    if (t < 3.5) {
       requestAnimationFrame(tick);
     }
   }
@@ -137,11 +137,10 @@ function initDropdowns() {
         case "Export Data":
           toast("Export functionality coming soon!", "ok");
           break;
-        case "Time Plot":
-          // Already on time plot
+        case "Signal Matrix":
+          // Already on multi plot
           break;
-        case "Analysis":
-          try { sessionStorage.setItem('suppressStartupLoading','1'); } catch(_){}
+        case "Correlation Lab":
           window.location.href = "compare.html";
           break;
         case "Compare Mode":
@@ -200,20 +199,20 @@ function hideStartupLoading() {
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  // Simple splash control – hide after 1.5s
-  const SPLASH_MS = 1500;
-  const splashEl = document.querySelector('#splash');
-  if (splashEl) setTimeout(() => splashEl.classList.add('hidden'), SPLASH_MS);
-  // Show startup loading screen unless suppressed for intra-app navigation
-  const suppress = sessionStorage.getItem('suppressStartupLoading') === '1';
-  if (!suppress) {
+function handleStartupSplash(){
+  const navEntry = performance.getEntriesByType && performance.getEntriesByType("navigation")[0];
+  const shouldShow = !sessionStorage.getItem("splashShown") || (navEntry && navEntry.type === "reload");
+  if (shouldShow){
     showStartupLoading();
-    setTimeout(() => { hideStartupLoading(); }, 1500);
+    sessionStorage.setItem("splashShown","1");
+    setTimeout(()=> hideStartupLoading(), 1500);
   } else {
     hideStartupLoading();
-    try { sessionStorage.removeItem('suppressStartupLoading'); } catch(_){}
   }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  handleStartupSplash();
   
   // Initialize theme system
   initTheme();
@@ -223,6 +222,28 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Start ASCII animation
   createAsciiAnimation();
+
+  if (changelogBtn) changelogBtn.addEventListener("click", openChangelog);
+  if (changelogClose) changelogClose.addEventListener("click", closeChangelog);
+  if (changelogModal){
+    changelogModal.addEventListener("click", (e) => {
+      if (e.target === changelogModal) closeChangelog();
+    });
+  }
+  if (hintsBtn) hintsBtn.addEventListener("click", openHints);
+  if (hintsClose) hintsClose.addEventListener("click", closeHints);
+  if (hintsModal){
+    hintsModal.addEventListener("click", (e) => {
+      if (e.target === hintsModal) closeHints();
+    });
+  }
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && changelogModal && !changelogModal.classList.contains("hidden")) {
+      closeChangelog();
+    } else if (e.key === "Escape" && hintsModal && !hintsModal.classList.contains("hidden")) {
+      closeHints();
+    }
+  });
 });
 
 const els = {
@@ -238,6 +259,13 @@ const els = {
   loadingScreen: document.getElementById("loadingScreen"),
 };
 
+const changelogBtn = document.getElementById("changelogBtn");
+const changelogModal = document.getElementById("changelogModal");
+const changelogClose = document.getElementById("changelogClose");
+const hintsBtn = document.getElementById("hintsBtn");
+const hintsModal = document.getElementById("hintsModal");
+const hintsClose = document.getElementById("hintsClose");
+
 
 
 const S = { headers: [], cols: [], timeIdx: -1, name:"", size:0, ready:false };
@@ -252,6 +280,22 @@ const fmt = n=>{ if(!Number.isFinite(n))return""; const u=["B","KB","MB","GB"];l
 
 const cacheSet=(txt,name,size)=>{ sessionStorage.setItem("csvText",txt); sessionStorage.setItem("csvName",name||""); sessionStorage.setItem("csvSize",String(size||0)); };
 const cacheClr=()=>{ ["csvText","csvName","csvSize"].forEach(k=>sessionStorage.removeItem(k)); };
+
+function openChangelog(){
+  if (changelogModal) changelogModal.classList.remove("hidden");
+}
+
+function closeChangelog(){
+  if (changelogModal) changelogModal.classList.add("hidden");
+}
+
+function openHints(){
+  if (hintsModal) hintsModal.classList.remove("hidden");
+}
+
+function closeHints(){
+  if (hintsModal) hintsModal.classList.add("hidden");
+}
 
 // Loading screen functions
 let loadingTimeout = null;
@@ -313,72 +357,56 @@ function stageParsed(text, name, size){
   }, 700);
 }
 
-// Extract units in parentheses from a header label
-function extractUnits(label){
-  const m = /\(([^)]+)\)/.exec(String(label||""));
-  return m ? m[1] : "";
-}
-
-// Simple stride downsample to limit DOM point count for SVG plots
-function strideDownsample(xArr, yArr, maxPoints){
-  const xs = Array.isArray(xArr) ? xArr : [];
-  const ys = Array.isArray(yArr) ? yArr : [];
-  const n = Math.min(xs.length, ys.length);
-  if (n <= 0) return { x: [], y: [] };
-  if (!Number.isFinite(maxPoints) || maxPoints <= 0 || n <= maxPoints) return { x: xs.slice(0, n), y: ys.slice(0, n) };
-  const step = Math.ceil(n / maxPoints);
-  const xd = []; const yd = [];
-  for (let i = 0; i < n; i += step){ xd.push(xs[i]); yd.push(ys[i]); }
-  return { x: xd, y: yd };
-}
-
-// Find nearest index in xs to target x
-function nearestIndexByX(xs, target){
-  if (!Array.isArray(xs) || !xs.length) return 0;
-  let bestI = 0, bestD = Infinity;
-  for (let i = 0; i < xs.length; i++) {
-    const d = Math.abs(xs[i] - target);
-    if (d < bestD) { bestD = d; bestI = i; }
+function nearestIndex(arr,val){
+  if(!Array.isArray(arr)||!arr.length) return null;
+  let lo=0, hi=arr.length-1;
+  while(hi-lo>1){
+    const mid=(lo+hi)>>1;
+    if(arr[mid] < val) lo=mid; else hi=mid;
   }
-  return bestI;
+  return Math.abs(arr[lo]-val) <= Math.abs(arr[hi]-val) ? lo : hi;
 }
 
-// Enable touch/mouse tap-and-drag cursor with dotted vertical line and fixed annotation
-function enableTapCursor(plotDiv, traceName, xTitle){
-  function draw(x, y){
-    Plotly.relayout(plotDiv, {
+function wirePlotSnap(div, xSeries, ySeries, readout, label){
+  if (!Array.isArray(xSeries) || !Array.isArray(ySeries)) return;
+  const formatReadout = (idx)=>{
+    if (idx == null) return;
+    const xv = xSeries[idx];
+    const yv = ySeries[idx];
+    if (Number.isFinite(xv) && Number.isFinite(yv)){
+      readout.textContent = `${label}: ${yv.toFixed(2)} @ ${xv.toFixed(2)}s`;
+    }
+  };
+  const update = (clientX)=>{
+    const fl = div._fullLayout; if (!fl || !fl.xaxis || !fl.margin) return;
+    const bb = div.getBoundingClientRect();
+    const xpx = clientX - bb.left - fl.margin.l;
+    const xVal = fl.xaxis.p2d(xpx);
+    if (!Number.isFinite(xVal)) return;
+    const idx = nearestIndex(xSeries, xVal);
+    if (idx == null) return;
+    const xv = xSeries[idx];
+    Plotly.relayout(div, {
       shapes: [{
-        type: 'line',
-        xref: 'x', yref: 'paper',
-        x0: x, x1: x, y0: 0, y1: 1,
-        line: { color: '#34a0ff', width: 1, dash: 'dot' }
-      }],
-      annotations: [{
-        xref: 'x', yref: 'paper',
-        x: x, y: 1.12,
-        showarrow: false,
-        bgcolor: '#10161e',
-        bordercolor: '#1b1f25',
-        borderwidth: 1,
-        font: { size: 12, color: '#e7ecf2' },
-        text: `${traceName}: ${Number.isFinite(y)?y.toFixed(3):'—'}<br>${xTitle||'X'}=${Number.isFinite(x)?x.toFixed(3):'—'}`
+        type:"line", xref:"x", yref:"paper",
+        x0:xv, x1:xv, y0:0, y1:1,
+        line:{color:"#43B3FF", width:1, dash:"dot"}
       }]
     });
-  }
-
-  // Follow finger/mouse while moving
-  plotDiv.on('plotly_hover', (ev) => {
-    const p = ev.points && ev.points[0];
-    if (p) draw(p.x, p.y);
+    formatReadout(idx);
+  };
+  let dragging=false;
+  div.addEventListener("pointerdown", (e)=>{
+    dragging=true;
+    update(e.clientX);
+    div.setPointerCapture?.(e.pointerId);
   });
-
-  // Tap/click to set and keep position
-  plotDiv.on('plotly_click', (ev) => {
-    const p = ev.points && ev.points[0];
-    if (p) draw(p.x, p.y);
+  div.addEventListener("pointermove", (e)=>{
+    if (dragging) update(e.clientX);
   });
-
-  // Do NOT clear on unhover; persist last position (prevents snap-to-0)
+  ["pointerup","pointercancel","pointerleave"].forEach(evt=>{
+    div.addEventListener(evt, ()=>{ dragging=false; });
+  });
 }
 
 function renderPlots(){
@@ -396,102 +424,30 @@ function renderPlots(){
     const text  = cs.getPropertyValue('--text').trim() || "#0f141a";
     const template = (document.documentElement.getAttribute('data-theme') === 'light') ? 'plotly_white' : 'plotly_dark';
 
-    const miniPlots = [];
-    function broadcastAtIndex(idx){
-      if (!Number.isFinite(idx)) return;
-      for (const mp of miniPlots){
-        const yv = S.cols[mp.i][idx];
-        // update probe marker position (trace index 1)
-        Plotly.restyle(mp.div, { x: [[x[idx]]], y: [[Number.isFinite(yv)?yv:null]] }, [1]);
-        mp.readout.textContent = `${S.headers[mp.i]}: ${Number.isFinite(yv)?yv.toFixed(3):"—"}`;
-      }
-    }
     for (let i=0;i<S.headers.length;i++){
       if (i === S.timeIdx) continue;                 // no Time vs Time
       const valid = S.cols[i].reduce((a,v)=>a+(Number.isFinite(v)?1:0),0);
       if (valid < 5) continue;
 
       const card=document.createElement("div"); card.className="card plot-card";
-      const title=document.createElement("div"); title.className="plot-title"; title.textContent=S.headers[i];
+      const title=document.createElement("div"); title.className="plot-title";
+      const titleText=document.createElement("span"); titleText.textContent=S.headers[i];
+      const titleReadout=document.createElement("span"); titleReadout.className="plot-readout"; titleReadout.textContent="—";
+      title.appendChild(titleText); title.appendChild(titleReadout);
       const frame=document.createElement("div"); frame.className="plot-frame";
       const div=document.createElement("div"); div.className="plot";
-      frame.appendChild(div); card.appendChild(title); card.appendChild(frame);
+      const footer=document.createElement("div"); footer.className="plot-footer"; footer.textContent="Click to inspect";
+      frame.appendChild(div); card.appendChild(title); card.appendChild(frame); card.appendChild(footer); els.plots.appendChild(card);
 
-      // Readout line below plot
-      const readout = document.createElement("div");
-      readout.className = "plot-readout";
-      readout.style.color = "#9aa7b2";
-      readout.style.marginTop = "6px";
-      readout.textContent = `${S.headers[i]}: —`;
-      card.appendChild(readout);
-      els.plots.appendChild(card);
-
-      // Optional small downsample to keep DOM light (SVG lines)
-      const containerWidth = Math.max(320, frame.clientWidth || 640);
-      const dpr = Math.min(2, window.devicePixelRatio || 1);
-      const maxPts = Math.floor(containerWidth * dpr * 0.8); // ~1 point per px
-      const ds = strideDownsample(x, S.cols[i], Math.max(2000, maxPts));
-      const xData = ds.x, yData = ds.y;
-
-      Plotly.newPlot(
-        div,
-        [{
-          x: xData,
-          y: yData,
-          type: "scatter",
-          mode: "lines",
-          name: S.headers[i],
-          line: { width: 1, color: "#00ff66" },
-          hoverinfo: "skip"
-        },
-        {
-          x: [],
-          y: [],
-          type: "scatter",
-          mode: "markers",
-          name: "probe",
-          marker: { size: 5, symbol: "circle", color: "#00ff66" },
-          hoverinfo: "skip",
-          showlegend: false
-        }],
-        {
-          paper_bgcolor: "#0f1318",
-          plot_bgcolor: "#0f1318",
-          font: { color: "#e7ecf2" },
-          margin: { l: 50, r: 10, t: 10, b: 40 },
-          xaxis: { title: S.headers[S.timeIdx] || "X", gridcolor: "#1b1f25" },
-          yaxis: { title: S.headers[i], gridcolor: "#1b1f25", automargin: true },
-          showlegend: false,
-          hovermode: false,
-          dragmode: false
-        },
-        { displaylogo: false, displayModeBar: false, responsive: true, scrollZoom: false, doubleClick: false }
-      ).then(() => {
-        // Store refs for cross-plot updates
-        miniPlots.push({ div, readout, i });
-        // Local click forwards to global update (tolerant to clicking anywhere on plot area)
-        div.on("plotly_click", (ev) => {
-          const p = ev.points && ev.points[0];
-          if (p && Number.isFinite(p.x)) {
-            const idx = nearestIndexByX(x, Number(p.x));
-            broadcastAtIndex(idx);
-          }
+      Plotly.newPlot(div, [{x, y:S.cols[i], mode:"lines", name:S.headers[i], line:{width:1}}],
+        { template, paper_bgcolor:paper, plot_bgcolor:plot, font:{color:text},
+          margin:{l:50,r:10,t:10,b:40}, xaxis:{title:S.headers[S.timeIdx]},
+          yaxis:{title:S.headers[i], automargin:true}, showlegend:false, hovermode:false, dragmode:false },
+        { displaylogo:false, responsive:true, scrollZoom:false, staticPlot:true, doubleClick:false })
+        .then(()=>{ 
+          applyTheme(document.documentElement.getAttribute('data-theme')==='light', [div]);
+          wirePlotSnap(div, x, S.cols[i], footer, S.headers[i]);
         });
-
-        // Fallback: pointer events on drag layer so background clicks work
-        const layer = div.querySelector('.plotly .nsewdrag') || div;
-        const onPoint = (e) => {
-          const fl = div && div._fullLayout; if (!fl || !fl.xaxis || !fl.margin) return;
-          const bb = div.getBoundingClientRect();
-          const clientX = (e.touches? e.touches[0].clientX : e.clientX);
-          const xpx = clientX - bb.left - fl.margin.l;
-          const xVal = fl.xaxis.p2d(xpx);
-          const idx = nearestIndexByX(x, xVal);
-          broadcastAtIndex(idx);
-        };
-        layer.addEventListener('pointerdown', onPoint, { passive:true });
-        layer.addEventListener('touchstart', onPoint, { passive:true });
-      });
     }
     
     hideLoading();
@@ -537,29 +493,27 @@ if (els.viewSwitcher) {
   });
 }
 
-if (els.dropzone) {
-  ["dragenter","dragover"].forEach(ev=>{
-    els.dropzone.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); els.dropzone.classList.add("dragover"); });
-  });
-  ["dragleave","drop"].forEach(ev=>{
-    els.dropzone.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); els.dropzone.classList.remove("dragover"); });
-  });
-  els.dropzone.addEventListener("drop", e=>{
-    const f=e.dataTransfer.files?.[0];
-    if (!f || !/\.(csv|txt|log)$/i.test(f.name)) return toast("Drop a .csv/.txt/.log file.");
-    const r=new FileReader();
-    r.onerror=()=>{
-      hideLoading();
-      toast("Failed to read file.");
-    };
-    r.onload=ev=>{ 
-      const text=String(ev.target.result||""); 
-      cacheSet(text,f.name,f.size);
-      stageParsed(text,f.name,f.size);
-    };
-    r.readAsText(f);
-  });
-}
+["dragenter","dragover"].forEach(ev=>{
+  els.dropzone.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); els.dropzone.classList.add("dragover"); });
+});
+["dragleave","drop"].forEach(ev=>{
+  els.dropzone.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); els.dropzone.classList.remove("dragover"); });
+});
+els.dropzone.addEventListener("drop", e=>{
+  const f=e.dataTransfer.files?.[0];
+  if (!f || !/\.(csv|txt|log)$/i.test(f.name)) return toast("Drop a .csv/.txt/.log file.");
+  const r=new FileReader();
+  r.onerror=()=>{
+    hideLoading();
+    toast("Failed to read file.");
+  };
+  r.onload=ev=>{ 
+    const text=String(ev.target.result||""); 
+    cacheSet(text,f.name,f.size);
+    stageParsed(text,f.name,f.size);
+  };
+  r.readAsText(f);
+});
 
 document.addEventListener("DOMContentLoaded", ()=>{
   // Add click handler to hide loading screen if stuck

@@ -64,10 +64,10 @@ function initDropdowns() {
         case "Export Data":
           toast("Export functionality coming soon!", "ok");
           break;
-        case "Multi Plot":
+        case "Signal Matrix":
           window.location.href = "index.html";
           break;
-        case "Mega Plot":
+        case "Correlation Lab":
           window.location.href = "compare.html";
           break;
         case "About":

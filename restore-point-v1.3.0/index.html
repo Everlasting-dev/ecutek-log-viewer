@@ -59,24 +59,24 @@
           <div class="dropdown">
             <a href="#" class="nav-item">View</a>
             <div class="dropdown-content">
-              <a href="#" class="dropdown-item">
+              <a href="#" class="dropdown-item active">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/>
                 </svg>
-                Multi Plot
+                Signal Matrix
               </a>
-              <a href="#" class="dropdown-item">
+              <a href="compare.html" class="dropdown-item">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
                 </svg>
-                Mega Plot
+                Correlation Lab
               </a>
               <div class="dropdown-divider"></div>
-              <a href="about.html" class="dropdown-item">
+              <a href="#" class="dropdown-item" id="hintsBtn">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
                 </svg>
-                About
+                Hints
               </a>
             </div>
           </div>
@@ -132,8 +132,7 @@
           </svg>
           <span id="themeText">Dark</span>
         </div>
-        
-
+        <button id="changelogBtn" class="btn ghost mini">Change Log</button>
       </div>
     </div>
   </div>
@@ -165,6 +164,31 @@
 
   <div class="footer">Made by AK Everlasting Dev · v1.3.0</div>
   <button id="toTop" class="totop" title="Back to top">↑ Top</button>
+  <div id="changelogModal" class="modal hidden">
+    <div class="modal-content">
+      <button class="modal-close" id="changelogClose" aria-label="Close change log">×</button>
+      <h3>Change Log</h3>
+      <ul>
+        <li><strong>Signal Matrix snap:</strong> click any plot to read exact values.</li>
+        <li><strong>Power scaling:</strong> per-trace exponents with modifier shortcuts.</li>
+        <li><strong>Correlation Lab:</strong> dual-log overlays, smoothing, highlighting.</li>
+        <li><strong>Time window filter:</strong> isolate events without re-uploading.</li>
+      </ul>
+      <p>For the full story see <code>CHANGELOG.md</code>.</p>
+    </div>
+  </div>
+  <div id="hintsModal" class="modal hidden">
+    <div class="modal-content">
+      <button class="modal-close" id="hintsClose" aria-label="Close hints">×</button>
+      <h3>Hints</h3>
+      <ul>
+        <li>Signal Matrix shows every column; toggle plots off to declutter.</li>
+        <li>Use keyboard modifiers (Shift/Alt) for finer scaling steps on desktop.</li>
+        <li>Correlation Lab adds dual-log overlay, smoothing, and highlights.</li>
+        <li>New Comparison Plot view (coming soon) will combine multiple logs.</li>
+      </ul>
+    </div>
+  </div>
   <script type="module" src="app.js?v=1.3.0"></script>
 </body>
 </html>

@@ -64,10 +64,10 @@ function initDropdowns() {
         case "Export Data":
           toast("Export functionality coming soon!", "ok");
           break;
-        case "Multi Plot":
+        case "Signal Matrix":
           window.location.href = "index.html";
           break;
-        case "Mega Plot":
+        case "Correlation Lab":
           window.location.href = "compare.html";
           break;
         case "About":
@@ -164,8 +164,8 @@ function createAsciiAnimation() {
       asciiContainer.textContent = render(t);
     }
     
-    // Continue animation for 1.5 seconds
-    if (t < 1.5) {
+    // Continue animation for 3.5 seconds
+    if (t < 3.5) {
       requestAnimationFrame(tick);
     }
   }
@@ -214,10 +214,10 @@ document.addEventListener("DOMContentLoaded", () => {
   // Show startup loading screen
   showStartupLoading();
   
-  // Hide loading screen after 1.5 seconds
+  // Hide loading screen after 3-4 seconds
   setTimeout(() => {
     hideStartupLoading();
-  }, 1500);
+  }, 3500);
   
   // Initialize theme system
   initTheme();

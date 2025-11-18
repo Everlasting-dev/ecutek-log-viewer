@@ -63,20 +63,20 @@
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
                 </svg>
-                Mega Plot
+                Correlation Lab
               </a>
               <a href="#" class="dropdown-item">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/>
                 </svg>
-                Multi Plot
+                Signal Matrix
               </a>
               <div class="dropdown-divider"></div>
-              <a href="about.html" class="dropdown-item">
+              <a href="#" class="dropdown-item" id="hintsBtn">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
                 </svg>
-                About
+                Hints
               </a>
             </div>
           </div>
@@ -132,8 +132,7 @@
           </svg>
           <span id="themeText">Dark</span>
         </div>
-        
-
+        <button id="changelogBtn" class="btn ghost mini">Change Log</button>
       </div>
     </div>
   </div>
@@ -145,29 +144,154 @@
       <div class="pickers">
         <label class="filebtn">
           <input id="csvFile" type="file" accept=".csv,.txt,.log,text/csv,text/plain" />
-          <span>Choose Log File (.txt/.csv)</span>
+          <span>Primary Log (CSV/TXT)</span>
         </label>
-        <button id="clearBtn" class="btn ghost">Clear</button>
+        <label class="filebtn secondary">
+          <input id="csvCompareFile" type="file" accept=".csv,.txt,.log,text/csv,text/plain" />
+          <span>Comparison Log (Optional)</span>
+        </label>
+        <button id="clearBtn" class="btn ghost">Clear All</button>
       </div>
       <div class="toolbar">
         <button id="genBtnCompare" class="btn primary">Generate Plot</button>
       </div>
       <div id="fileInfo" class="fileinfo"></div>
+      <div id="compareFileInfo" class="fileinfo secondary hidden"></div>
 
       <div id="toast" class="toast hidden"></div>
     </div>
 
-    <div class="card">
+    <div class="card axis-card">
+      <div class="card-heading">
+        <span>Axis Configuration</span>
+        <div class="heading-actions">
+          <button id="autoScaleBtn" class="btn ghost mini">Auto Scale</button>
+          <button id="scaleHelpBtn" class="btn ghost mini">Scaling Help</button>
+        </div>
+      </div>
       <div id="axisPanel" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="card enhancements-card">
+      <div class="card-heading">
+        <span>Data Enhancements</span>
+      </div>
+      <div class="enhance-grid">
+        <div class="enhance-block">
+          <label for="smoothSelect">Smoothing Window</label>
+          <select id="smoothSelect">
+            <option value="0">Off</option>
+            <option value="3">3 pt</option>
+            <option value="5">5 pt</option>
+            <option value="9">9 pt</option>
+            <option value="15">15 pt</option>
+          </select>
+          <small>Centered moving average applied before scaling.</small>
+        </div>
+        <div class="enhance-block">
+          <label for="highlightToggle">Event Highlighting</label>
+          <div class="highlight-controls">
+            <label class="toggle">
+              <input type="checkbox" id="highlightToggle" />
+              <span>Enable</span>
+            </label>
+            <select id="highlightColumn"></select>
+            <div class="threshold-row">
+              <select id="highlightMode">
+                <option value="above">above</option>
+                <option value="below">below</option>
+              </select>
+              <input type="number" id="highlightThreshold" step="0.1" placeholder="Threshold" />
+            </div>
+          </div>
+          <small>Highlighted points appear as accent markers.</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Time Range Slider -->
+    <div class="card time-range-card">
+      <div class="time-range-header">
+        <h3>Time Window Filter</h3>
+        <div class="time-range-display">
+          <span id="timeMinDisplay">0.0s</span> - <span id="timeMaxDisplay">0.0s</span>
+        </div>
+      </div>
+      <div class="time-range-controls">
+        <div class="slider-row">
+          <label for="timeMinSlider">Start Time</label>
+          <input type="range" id="timeMinSlider" min="0" max="100" step="0.1" value="0" class="time-slider">
+        </div>
+        <div class="slider-row">
+          <label for="timeMaxSlider">End Time</label>
+          <input type="range" id="timeMaxSlider" min="0" max="100" step="0.1" value="100" class="time-slider">
+        </div>
+        <div class="time-inputs">
+          <div class="time-input-group">
+            <label for="timeMinInput">Start (s):</label>
+            <input type="number" id="timeMinInput" step="0.1" min="0" class="time-input">
+          </div>
+          <div class="time-input-group">
+            <label for="timeMaxInput">End (s):</label>
+            <input type="number" id="timeMaxInput" step="0.1" min="0" class="time-input">
+          </div>
+        </div>
+        <div class="time-range-buttons">
+          <button id="resetTimeRange" class="btn ghost mini">Reset Range</button>
+          <button id="fullTimeRange" class="btn ghost mini">Full Range</button>
+        </div>
+      </div>
     </div>
 
     <div class="plots">
       <div class="plot-card">
-        <div class="plot-title">Comparison Plot</div>
+        <div class="plot-title">Performance Analytics Plot</div>
         <div class="plot-frame">
           <div id="chart" class="plot big"></div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <div id="scaleHelpModal" class="modal hidden">
+    <div class="modal-content">
+      <button class="modal-close" id="scaleHelpClose" aria-label="Close scaling help">×</button>
+      <h3>Scaling Shortcuts</h3>
+      <p>Use the ▲ / ▼ buttons (or the exponent input) to adjust each trace. Hold modifier keys for finer control:</p>
+      <ul>
+        <li><strong>Click</strong> – step by <code>±1</code></li>
+        <li><strong>Shift + Click</strong> – step by <code>±0.1</code></li>
+        <li><strong>Alt + Click</strong> – step by <code>±0.01</code></li>
+        <li><strong>Shift + Alt + Click</strong> – step by <code>±0.001</code></li>
+      </ul>
+      <p>The exponent shown (e.g., <code>0.01</code>) is applied as <code>value = raw ^ exponent</code>. Reset returns to <code>0</code> (no scaling).</p>
+    </div>
+  </div>
+
+  <div id="changelogModal" class="modal hidden">
+    <div class="modal-content">
+      <button class="modal-close" id="changelogClose" aria-label="Close change log">×</button>
+      <h3>Change Log</h3>
+      <ul>
+        <li><strong>Dual Log Overlay:</strong> load a reference CSV/TXT to plot dashed comparison traces.</li>
+        <li><strong>Smoothing & Highlights:</strong> moving averages plus threshold-based event markers.</li>
+        <li><strong>Time Window Filter:</strong> dual sliders + numeric inputs keep the chart focused.</li>
+        <li><strong>Power Scaling:</strong> per-trace exponents with modifier shortcuts for fine control.</li>
+      </ul>
+      <p>Full history lives in <code>CHANGELOG.md</code>.</p>
+    </div>
+  </div>
+
+  <div id="hintsModal" class="modal hidden">
+    <div class="modal-content">
+      <button class="modal-close" id="hintsClose" aria-label="Close hints">×</button>
+      <h3>Hints</h3>
+      <ul>
+        <li>Use Auto Scale to align wildly different signals before fine tuning.</li>
+        <li>Enable highlights only for the active traces to spot events quickly.</li>
+        <li>On mobile, swipe from the left edge to open analysis controls.</li>
+        <li>Load a reference log to compare runs without re-uploading data.</li>
+      </ul>
     </div>
   </div>
 
