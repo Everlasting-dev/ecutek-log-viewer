@@ -1,17 +1,26 @@
 # EcuTek Log Viewer
 
+**Current build:** `preAlpha 1.3.10`
+
 A modern, client-side web application for viewing and analyzing EcuTek CSV log files. Built with vanilla JavaScript, Plotly.js, and PapaParse for robust CSV parsing and interactive data visualization.
 
 ## 🚀 Features
 
-- **Time Plot View** - Individual parameter visualization with mini plots
-- **Analysis View** - Unified comparison interface with cursor snapping
-- **Log Scale Support** - True logarithmic scaling with multiplicative controls
-- **File Upload** - File picker (drag & drop removed)
-- **Session Storage** - Persistent file caching between sessions
-- **Mobile-First Design** - Responsive layout optimized for all devices
-- **Metadata Display** - Vehicle, VIN, ECU Call IDs, and Programming Dongle info
-- **Real-time Plotting** - Click-to-select with readouts; unified RAW readout in analysis
+- **Signal Matrix (index.html)** – individual parameter plots with inline readouts
+- **Correlation Lab (compare.html)** – unified comparison interface with dual-log overlay
+- **Auto Scale + Power Scaling** – normalize wildly different signals before fine-grained exponent tweaks
+- **Smoothing & Highlights** – moving averages plus threshold-based event markers
+- **Change Log & Hints modals** – in-app documentation for every release
+- **Session Storage** – Persistent file caching between sessions
+- **Metadata Display** – Vehicle, VIN, ECU Call IDs, and Programming Dongle info
+- **Real-time Plotting** – Click-to-select with readouts; unified RAW readout in analysis
+
+## 🆕 What’s new in preAlpha 1.3.10
+
+- Dual-log overlay now supports smoothing windows and threshold-based event highlights.
+- Auto Scale button normalizes enabled traces to a shared amplitude before exponent tweaks.
+- Time-window sliders respect both start and end bounds without unexpected zooms.
+- In-app Change Log and Hints modals document every release and provide quick tips.
 
 ## 📁 Project Structure
 
@@ -87,14 +96,17 @@ http-server -p 8000
 
 ### Analysis View (`compare.html`)
 - **Unified comparison interface** for multiple parameters
+- **Dual-log overlays** – load a comparison CSV/TXT for dashed reference traces
+- **Smoothing & event highlights** – moving-average windows and threshold markers
 - **Cursor snapping** and click-to-snap; unified readout with RAW values
-- **Multiplicative scaling** controls (log-step adjustments)
+- **Auto Scale + exponent controls** – quick normalization followed by precise tweaks
 - **Auto Y rescale within current X window; X range preserved**
 - **Presets**: preloads Engine Speed, Fuel Pressure, Fuel Trim Short Term, MAP
 
-### Log Scale Features
+### Scaling & Normalization
 - **True logarithmic scaling** with base-10 decades
-- **Multiplicative controls** - Up (×1.2589) and Down (÷1.2589)
+- **Auto Scale** – aligns each enabled trace to a shared amplitude target
+- **Modifier shortcuts / fine controls** for desktop (Shift/Alt) and buttons for mobile
 - **Dynamic annotations** showing peak values
 - **Enhanced tooltips** with raw and scaled values
 

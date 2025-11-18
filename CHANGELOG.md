@@ -2,6 +2,23 @@
 
 ## Version History
 
+### preAlpha 1.3.10 – Dual Log Enhancements & Auto Scale
+**Date:** November 2025  
+**Status:** 🚧 Pre-release
+
+#### ✨ Features
+- **Dual-log overlay upgrades** – smoothing windows plus threshold-based event highlights
+- **Auto Scale** – normalizes each enabled trace before fine power-scaling adjustments
+- **Change Log & Hints modals** – in-app documentation so users don’t need to leave the UI
+
+#### 🐛 Fixes
+- Fixed time-slider behavior so both start and end bounds stay in sync without unexpected zooming
+- Highlight dropdown now lists only the traces currently enabled in the axis configuration
+
+#### 🔧 Technical
+- Shortened splash screen to 1.5s and limited it to startup/reload events
+- Added groundwork for upcoming Comparison view and mobile slide-in controls
+
 ### v1.3.1 – Performance improvements and mobile UX enhancements
 **Date:** October 2025  
 **Status:** 🚀 Alpha Release
