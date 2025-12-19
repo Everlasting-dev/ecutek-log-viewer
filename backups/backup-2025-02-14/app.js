@@ -137,20 +137,23 @@ function initDropdowns() {
         case "Export Data":
           toast("Export functionality coming soon!", "ok");
           break;
-        case "Signal Matrix":
+        case "Multi Plot":
           // Already on multi plot
           break;
-        case "Correlation Lab":
+        case "Mega Plot":
           window.location.href = "compare.html";
           break;
-        case "GR6 Gear Scope":
-          window.location.href = "gear.html";
+        case "Compare Mode":
+          window.location.href = "compare.html";
           break;
-        case "Data Analysis Suite":
-          window.location.href = "analysis.html";
+        case "Data Analysis":
+          toast("Data analysis tools coming soon!", "ok");
           break;
-        case "Shift Strategy Lab":
-          window.location.href = "compare.html#shift-lab";
+        case "Statistics":
+          toast("Statistics panel coming soon!", "ok");
+          break;
+        case "Performance Metrics":
+          toast("Performance metrics coming soon!", "ok");
           break;
         case "Documentation":
           toast("Documentation coming soon!", "ok");
@@ -196,20 +199,14 @@ function hideStartupLoading() {
   }
 }
 
-function handleStartupSplash(){
-  const navEntry = performance.getEntriesByType && performance.getEntriesByType("navigation")[0];
-  const shouldShow = !sessionStorage.getItem("splashShown") || (navEntry && navEntry.type === "reload");
-  if (shouldShow){
-    showStartupLoading();
-    sessionStorage.setItem("splashShown","1");
-    setTimeout(()=> hideStartupLoading(), 1500);
-  } else {
-    hideStartupLoading();
-  }
-}
-
 document.addEventListener('DOMContentLoaded', () => {
-  handleStartupSplash();
+  // Show startup loading screen
+  showStartupLoading();
+  
+  // Hide loading screen after 3-4 seconds
+  setTimeout(() => {
+    hideStartupLoading();
+  }, 3500);
   
   // Initialize theme system
   initTheme();
@@ -219,28 +216,6 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Start ASCII animation
   createAsciiAnimation();
-
-  if (changelogBtn) changelogBtn.addEventListener("click", openChangelog);
-  if (changelogClose) changelogClose.addEventListener("click", closeChangelog);
-  if (changelogModal){
-    changelogModal.addEventListener("click", (e) => {
-      if (e.target === changelogModal) closeChangelog();
-    });
-  }
-  if (hintsBtn) hintsBtn.addEventListener("click", openHints);
-  if (hintsClose) hintsClose.addEventListener("click", closeHints);
-  if (hintsModal){
-    hintsModal.addEventListener("click", (e) => {
-      if (e.target === hintsModal) closeHints();
-    });
-  }
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && changelogModal && !changelogModal.classList.contains("hidden")) {
-      closeChangelog();
-    } else if (e.key === "Escape" && hintsModal && !hintsModal.classList.contains("hidden")) {
-      closeHints();
-    }
-  });
 });
 
 const els = {
@@ -254,22 +229,11 @@ const els = {
   toast: document.getElementById("toast"),
   plots: document.getElementById("plots"),
   loadingScreen: document.getElementById("loadingScreen"),
-  timeWindowToggle: document.getElementById("timeWindowToggle"),
-  resetWindow: document.getElementById("resetWindow"),
 };
-
-const changelogBtn = document.getElementById("changelogBtn");
-const changelogModal = document.getElementById("changelogModal");
-const changelogClose = document.getElementById("changelogClose");
-const hintsBtn = document.getElementById("hintsBtn");
-const hintsModal = document.getElementById("hintsModal");
-const hintsClose = document.getElementById("hintsClose");
 
 
 
 const S = { headers: [], cols: [], timeIdx: -1, name:"", size:0, ready:false };
-const plotRegistry = [];
-const timeWindow = { enabled:false, range:null };
 
 const toast = (m,t="error")=>{
   els.toast.textContent=m; els.toast.classList.remove("hidden");
@@ -281,22 +245,6 @@ const fmt = n=>{ if(!Number.isFinite(n))return""; const u=["B","KB","MB","GB"];l
 
 const cacheSet=(txt,name,size)=>{ sessionStorage.setItem("csvText",txt); sessionStorage.setItem("csvName",name||""); sessionStorage.setItem("csvSize",String(size||0)); };
 const cacheClr=()=>{ ["csvText","csvName","csvSize"].forEach(k=>sessionStorage.removeItem(k)); };
-
-function openChangelog(){
-  if (changelogModal) changelogModal.classList.remove("hidden");
-}
-
-function closeChangelog(){
-  if (changelogModal) changelogModal.classList.add("hidden");
-}
-
-function openHints(){
-  if (hintsModal) hintsModal.classList.remove("hidden");
-}
-
-function closeHints(){
-  if (hintsModal) hintsModal.classList.add("hidden");
-}
 
 // Loading screen functions
 let loadingTimeout = null;
@@ -358,117 +306,6 @@ function stageParsed(text, name, size){
   }, 700);
 }
 
-function nearestIndex(arr,val){
-  if(!Array.isArray(arr)||!arr.length) return null;
-  let lo=0, hi=arr.length-1;
-  while(hi-lo>1){
-    const mid=(lo+hi)>>1;
-    if(arr[mid] < val) lo=mid; else hi=mid;
-  }
-  return Math.abs(arr[lo]-val) <= Math.abs(arr[hi]-val) ? lo : hi;
-}
-
-function getTimeBounds(){
-  const t = S.cols[S.timeIdx] || [];
-  if (!t.length) return [0,0];
-  return [t[0], t[t.length-1]];
-}
-
-function applyWindowRange(range){
-  timeWindow.range = range;
-  plotRegistry.forEach(({div})=> applyWindowRangeToPlot(div));
-}
-
-function applyWindowRangeToPlot(div){
-  if (!div) return;
-  if (timeWindow.range && Number.isFinite(timeWindow.range[0]) && Number.isFinite(timeWindow.range[1])){
-    Plotly.relayout(div, {"xaxis.range":[timeWindow.range[0], timeWindow.range[1]]});
-  } else {
-    Plotly.relayout(div, {"xaxis.autorange": true});
-  }
-}
-
-function setSelectionMode(enabled){
-  timeWindow.enabled = !!enabled;
-  plotRegistry.forEach(({div})=>{
-    Plotly.relayout(div, { shapes: [] });  // clear snap line when switching modes
-    Plotly.relayout(div, { selections: [] }); // clear any selection box
-    setPlotDragMode(div);
-  });
-  updatePlotFooters();
-}
-
-function updatePlotFooters(){
-  plotRegistry.forEach(({footer})=>{
-    if (!footer) return;
-    footer.textContent = timeWindow.enabled ? "Drag to set shared Time window" : "Click to inspect";
-  });
-}
-
-function setPlotDragMode(div){
-  const dragmode = timeWindow.enabled ? "select" : false;
-  Plotly.relayout(div, { dragmode, selectdirection:"h" });
-}
-
-function wirePlotSelection(div){
-  div.removeAllListeners?.('plotly_selected');
-  div.on('plotly_selected', (ev)=>{
-    if (!timeWindow.enabled) return;
-    const rx = ev?.range?.x;
-    if (!Array.isArray(rx) || rx.length < 2) return;
-    let t0 = Math.min(rx[0], rx[1]);
-    let t1 = Math.max(rx[0], rx[1]);
-    const [minT,maxT] = getTimeBounds();
-    t0 = Math.max(t0,minT); t1 = Math.min(t1,maxT);
-    if (t1 - t0 <= 0) return;
-    applyWindowRange([t0,t1]);
-  });
-}
-
-function wirePlotSnap(div, xSeries, ySeries, readout, label){
-  if (!Array.isArray(xSeries) || !Array.isArray(ySeries)) return;
-  const formatReadout = (idx)=>{
-    if (idx == null) return;
-    const xv = xSeries[idx];
-    const yv = ySeries[idx];
-    if (Number.isFinite(xv) && Number.isFinite(yv)){
-      readout.textContent = `${label}: ${yv.toFixed(2)} @ ${xv.toFixed(2)}s`;
-    }
-  };
-  const update = (clientX)=>{
-    const fl = div._fullLayout; if (!fl || !fl.xaxis || !fl.margin) return;
-    const bb = div.getBoundingClientRect();
-    const xpx = clientX - bb.left - fl.margin.l;
-    const xVal = fl.xaxis.p2d(xpx);
-    if (!Number.isFinite(xVal)) return;
-    const idx = nearestIndex(xSeries, xVal);
-    if (idx == null) return;
-    const xv = xSeries[idx];
-    Plotly.relayout(div, {
-      shapes: [{
-        type:"line", xref:"x", yref:"paper",
-        x0:xv, x1:xv, y0:0, y1:1,
-        line:{color:"#43B3FF", width:1, dash:"dot"}
-      }]
-    });
-    formatReadout(idx);
-  };
-  let dragging=false;
-  div.addEventListener("pointerdown", (e)=>{
-    if (timeWindow.enabled) return;       // selection mode disables snap
-    dragging=true;
-    update(e.clientX);
-    div.setPointerCapture?.(e.pointerId);
-  });
-  div.addEventListener("pointermove", (e)=>{
-    if (timeWindow.enabled) return;
-    if (dragging) update(e.clientX);
-  });
-  ["pointerup","pointercancel","pointerleave"].forEach(evt=>{
-    div.addEventListener(evt, ()=>{ dragging=false; });
-  });
-}
-
 function renderPlots(){
   if (!S.ready){ toast("Upload a file first."); return; }
   
@@ -476,7 +313,6 @@ function renderPlots(){
   
   setTimeout(() => {
     els.plots.innerHTML = "";
-    plotRegistry.length = 0;
     const x = S.cols[S.timeIdx];
 
     const cs = getComputedStyle(document.documentElement);
@@ -491,35 +327,21 @@ function renderPlots(){
       if (valid < 5) continue;
 
       const card=document.createElement("div"); card.className="card plot-card";
-      const title=document.createElement("div"); title.className="plot-title";
-      const titleText=document.createElement("span"); titleText.textContent=S.headers[i];
-      const titleReadout=document.createElement("span"); titleReadout.className="plot-readout"; titleReadout.textContent="—";
-      title.appendChild(titleText); title.appendChild(titleReadout);
+      const title=document.createElement("div"); title.className="plot-title"; title.textContent=S.headers[i];
       const frame=document.createElement("div"); frame.className="plot-frame";
       const div=document.createElement("div"); div.className="plot";
-      const footer=document.createElement("div"); footer.className="plot-footer"; footer.textContent="Click to inspect";
-      frame.appendChild(div); card.appendChild(title); card.appendChild(frame); card.appendChild(footer); els.plots.appendChild(card);
+      frame.appendChild(div); card.appendChild(title); card.appendChild(frame); els.plots.appendChild(card);
 
       Plotly.newPlot(div, [{x, y:S.cols[i], mode:"lines", name:S.headers[i], line:{width:1}}],
         { template, paper_bgcolor:paper, plot_bgcolor:plot, font:{color:text},
-          margin:{l:50,r:10,t:10,b:40},
-          xaxis:{title:S.headers[S.timeIdx]},
-          yaxis:{title:S.headers[i], automargin:true},
-          showlegend:false, hovermode:false, dragmode: timeWindow.enabled ? "select" : false, selectdirection:"h" },
-        { displaylogo:false, responsive:true, scrollZoom:false, staticPlot:false, doubleClick:false, displayModeBar:false })
-        .then(()=>{ 
-          applyTheme(document.documentElement.getAttribute('data-theme')==='light', [div]);
-          wirePlotSnap(div, x, S.cols[i], footer, S.headers[i]);
-          wirePlotSelection(div);
-          setPlotDragMode(div);
-          plotRegistry.push({div, xSeries:x, footer, readout:titleReadout});
-          applyWindowRangeToPlot(div);
-        });
+          margin:{l:50,r:10,t:10,b:40}, xaxis:{title:S.headers[S.timeIdx]},
+          yaxis:{title:S.headers[i], automargin:true}, showlegend:false },
+        { displaylogo:false, responsive:true, scrollZoom:false, staticPlot:true, doubleClick:false })
+        .then(()=> applyTheme(document.documentElement.getAttribute('data-theme')==='light', [div]));
     }
     
     hideLoading();
     toast("Plots generated successfully!", "ok");
-    updatePlotFooters();
   }, 300);
 }
 
@@ -583,19 +405,6 @@ els.dropzone.addEventListener("drop", e=>{
   r.readAsText(f);
 });
 
-if (els.timeWindowToggle){
-  els.timeWindowToggle.addEventListener("change", (e)=>{
-    setSelectionMode(e.target.checked);
-  });
-}
-
-if (els.resetWindow){
-  els.resetWindow.addEventListener("click", ()=>{
-    applyWindowRange(null);
-    plotRegistry.forEach(({div})=> Plotly.relayout(div, { shapes: [] }));
-  });
-}
-
 document.addEventListener("DOMContentLoaded", ()=>{
   // Add click handler to hide loading screen if stuck
   els.loadingScreen.addEventListener("click", () => {
@@ -617,5 +426,4 @@ document.addEventListener("DOMContentLoaded", ()=>{
   // Back to top button
   const toTopBtn = document.getElementById("toTop");
   if (toTopBtn) toTopBtn.onclick = () => window.scrollTo({ top: 0, behavior: "smooth" });
-  updatePlotFooters();
 });

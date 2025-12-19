@@ -26,7 +26,7 @@
           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
             <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z" />
           </svg>
-          EcuTek Log Viewer
+          EcuTek Log Viewer <span class="badge">COMPARE</span>
         </div>
         
         <nav class="nav-menu">
@@ -63,44 +63,44 @@
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
                 </svg>
-                Correlation Lab
+                Mega Plot
               </a>
               <a href="#" class="dropdown-item">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/>
                 </svg>
-                Signal Matrix
-              </a>
-              <a href="gear.html" class="dropdown-item">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M7 10l5 5 5-5H7z"/>
-                </svg>
-                GR6 Gear Scope
+                Multi Plot
               </a>
               <div class="dropdown-divider"></div>
-              <a href="#" class="dropdown-item" id="hintsBtn">
+              <a href="about.html" class="dropdown-item">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
                 </svg>
-                Hints
+                About
               </a>
             </div>
           </div>
           
           <div class="dropdown">
-            <a href="#" class="nav-item">Tools <small class="tag-exp">Experimental</small></a>
+            <a href="#" class="nav-item">Tools</a>
             <div class="dropdown-content">
-              <a href="analysis.html" class="dropdown-item">
+              <a href="#" class="dropdown-item">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                </svg>
+                Data Analysis
+              </a>
+              <a href="#" class="dropdown-item">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
                 </svg>
-                Data Analysis Suite
+                Statistics
               </a>
-              <a href="#" class="dropdown-item" id="shiftLabLink">
+              <a href="#" class="dropdown-item">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
                 </svg>
-                Shift Strategy Lab
+                Performance Metrics
               </a>
             </div>
           </div>
@@ -132,7 +132,8 @@
           </svg>
           <span id="themeText">Dark</span>
         </div>
-        <button id="changelogBtn" class="btn ghost mini">Change Log</button>
+        
+
       </div>
     </div>
   </div>
@@ -144,20 +145,14 @@
       <div class="pickers">
         <label class="filebtn">
           <input id="csvFile" type="file" accept=".csv,.txt,.log,text/csv,text/plain" />
-          <span>Primary Log (CSV/TXT)</span>
+          <span>Choose Log File (.txt/.csv)</span>
         </label>
-        <label class="filebtn secondary">
-          <input id="csvCompareFile" type="file" accept=".csv,.txt,.log,text/csv,text/plain" />
-          <span>Comparison Log (Optional)</span>
-        </label>
-        <button id="clearBtn" class="btn ghost">Clear All</button>
+        <button id="clearBtn" class="btn ghost">Clear</button>
       </div>
       <div class="toolbar">
         <button id="genBtnCompare" class="btn primary">Generate Plot</button>
-        <button id="metadataLink" class="btn ghost mini">Metadata &amp; Archive</button>
       </div>
       <div id="fileInfo" class="fileinfo"></div>
-      <div id="compareFileInfo" class="fileinfo secondary hidden"></div>
 
       <div id="toast" class="toast hidden"></div>
     </div>
@@ -165,65 +160,15 @@
     <div class="card axis-card">
       <div class="card-heading">
         <span>Axis Configuration</span>
-        <div class="heading-actions">
-          <button id="resetYRangeBtn" class="btn ghost mini">Reset Y</button>
-          <button id="autoScaleBtn" class="btn ghost mini">Auto Scale</button>
-          <button id="scaleHelpBtn" class="btn ghost mini">Scaling Help</button>
-        </div>
+        <button id="scaleHelpBtn" class="btn ghost mini">Scaling Help</button>
       </div>
       <div id="axisPanel" style="margin-top:10px;"></div>
-    </div>
-
-    <div class="card enhancements-card">
-      <div class="card-heading">
-        <span>Data Enhancements</span>
-      </div>
-      <div class="enhance-grid">
-        <div class="enhance-block">
-          <label for="smoothSelect">Smoothing Window</label>
-          <select id="smoothSelect">
-            <option value="0">Off</option>
-            <option value="3">3 pt</option>
-            <option value="5">5 pt</option>
-            <option value="9">9 pt</option>
-            <option value="15">15 pt</option>
-          </select>
-          <small>Centered moving average applied before scaling.</small>
-        </div>
-        <div class="enhance-block">
-          <label for="highlightToggle">Event Highlighting</label>
-          <div class="highlight-controls">
-            <label class="toggle">
-              <input type="checkbox" id="highlightToggle" />
-              <span>Enable</span>
-            </label>
-            <select id="highlightColumn"></select>
-            <div class="threshold-row">
-              <select id="highlightMode">
-                <option value="gt">&gt; threshold</option>
-                <option value="gte">≥ threshold</option>
-                <option value="eq">= threshold</option>
-                <option value="lte">≤ threshold</option>
-                <option value="lt">&lt; threshold</option>
-              </select>
-              <input type="number" id="highlightThreshold" step="0.1" placeholder="Threshold" />
-            </div>
-          </div>
-          <div id="highlightSummary" class="highlight-summary">Highlighted samples: 0</div>
-          <small>Highlights are mirrored on the plot as diamond markers.</small>
-        </div>
-        <div class="enhance-block">
-          <label for="lineWidthSlider">Line Thickness</label>
-          <input type="range" id="lineWidthSlider" min="0.5" max="3" step="0.1" value="1.4" />
-          <small id="lineWidthValue">1.4 px</small>
-        </div>
-      </div>
     </div>
 
     <!-- Time Range Slider -->
     <div class="card time-range-card">
       <div class="time-range-header">
-        <h3>Time Window Filter</h3>
+        <h3>Time Range Filter</h3>
         <div class="time-range-display">
           <span id="timeMinDisplay">0.0s</span> - <span id="timeMaxDisplay">0.0s</span>
         </div>
@@ -256,7 +201,7 @@
 
     <div class="plots">
       <div class="plot-card">
-        <div class="plot-title">Performance Analytics Plot</div>
+        <div class="plot-title">Comparison Plot</div>
         <div class="plot-frame">
           <div id="chart" class="plot big"></div>
         </div>
@@ -279,84 +224,7 @@
     </div>
   </div>
 
-  <div id="metadataModal" class="modal hidden">
-    <div class="modal-content wide">
-      <button class="modal-close" id="metadataClose" aria-label="Close metadata">×</button>
-      <h3>Log Metadata & Archive</h3>
-      <div id="metaSummary" class="meta-grid muted">
-        <span>Upload a log to see VIN, ECU SW numbers, dongle IDs, sampling stats, GR6 shifts, and torque interventions.</span>
-      </div>
-      <section class="modal-section">
-        <h4>Cloud Save Note</h4>
-        <div class="form-grid">
-          <textarea id="archiveNoteInput" rows="2" placeholder="e.g. 2025-11-24 · 4th gear pull · new injectors"></textarea>
-          <button id="archiveLogBtn" class="btn primary mini" disabled>Archive Current Log</button>
-        </div>
-        <p class="muted">Downloads a timestamped CSV with your note prepended as a comment. Drop it into <code>logs/</code> and commit via <code>logvault/&lt;date&gt;-&lt;rand&gt;</code>.</p>
-      </section>
-    </div>
-  </div>
-
-  <div id="shiftLabModal" class="modal hidden">
-    <div class="modal-content wide">
-      <button class="modal-close" id="shiftLabClose" aria-label="Close shift lab">×</button>
-      <h3>Shift Strategy Lab · GR6 Focus</h3>
-      <p class="muted">Blend gearbox ratios, final drive, and tire diameter to visualize shift points and re-clutch RPM. Inspired by <a href="https://www.blocklayer.com/rpm-gear" target="_blank" rel="noopener">blocklayer.com</a>.</p>
-      <div class="shift-grid">
-        <div class="shift-config">
-          <label>Redline (RPM)</label>
-          <input type="number" id="shiftRedline" value="7500" min="3000" max="9000" step="50" />
-          <label>Final Drive</label>
-          <input type="number" id="shiftFinal" value="3.70" step="0.01" />
-          <label>Tire Diameter (in)</label>
-          <input type="number" id="shiftTire" value="26.5" step="0.1" />
-          <label>GR6 Gear Ratios</label>
-          <textarea id="shiftRatios" rows="4" spellcheck="false">3.36, 2.10, 1.49, 1.20, 1.00, 0.79</textarea>
-          <label>Clutch Fill Time (ms)</label>
-          <input type="number" id="shiftClutchFill" value="90" step="5" />
-          <label>Wheel Slip Threshold (%)</label>
-          <input type="number" id="shiftSlip" value="6" step="0.5" />
-          <div class="shift-buttons">
-            <button id="shiftAnalyzeBtn" class="btn primary mini">Generate Shift Notes</button>
-            <button id="shiftResetBtn" class="btn ghost mini">Reset Defaults</button>
-          </div>
-        </div>
-        <div class="shift-results">
-          <div id="shiftPlot" class="shift-plot"></div>
-          <div id="shiftNotes" class="shift-notes muted">Provide realistic ratios (e.g., Dodson GR6, Albins) to see suggested shift RPM, drop RPM, and traction notes.</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div id="changelogModal" class="modal hidden">
-    <div class="modal-content">
-      <button class="modal-close" id="changelogClose" aria-label="Close change log">×</button>
-      <h3>Change Log</h3>
-      <ul>
-        <li><strong>Auto Scale restored:</strong> normalizes active traces against the current time window.</li>
-        <li><strong>Reset Y working:</strong> quickly re-applies autoscale per-axis after tweaks.</li>
-        <li><strong>Scaling Help & Change Log:</strong> buttons now open their modals reliably.</li>
-        <li><strong>Line weight + highlights:</strong> stays responsive alongside comparison overlays.</li>
-      </ul>
-      <p>Full history lives in <code>CHANGELOG.md</code>.</p>
-    </div>
-  </div>
-
-  <div id="hintsModal" class="modal hidden">
-    <div class="modal-content">
-      <button class="modal-close" id="hintsClose" aria-label="Close hints">×</button>
-      <h3>Hints</h3>
-      <ul>
-        <li>Use Auto Scale to align wildly different signals before fine tuning.</li>
-        <li>Enable highlights only for the active traces to spot events quickly.</li>
-        <li>On mobile, swipe from the left edge to open analysis controls.</li>
-        <li>Load a reference log to compare runs without re-uploading data.</li>
-      </ul>
-    </div>
-  </div>
-
-  <div class="footer">Client‑side parsing. Your file never leaves the device. · preAlpha 1.3.10</div>
+  <div class="footer">Client‑side parsing. Your file never leaves the device. · v1.3.0</div>
   <button id="toTop" class="totop" title="Back to top">↑ Top</button>
   <!-- ES module so compare.js can import parser.js -->
   <script type="module" src="compare.js?v=1.3.0"></script>

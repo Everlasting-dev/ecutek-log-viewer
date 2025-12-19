@@ -176,6 +176,8 @@ NEW IDEAS:
 [ ] **User feedback system** - Add input area for users to report issues, suggest ideas, and request features to be implemented.
 
 [ ] **GTR R35 Super App** - Comprehensive platform focusing exclusively on GTR R35: DTCs, system descriptions, engine/gearbox building guides, upgrades, technical documents, installation procedures, overhaul steps, tuning strategies, and integration with log viewer.
+[ ] **Owner-only telemetry dashboard** - Secure, auth-gated dashboard showing session counts, unique IP/device stats (desktop vs mobile), error rates, top parameters viewed, and moderation flags pulled from server logs.
+[ ] **GitHub-linked report queue** - Internal report form for the owner to log issues/enhancements directly into GitHub Issues via API (with screenshot/CSV attachments and labels).
 
 MOBILE WEB APP UPDATES & BUG FIXES:
 ====================================

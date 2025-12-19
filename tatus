@@ -1,0 +1,10 @@
+[33mdc3f9cc[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mpreAlpha1.3.1[m[33m, [m[1;31morigin/preBeta1.3.1[m[33m, [m[1;32mpreBeta1.3.1[m[33m)[m Reduce loading screen time from 3.5s to 1.5s for faster startup - Update app.js, compare.js, and about.js - Reduce ASCII animation duration to match loading screen timing
+[33m3e12d8e[m Fix mobile navigation bar positioning for iOS devices - Add safe-area-inset support and portrait mode optimizations - Adjust taskbar top position to avoid status bar conflicts - Improve mobile UX with proper spacing and clearance
+[33m672c6ea[m Fix: overlay removal + harden router against UI clicks + explicit buttons
+[33m7efd1c0[m Fix: theme toggle CSS vars + PWA navigation prevents Safari UI
+[33m0259cef[m PWA standalone: add SPA router (router.js), base target=_self, themeable nav buttons; intercept links to keep in-app
+[33m92c63a9[m PWA/mobile: add splash hide (1.5s) + iOS meta; style splash class
+[33mcb58436[m Mobile (analysis): compact paddings/slots; chart 65vh; improved touch handling
+[33m88386f3[m preBeta1.3.1: load updated top bar styles (cache-bust v=1.3.1) to match localhost look
+[33m8320dc4[m[33m ([m[1;31morigin/ui/mode-toggle[m[33m, [m[1;32mui/mode-toggle[m[33m)[m UI: enriched top bar styles for dark/light; Perf: adaptive SVG sampling based on width*DPR to reduce GPU use
+[33ma42e3eb[m[33m ([m[1;33mtag: [m[1;33mv1.4.0-pre-ui[m[33m, [m[1;33mtag: [m[1;33mv1.4.0-mini-plots[m[33m)[m Mini plots: hide legend to reclaim width; keep SVG lines

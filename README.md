@@ -1,6 +1,6 @@
 # EcuTek Log Viewer
 
-**Current build:** `preAlpha 1.3.10`
+**Current build:** `preAlpha 1.3.11`
 
 A modern, client-side web application for viewing and analyzing EcuTek CSV log files. Built with vanilla JavaScript, Plotly.js, and PapaParse for robust CSV parsing and interactive data visualization.
 
@@ -14,13 +14,19 @@ A modern, client-side web application for viewing and analyzing EcuTek CSV log f
 - **Session Storage** – Persistent file caching between sessions
 - **Metadata Display** – Vehicle, VIN, ECU Call IDs, and Programming Dongle info
 - **Real-time Plotting** – Click-to-select with readouts; unified RAW readout in analysis
+- **Log Metadata & Archive Panel** – auto insights (duration, sampling, GR6 shifts) plus one-click archive downloads
+- **Shift Strategy Lab** – tuner-facing gearing sandbox inspired by [blocklayer.com](https://www.blocklayer.com/rpm-gear)
+- **Performance Benchmarks** – automatic 0‑60/60‑130/100‑200 computations with torque & traction watchers
+- **Correlation Lab simplified** – only the uploader, axis config, enhancements, time slider, and primary plot remain; all advanced labs live under the Tools menu.
 
-## 🆕 What’s new in preAlpha 1.3.10
+## 🆕 What’s new in preAlpha 1.3.11
 
-- Dual-log overlay now supports smoothing windows and threshold-based event highlights.
-- Auto Scale button normalizes enabled traces to a shared amplitude before exponent tweaks.
-- Time-window sliders respect both start and end bounds without unexpected zooms.
-- In-app Change Log and Hints modals document every release and provide quick tips.
+- **Archive-ready logs** – new “Archive Current Log” button downloads a timestamped CSV ready for `logs/`.
+- **Metadata Grid** – duration, sampling rate, RPM range, speed source, GR6 shift deltas, torque/traction notes.
+- **Line Weight control** – per-trace thickness sliders for both primary and comparison traces.
+- **Shift Strategy Lab** – GR6-friendly gearing visualizer + notes (built with inspiration from [blocklayer.com](https://www.blocklayer.com/rpm-gear)).
+- **Performance metrics overhaul** – automatic speed-channel detection, 0‑60/60‑130/100‑200, peak G, and health overlays.
+- **Random zoom fix** – X range now clamps exactly to the Time Window sliders while Y auto-rescales inside that window.
 
 ## 📁 Project Structure
 
@@ -63,7 +69,6 @@ npm install -g http-server
 
 # Run server
 http-server -p 8000
-```
 
 #### Option 3: Live Server (VS Code Extension)
 1. Install "Live Server" extension in VS Code
@@ -80,6 +85,22 @@ http-server -p 8000
 4. **Switch between views** using the dropdown (or mobile links in the taskbar):
    - **Time Plot**: Individual parameter visualization
    - **Analysis**: Unified comparison interface
+
+## 📦 Log Archiving Workflow
+
+1. **Load the log in `compare.html`** – once parsed, the Metadata & Archive card activates.
+2. **Add a Cloud Note & click “Archive Current Log”** – the note is prepended as `# CloudNote:` and the downloaded file is timestamped (e.g., `logs_20251124_0930_trackA.csv`).
+3. **Drop the file into `logs/`** (tracked via `.gitkeep`) so it’s versioned with the project.
+4. **Create an archive branch** for each upload to keep main clean:
+   ```bash
+   git checkout -b logvault/$(Get-Date -Format 'yyyyMMdd-HHmmss')-$(Get-Random -Maximum 9999)
+   git add logs/20251124_0930_trackA.csv
+   git commit -m "Archive: TrackA 2025-11-24 AM"
+   git push origin logvault/20251124-0930-5821
+   ```
+5. **Open a PR or stash for later** – this keeps heavyweight CSVs isolated yet accessible on demand.
+
+> Tip: the archive button uses the browser File System Access API when possible; otherwise it falls back to a plain download so the workflow still functions everywhere.
 
 ## 📊 Usage
 
@@ -102,6 +123,9 @@ http-server -p 8000
 - **Auto Scale + exponent controls** – quick normalization followed by precise tweaks
 - **Auto Y rescale within current X window; X range preserved**
 - **Presets**: preloads Engine Speed, Fuel Pressure, Fuel Trim Short Term, MAP
+- **Metadata + Archive card** – sampling, duration, GR6 shift deltas, torque/traction interventions, archive downloads
+- **Shift Strategy Lab** – gearing sandbox for GR6 applications with clutch/slip hints inspired by [blocklayer.com](https://www.blocklayer.com/rpm-gear)
+- **Performance Metrics modal** – automatic speed-source detection, 0‑60/60‑130/100‑200, peak G, and health summaries (boost, AFR, knock, torque cuts)
 
 ### Scaling & Normalization
 - **True logarithmic scaling** with base-10 decades

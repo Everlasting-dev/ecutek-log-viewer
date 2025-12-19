@@ -161,46 +161,6 @@ const loadingScreen = $("loadingScreen");
 const scaleHelpBtn = $("scaleHelpBtn");
 const scaleHelpModal = $("scaleHelpModal");
 const scaleHelpClose = $("scaleHelpClose");
-const autoScaleBtn = $("autoScaleBtn");
-const changelogBtn = $("changelogBtn");
-const changelogModal = $("changelogModal");
-const changelogClose = $("changelogClose");
-const hintsBtn = $("hintsBtn");
-const hintsModal = $("hintsModal");
-const hintsClose = $("hintsClose");
-const dataAnalysisLink = $("dataAnalysisLink");
-const statsLink = $("statsLink");
-const performanceLink = $("performanceLink");
-const dataAnalysisModal = $("dataAnalysisModal");
-const dataAnalysisClose = $("dataAnalysisClose");
-const statsModal = $("statsModal");
-const statsClose = $("statsClose");
-const performanceModal = $("performanceModal");
-const performanceClose = $("performanceClose");
-const derivedInputA = $("derivedInputA");
-const derivedInputB = $("derivedInputB");
-const derivedOperation = $("derivedOperation");
-const derivedNameInput = $("derivedName");
-const derivedComputeBtn = $("derivedComputeBtn");
-const derivedResult = $("derivedResult");
-const smoothingPresetGroup = $("smoothingPresetGroup");
-const anomalyAutoToggle = $("anomalyAutoToggle");
-const anomalySummary = $("anomalySummary");
-const correlationChecklist = $("correlationChecklist");
-const correlationRunBtn = $("correlationRunBtn");
-const correlationResult = $("correlationResult");
-const statsColumnSelect = $("statsColumnSelect");
-const statsComputeBtn = $("statsComputeBtn");
-const statsSummary = $("statsSummary");
-const rangeMinInput = $("rangeMinInput");
-const rangeMaxInput = $("rangeMaxInput");
-const rangeComputeBtn = $("rangeComputeBtn");
-const rangeSummary = $("rangeSummary");
-const sessionComparison = $("sessionComparison");
-const speedColumnSelect = $("speedColumnSelect");
-const performanceComputeBtn = $("performanceComputeBtn");
-const performanceSummary = $("performanceSummary");
-const healthSummary = $("healthSummary");
 
 // Time range slider elements
 const timeMinSlider = $("timeMinSlider");
@@ -211,13 +171,6 @@ const timeMinDisplay = $("timeMinDisplay");
 const timeMaxDisplay = $("timeMaxDisplay");
 const resetTimeRange = $("resetTimeRange");
 const fullTimeRange = $("fullTimeRange");
-const smoothSelect = $("smoothSelect");
-const highlightToggle = $("highlightToggle");
-const highlightColumn = $("highlightColumn");
-const highlightModeSel = $("highlightMode");
-const highlightThresholdInput = $("highlightThreshold");
-const compareFileInfo = $("compareFileInfo");
-const csvCompareFile = $("csvCompareFile");
 
 let headers=[], cols=[], timeIdx=-1, rpmIdx=-1, xIdx=NaN, snapIndex=null;
 let xMin = 0, xMax = 0;
@@ -229,22 +182,6 @@ let timeRangeMax = 0;
 let timeRangeEnabled = false;
 let activeTimeSeries = [];
 let activeIndexMap = [];
-let smoothingWindow = 0;
-let highlightSettings = {
-  enabled:false,
-  columnIdx:-1,
-  mode:'above',
-  threshold:0
-};
-let compareLog = null;
-const AUTO_SCALE_TARGET = 200;
-const EPS = 1e-3;
-let autoAnomaly = { enabled:false, zScore:2.0 };
-
-if (smoothSelect) smoothSelect.value = String(smoothingWindow);
-if (highlightThresholdInput) highlightThresholdInput.value = highlightSettings.threshold;
-refreshHighlightOptions();
-syncHighlightControls();
 
 const SLOT_COUNT = 5;
 const ySlots = Array.from({length: SLOT_COUNT}, () => ({
@@ -290,216 +227,9 @@ function openScaleHelp(){
   }
 }
 
-function applySmoothing(series, window){
-  if (!Array.isArray(series) || !series.length || window < 3) return series.slice();
-  const half = Math.floor(window / 2);
-  const result = [];
-  for (let i = 0; i < series.length; i++){
-    let sum = 0;
-    let count = 0;
-    for (let j = i - half; j <= i + half; j++){
-      if (j >= 0 && j < series.length && Number.isFinite(series[j])){
-        sum += series[j];
-        count++;
-      }
-    }
-    result.push(count ? sum / count : series[i]);
-  }
-  return result;
-}
-
-function prepareSeries(raw, exponent){
-  const base = Array.isArray(raw) ? raw : [];
-  const smoothed = smoothingWindow >=3 ? applySmoothing(base, smoothingWindow) : base.slice();
-  return smoothed.map(v => applyPowerScaling(v, exponent));
-}
-
-function refreshHighlightOptions(){
-  if (!highlightColumn) return;
-  highlightColumn.innerHTML = "";
-  if (!headers.length){
-    const placeholder = document.createElement("option");
-    placeholder.value = "-1";
-    placeholder.textContent = "Load a file to enable highlighting";
-    placeholder.disabled = true;
-    placeholder.selected = true;
-    highlightColumn.appendChild(placeholder);
-    return;
-  }
-  if (!headers[highlightSettings.columnIdx]) {
-    highlightSettings.columnIdx = -1;
-  }
-  const placeholder = document.createElement("option");
-  placeholder.value = "-1";
-  placeholder.textContent = "Select column";
-  if (highlightSettings.columnIdx === -1) placeholder.selected = true;
-  highlightColumn.appendChild(placeholder);
-  const enabledCols = new Set(ySlots.filter(s=>s.enabled && s.colIdx >= 0).map(s=>s.colIdx));
-  enabledCols.forEach(idx => {
-    const h = headers[idx];
-    const option = document.createElement("option");
-    option.value = String(idx);
-    option.textContent = h;
-    if (idx === highlightSettings.columnIdx) option.selected = true;
-    highlightColumn.appendChild(option);
-  });
-
-  if (!enabledCols.has(highlightSettings.columnIdx)) {
-    highlightSettings.columnIdx = -1;
-    highlightColumn.value = "-1";
-  }
-}
-
-function updateCompareInfo(){
-  if (!compareFileInfo) return;
-  if (compareLog){
-    compareFileInfo.classList.remove("hidden");
-    compareFileInfo.textContent = `Comparison loaded: ${compareLog.name} (${compareLog.rows} rows)`;
-    if (statsColumnSelect && statsColumnSelect.value) {
-      updateSessionComparison(Number(statsColumnSelect.value));
-    }
-  } else {
-    compareFileInfo.classList.add("hidden");
-    compareFileInfo.textContent = "";
-    if (sessionComparison) sessionComparison.textContent = "Load a comparison log to see session deltas.";
-  }
-}
-
-function loadComparisonFile(file){
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    try{
-      const text = String(ev.target.result || "");
-      const parsed = parseCSV(text);
-      const refTimeIdx = findTimeIndex(parsed.headers);
-      if (!Number.isFinite(refTimeIdx) || refTimeIdx < 0){
-        toastMsg("Comparison log missing a Time column.", "error");
-        return;
-      }
-      compareLog = {
-        name: file.name,
-        headers: parsed.headers,
-        cols: parsed.cols,
-        timeIdx: refTimeIdx,
-        rows: parsed.rows
-      };
-      updateCompareInfo();
-      toastMsg("Comparison log ready.", "ok");
-      plot(false, true);
-    }catch(err){
-      compareLog = null;
-      updateCompareInfo();
-      toastMsg(err.message || "Failed to parse comparison log.", "error");
-    }
-  };
-  reader.onerror = () => {
-    compareLog = null;
-    updateCompareInfo();
-    toastMsg("Unable to read comparison file.", "error");
-  };
-  reader.readAsText(file);
-}
-
-function syncHighlightControls(){
-  if (highlightToggle) highlightToggle.checked = !!highlightSettings.enabled;
-  const disabled = !highlightSettings.enabled;
-  if (highlightColumn) highlightColumn.disabled = disabled;
-  if (highlightModeSel) highlightModeSel.disabled = disabled;
-  if (highlightThresholdInput) highlightThresholdInput.disabled = disabled;
-  if (highlightThresholdInput && Number.isFinite(highlightSettings.threshold)){
-    highlightThresholdInput.value = highlightSettings.threshold;
-  }
-  if (highlightModeSel) highlightModeSel.value = highlightSettings.mode;
-}
-
 function closeScaleHelp(){
   if (scaleHelpModal) {
     scaleHelpModal.classList.add("hidden");
-  }
-}
-
-function openChangelog(){
-  if (changelogModal) {
-    changelogModal.classList.remove("hidden");
-  }
-}
-
-function closeChangelog(){
-  if (changelogModal) {
-    changelogModal.classList.add("hidden");
-  }
-}
-
-function openHints(){
-  if (hintsModal) {
-    hintsModal.classList.remove("hidden");
-  }
-}
-
-function closeHints(){
-  if (hintsModal) {
-    hintsModal.classList.add("hidden");
-  }
-}
-
-function autoScaleTraces(){
-  if (!headers.length || !Number.isFinite(xIdx)) {
-    toastMsg("Load a log before auto-scaling.","error");
-    return;
-  }
-  const xs = cols[xIdx];
-  if (!xs || !xs.length){
-    toastMsg("No time data available.","error");
-    return;
-  }
-  let changed = false;
-
-  for (let i = 0; i < ySlots.length; i++){
-    const slot = ySlots[i];
-    if (!slot.enabled || slot.colIdx === -1) continue;
-    const raw = cols[slot.colIdx];
-    if (!raw) continue;
-
-    const magnitudes = [];
-    let hasNegative = false;
-    for (let j = 0; j < xs.length; j++){
-      const t = xs[j];
-      if (timeRangeEnabled && (t < timeRangeMin || t > timeRangeMax)) continue;
-      const v = raw[j];
-      if (!Number.isFinite(v)) continue;
-      if (v < 0) hasNegative = true;
-      const abs = Math.abs(v);
-      if (abs > 0) magnitudes.push(abs);
-    }
-    if (!magnitudes.length) continue;
-    magnitudes.sort((a,b)=>a-b);
-    const max = magnitudes[magnitudes.length - 1];
-    if (!Number.isFinite(max) || max <= 0) continue;
-
-    let exponent = Math.log(AUTO_SCALE_TARGET) / Math.log(max);
-    if (!Number.isFinite(exponent)) continue;
-    exponent = Math.max(-3, Math.min(3, exponent));
-
-    if (hasNegative && Math.abs(exponent % 1) > 1e-6){
-      exponent = Math.round(exponent);
-    }
-    exponent = Number(exponent.toFixed(3));
-    if (!Number.isFinite(exponent)) continue;
-
-    if ((slot.scale ?? 0) !== exponent){
-      slot.scale = exponent;
-      updateScaleBox(i);
-      changed = true;
-    }
-  }
-
-  if (changed){
-    plot(false, true);
-    if (Number.isFinite(lastIdx)) showPointInfoAt(lastIdx);
-    toastMsg("Scaling normalized.", "ok");
-  } else {
-    toastMsg("Nothing to auto-scale.", "error");
   }
 }
 function toastMsg(msg, type="error"){ 
@@ -552,474 +282,9 @@ function filterDataByTimeRange(xData, yData, customData) {
   };
 }
 
-function getFilteredSeries(colIdx){
-  if (!Number.isInteger(colIdx) || colIdx < 0 || !cols[colIdx] || !cols[xIdx]) return null;
-  return filterDataByTimeRange(cols[xIdx], cols[colIdx], cols[colIdx]);
-}
-
-function computeBasicStats(values){
-  const cleaned = values.filter(Number.isFinite);
-  if (!cleaned.length) return null;
-  cleaned.sort((a,b)=>a-b);
-  const count = cleaned.length;
-  const sum = cleaned.reduce((a,b)=>a+b,0);
-  const mean = sum / count;
-  const median = cleaned[Math.floor(count/2)];
-  const min = cleaned[0];
-  const max = cleaned[count-1];
-  const variance = cleaned.reduce((acc,v)=> acc + (v-mean)**2, 0) / count;
-  const std = Math.sqrt(variance);
-  const p90 = cleaned[Math.min(count-1, Math.floor(count*0.9))];
-  const p10 = cleaned[Math.min(count-1, Math.floor(count*0.1))];
-  return {count, mean, median, min, max, std, p90, p10};
-}
-
-function renderStatsTable(stats){
-  if (!stats) return "<p>No numeric data.</p>";
-  return `
-    <table>
-      <tr><th>Count</th><td>${stats.count}</td><th>Mean</th><td>${stats.mean.toFixed(3)}</td></tr>
-      <tr><th>Median</th><td>${stats.median.toFixed(3)}</td><th>Std Dev</th><td>${stats.std.toFixed(3)}</td></tr>
-      <tr><th>Min</th><td>${stats.min.toFixed(3)}</td><th>Max</th><td>${stats.max.toFixed(3)}</td></tr>
-      <tr><th>P10</th><td>${stats.p10.toFixed(3)}</td><th>P90</th><td>${stats.p90.toFixed(3)}</td></tr>
-    </table>`;
-}
-
-function computeCorrelationMatrix(indices){
-  const series = indices.map(idx => getFilteredSeries(idx));
-  if (series.some(s => !s)) return null;
-  const data = series.map(s => s.y ?? []);
-  const length = Math.min(...data.map(arr => arr.length));
-  if (!length) return null;
-  const trimmed = data.map(arr => arr.slice(0,length));
-  const matrix = [];
-  for (let i=0;i<trimmed.length;i++){
-    matrix[i] = [];
-    for (let j=0;j<trimmed.length;j++){
-      matrix[i][j] = pearson(trimmed[i], trimmed[j]);
-    }
-  }
-  return matrix;
-}
-
-function pearson(a,b){
-  const len = Math.min(a.length, b.length);
-  if (!len) return 0;
-  let sumA=0,sumB=0,sumAB=0,sumASq=0,sumBSq=0,count=0;
-  for (let i=0;i<len;i++){
-    const va=a[i], vb=b[i];
-    if (!Number.isFinite(va) || !Number.isFinite(vb)) continue;
-    sumA+=va; sumB+=vb; sumAB+=va*vb; sumASq+=va*va; sumBSq+=vb*vb; count++;
-  }
-  if (!count) return 0;
-  const numerator = (count * sumAB) - (sumA * sumB);
-  const denom = Math.sqrt((count*sumASq - sumA**2) * (count*sumBSq - sumB**2));
-  return denom === 0 ? 0 : numerator/denom;
-}
-
-function computeTimeToSpeed(series, startSpeed, endSpeed){
-  if (!series) return null;
-  const times = series.x;
-  const speeds = series.y;
-  let startTime = null;
-  for (let i=0;i<speeds.length;i++){
-    const v = speeds[i];
-    if (!Number.isFinite(v)) continue;
-    if (startTime === null && v >= startSpeed) {
-      startTime = times[i];
-    }
-    if (startTime !== null && v >= endSpeed){
-      return times[i] - startTime;
-    }
-  }
-  return null;
-}
-
-function detectGearChanges(rpmSeries){
-  if (!rpmSeries) return {count:0, times:[]};
-  const rpm = rpmSeries.y;
-  const times = rpmSeries.x;
-  const events = [];
-  for (let i=1;i<rpm.length;i++){
-    const delta = rpm[i] - rpm[i-1];
-    if (Number.isFinite(delta) && delta < -500) {
-      events.push(times[i]);
-    }
-  }
-  return {count:events.length, times:events};
-}
-
-function populateColumnSelect(select, opts = {}){
-  if (!select) return;
-  select.innerHTML = "";
-  headers.forEach((header, idx)=>{
-    if (opts.enabledOnly && !ySlots.some(s=>s.enabled && s.colIdx===idx)) return;
-    const option = document.createElement("option");
-    option.value = String(idx);
-    option.textContent = header;
-    select.appendChild(option);
-  });
-}
-
-function updateCorrelationChecklist(){
-  if (!correlationChecklist) return;
-  correlationChecklist.innerHTML = "";
-  ySlots.forEach(slot=>{
-    if (!slot.enabled || slot.colIdx === -1) return;
-    const id = `corr-${slot.colIdx}`;
-    const label = document.createElement("label");
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.value = String(slot.colIdx);
-    checkbox.id = id;
-    label.appendChild(checkbox);
-    const span = document.createElement("span");
-    span.textContent = headers[slot.colIdx];
-    label.appendChild(span);
-    correlationChecklist.appendChild(label);
-  });
-}
-
-function populateSpeedSelect(){
-  if (!speedColumnSelect) return;
-  populateColumnSelect(speedColumnSelect);
-  const defaultIdx = headers.findIndex(h => /speed/i.test(h));
-  if (defaultIdx >= 0) speedColumnSelect.value = String(defaultIdx);
-}
-
-function populateStatsControls(){
-  populateColumnSelect(statsColumnSelect);
-  populateColumnSelect(derivedInputA);
-  populateColumnSelect(derivedInputB);
-}
-
-function refreshAnalysisControls(){
-  populateStatsControls();
-  populateSpeedSelect();
-  updateCorrelationChecklist();
-  if (statsColumnSelect && statsColumnSelect.options.length){
-    handleStatsCompute();
-  }
-}
-
-function openDataAnalysisModal(){
-  if (!headers.length){
-    toastMsg("Load a log to use Data Analysis.","error");
-    return;
-  }
-  if (dataAnalysisModal) dataAnalysisModal.classList.remove("hidden");
-}
-
-function openStatsModal(){
-  if (!headers.length){
-    toastMsg("Load a log to use Statistics.","error");
-    return;
-  }
-  if (statsModal) statsModal.classList.remove("hidden");
-}
-
-function openPerformanceModal(){
-  if (!headers.length){
-    toastMsg("Load a log to view Performance metrics.","error");
-    return;
-  }
-  if (performanceModal) performanceModal.classList.remove("hidden");
-}
-
-function closeModal(el){
-  if (el) el.classList.add("hidden");
-}
-
-function handleDerivedCompute(){
-  if (!derivedInputA || !derivedInputB) return;
-  const idxA = Number(derivedInputA.value);
-  const idxB = Number(derivedInputB.value);
-  if (!Number.isFinite(idxA) || !Number.isFinite(idxB)){
-    derivedResult.textContent = "Select two columns.";
-    return;
-  }
-  const seriesA = getFilteredSeries(idxA);
-  const seriesB = getFilteredSeries(idxB);
-  if (!seriesA || !seriesB){
-    derivedResult.textContent = "Unable to read selected columns.";
-    return;
-  }
-  const len = Math.min(seriesA.y.length, seriesB.y.length);
-  const op = derivedOperation?.value || "subtract";
-  const output = [];
-  for (let i=0;i<len;i++){
-    const a = seriesA.y[i];
-    const b = seriesB.y[i];
-    if (!Number.isFinite(a) || !Number.isFinite(b)) {
-      output.push(NaN);
-      continue;
-    }
-    switch(op){
-      case "add": output.push(a + b); break;
-      case "multiply": output.push(a * b); break;
-      case "divide": output.push(b === 0 ? NaN : a / b); break;
-      default: output.push(a - b); break;
-    }
-  }
-  const stats = computeBasicStats(output);
-  const preview = output.filter(Number.isFinite).slice(0,8).map(v=>v.toFixed(3)).join(", ");
-  const label = derivedNameInput?.value?.trim() || `${headers[idxA]} ${op} ${headers[idxB]}`;
-  derivedResult.innerHTML = `<strong>${label}</strong>${renderStatsTable(stats)}<p>Preview: ${preview || "No numeric samples"}.</p><p class="muted">Derived channels preview only for now—add to Correlation Lab manually if desired.</p>`;
-}
-
-function setSmoothingPresetActive(val){
-  if (!smoothingPresetGroup) return;
-  smoothingPresetGroup.querySelectorAll("button").forEach(btn=>{
-    btn.classList.toggle("active", btn.dataset.smooth === String(val));
-  });
-}
-
-function applyAnomalyDetection(){
-  if (!autoAnomaly.enabled){
-    anomalySummary.textContent = "Auto detection off.";
-    return;
-  }
-  if (highlightSettings.columnIdx === -1){
-    anomalySummary.textContent = "Enable a highlight column first.";
-    return;
-  }
-  const series = getFilteredSeries(highlightSettings.columnIdx);
-  if (!series){
-    anomalySummary.textContent = "No data for highlight column.";
-    return;
-  }
-  const stats = computeBasicStats(series.y || []);
-  if (!stats){
-    anomalySummary.textContent = "Insufficient numeric data.";
-    return;
-  }
-  const threshold = stats.mean + autoAnomaly.zScore * stats.std;
-  highlightSettings.threshold = threshold;
-  highlightSettings.mode = "above";
-  highlightSettings.enabled = true;
-  if (highlightToggle) highlightToggle.checked = true;
-  if (highlightThresholdInput) highlightThresholdInput.value = threshold.toFixed(3);
-  if (highlightModeSel) highlightModeSel.value = "above";
-  anomalySummary.textContent = `Highlighting values above ${threshold.toFixed(3)} (${stats.mean.toFixed(3)} + ${autoAnomaly.zScore}σ).`;
-  plot(false,true);
-}
-
-function handleCorrelationRun(){
-  if (!correlationChecklist){
-    correlationResult.textContent = "No enabled traces.";
-    return;
-  }
-  const selected = Array.from(correlationChecklist.querySelectorAll("input:checked")).map(cb=>Number(cb.value));
-  if (selected.length < 2){
-    correlationResult.textContent = "Select at least two traces.";
-    return;
-  }
-  const limited = selected.slice(0,4);
-  const matrix = computeCorrelationMatrix(limited);
-  if (!matrix){
-    correlationResult.textContent = "Not enough numeric data.";
-    return;
-  }
-  let html = "<table><tr><th></th>";
-  limited.forEach(idx => html += `<th>${headers[idx]}</th>`);
-  html += "</tr>";
-  matrix.forEach((row,i)=>{
-    html += `<tr><th>${headers[limited[i]]}</th>`;
-    row.forEach(val=>{
-      html += `<td>${val.toFixed(3)}</td>`;
-    });
-    html += "</tr>";
-  });
-  html += "</table>";
-  correlationResult.innerHTML = html;
-}
-
-function handleStatsCompute(){
-  if (!statsColumnSelect){
-    statsSummary.textContent = "No columns available.";
-    return;
-  }
-  const idx = Number(statsColumnSelect.value);
-  const series = getFilteredSeries(idx);
-  if (!series){
-    statsSummary.textContent = "Select a parameter.";
-    return;
-  }
-  const stats = computeBasicStats(series.y || []);
-  statsSummary.innerHTML = renderStatsTable(stats);
-  updateSessionComparison(idx);
-}
-
-function handleRangeCompute(){
-  if (!statsColumnSelect){
-    rangeSummary.textContent = "Select a parameter first.";
-    return;
-  }
-  const idx = Number(statsColumnSelect.value);
-  const series = getFilteredSeries(idx);
-  if (!series){
-    rangeSummary.textContent = "No data for selected parameter.";
-    return;
-  }
-  const min = parseFloat(rangeMinInput.value);
-  const max = parseFloat(rangeMaxInput.value);
-  if (!Number.isFinite(min) || !Number.isFinite(max)){
-    rangeSummary.textContent = "Enter min/max bounds.";
-    return;
-  }
-  const values = (series.y || []).filter(Number.isFinite);
-  if (!values.length){
-    rangeSummary.textContent = "No numeric samples.";
-    return;
-  }
-  const inside = values.filter(v => v >= Math.min(min,max) && v <= Math.max(min,max)).length;
-  const pct = (inside / values.length) * 100;
-  rangeSummary.textContent = `${pct.toFixed(2)}% of samples between ${min} and ${max}.`;
-}
-
-function getComparisonSeriesByHeader(header){
-  if (!compareLog || !header) return null;
-  const idx = compareLog.headers.indexOf(header);
-  if (idx === -1) return null;
-  const time = compareLog.cols[compareLog.timeIdx];
-  const series = compareLog.cols[idx];
-  if (!time || !series) return null;
-  if (!timeRangeEnabled) return {x:time.slice(), y:series.slice()};
-  const filtered = {x:[], y:[]};
-  for (let i=0;i<time.length;i++){
-    const t = time[i];
-    if (!Number.isFinite(t)) continue;
-    if (t < timeRangeMin || t > timeRangeMax) continue;
-    filtered.x.push(t);
-    filtered.y.push(series[i]);
-  }
-  return filtered;
-}
-
-function updateSessionComparison(primaryIdx){
-  if (!sessionComparison) return;
-  if (!compareLog){
-    sessionComparison.textContent = "Load a comparison log to see session deltas.";
-    return;
-  }
-  const header = headers[primaryIdx];
-  const refSeries = getComparisonSeriesByHeader(header);
-  const series = getFilteredSeries(primaryIdx);
-  if (!refSeries || !series){
-    sessionComparison.textContent = "Selected parameter not available in comparison log.";
-    return;
-  }
-  const statsA = computeBasicStats(series.y || []);
-  const statsB = computeBasicStats(refSeries.y || []);
-  if (!statsA || !statsB){
-    sessionComparison.textContent = "Not enough numeric samples.";
-    return;
-  }
-  sessionComparison.innerHTML = `
-    <table>
-      <tr><th></th><th>Primary</th><th>Comparison</th><th>Delta</th></tr>
-      <tr><td>Mean</td><td>${statsA.mean.toFixed(3)}</td><td>${statsB.mean.toFixed(3)}</td><td>${(statsA.mean-statsB.mean).toFixed(3)}</td></tr>
-      <tr><td>Peak</td><td>${statsA.max.toFixed(3)}</td><td>${statsB.max.toFixed(3)}</td><td>${(statsA.max-statsB.max).toFixed(3)}</td></tr>
-      <tr><td>Std Dev</td><td>${statsA.std.toFixed(3)}</td><td>${statsB.std.toFixed(3)}</td><td>${(statsA.std-statsB.std).toFixed(3)}</td></tr>
-    </table>`;
-}
-
-function handlePerformanceCompute(){
-  if (!speedColumnSelect){
-    performanceSummary.textContent = "No speed column available.";
-    return;
-  }
-  const idx = Number(speedColumnSelect.value);
-  const series = getFilteredSeries(idx);
-  if (!series){
-    performanceSummary.textContent = "Select a valid speed column.";
-    return;
-  }
-  const name = headers[idx];
-  const isKmh = /km/i.test(name);
-  const mphToMS = 0.44704;
-  const kmhToMS = 0.277778;
-  const speedFactor = isKmh ? kmhToMS : mphToMS;
-  const t0_60 = computeTimeToSpeed(series, 0, isKmh ? 100 : 60);
-  const t100_200 = computeTimeToSpeed(series, isKmh ? 100 : 62, isKmh ? 200 : 124);
-  let peakG = 0;
-  for (let i=1;i<series.y.length;i++){
-    const v1 = series.y[i-1];
-    const v2 = series.y[i];
-    const t1 = series.x[i-1];
-    const t2 = series.x[i];
-    if (!Number.isFinite(v1) || !Number.isFinite(v2) || !Number.isFinite(t1) || !Number.isFinite(t2)) continue;
-    const acc = ((v2 - v1) * speedFactor) / Math.max(0.0001, (t2 - t1));
-    peakG = Math.max(peakG, acc / 9.81);
-  }
-  const rpmIdx = headers.findIndex(h => /rpm/i.test(h));
-  const shiftInfo = detectGearChanges(rpmIdx >=0 ? getFilteredSeries(rpmIdx) : null);
-  performanceSummary.innerHTML = `
-    <table>
-      <tr><th colspan="2">Primary (${name})</th></tr>
-      <tr><td>0-${isKmh ? "100" : "60"}</td><td>${t0_60 ? t0_60.toFixed(3)+" s" : "N/A"}</td></tr>
-      <tr><td>${isKmh ? "100-200" : "60-124"}</td><td>${t100_200 ? t100_200.toFixed(3)+" s" : "N/A"}</td></tr>
-      <tr><td>Peak accel</td><td>${peakG.toFixed(3)} g</td></tr>
-      <tr><td>Gear events</td><td>${shiftInfo.count || 0}</td></tr>
-    </table>`;
-
-  const boostIdx = headers.findIndex(h => /boost/i.test(h) && /target/i.test(h));
-  const boostActualIdx = headers.findIndex(h => /boost/i.test(h) && !/target/i.test(h));
-  const afrIdx = headers.findIndex(h => /afr/i.test(h) && !/target/i.test(h));
-  const afrTargetIdx = headers.findIndex(h => /afr/i.test(h) && /target/i.test(h));
-  const healthParts = [];
-  if (boostIdx >=0 && boostActualIdx >=0){
-    const targetSeries = getFilteredSeries(boostIdx);
-    const actualSeries = getFilteredSeries(boostActualIdx);
-    const diffs = [];
-    const len = Math.min(targetSeries?.y?.length||0, actualSeries?.y?.length||0);
-    for (let i=0;i<len;i++){
-      const t = targetSeries.y[i];
-      const a = actualSeries.y[i];
-      if (Number.isFinite(t) && Number.isFinite(a)) diffs.push(Math.abs(a - t));
-    }
-    if (diffs.length){
-      const avg = diffs.reduce((a,b)=>a+b,0)/diffs.length;
-      healthParts.push(`Boost deviation: ${avg.toFixed(2)} psi`);
-    }
-  }
-  if (afrIdx >=0 && afrTargetIdx >=0){
-    const tSeries = getFilteredSeries(afrTargetIdx);
-    const aSeries = getFilteredSeries(afrIdx);
-    const diffs=[];
-    const len = Math.min(tSeries?.y?.length||0, aSeries?.y?.length||0);
-    for (let i=0;i<len;i++){
-      const t = tSeries.y[i];
-      const a = aSeries.y[i];
-      if (Number.isFinite(t) && Number.isFinite(a)) diffs.push(Math.abs(a - t));
-    }
-    if (diffs.length){
-      const avg = diffs.reduce((a,b)=>a+b,0)/diffs.length;
-      healthParts.push(`AFR deviation: ${avg.toFixed(2)}`);
-    }
-  }
-  const knockIdx = headers.findIndex(h => /knock/i.test(h));
-  if (knockIdx >=0){
-    const knockStats = computeBasicStats((getFilteredSeries(knockIdx)?.y) || []);
-    if (knockStats) healthParts.push(`Knock mean: ${knockStats.mean.toFixed(3)}`);
-  }
-  const trimsIdx = headers.findIndex(h => /fuel trim/i.test(h));
-  if (trimsIdx >=0){
-    const trimStats = computeBasicStats((getFilteredSeries(trimsIdx)?.y) || []);
-    if (trimStats) healthParts.push(`Fuel trim avg: ${trimStats.mean.toFixed(2)}%`);
-  }
-  healthSummary.textContent = healthParts.length ? healthParts.join(" • ") : "No boost/AFR/knock metrics detected in this log.";
-}
-
-
 function updateTimeRangeDisplays() {
   if (timeMinDisplay) timeMinDisplay.textContent = `${timeRangeMin.toFixed(1)}s`;
   if (timeMaxDisplay) timeMaxDisplay.textContent = `${timeRangeMax.toFixed(1)}s`;
-}
-
-function refreshTimeRangeState(){
-  const full = Math.abs(timeRangeMin - xMin) < EPS && Math.abs(timeRangeMax - xMax) < EPS;
-  timeRangeEnabled = !full;
 }
 
 function initializeTimeRange() {
@@ -1064,7 +329,6 @@ function updateTimeRangeFromData() {
   // Ensure time range stays within data bounds
   timeRangeMin = Math.max(xMin, Math.min(timeRangeMin, xMax));
   timeRangeMax = Math.max(xMin, Math.min(timeRangeMax, xMax));
-  refreshTimeRangeState();
 }
 
 // Loading screen functions
@@ -1088,9 +352,11 @@ function hideLoading() {
   loadingScreen.classList.add("hidden");
 }
 
-function rescaleYToWindow(){
-  const xs = activeTimeSeries.length ? activeTimeSeries : cols[xIdx];
-  if (!xs || !xs.length) return;
+function rescaleYToWindow(rangeOverride){
+  const xs = cols[xIdx]; if (!xs || !xs.length) return;
+  const xr = rangeOverride || (chart.layout?.xaxis?.range || null);
+  if (!xr || xr.length !== 2) return;
+  const [lo, hi] = xr;
   let mn = +Infinity, mx = -Infinity;
 
   for (let s of ySlots){
@@ -1098,7 +364,10 @@ function rescaleYToWindow(){
     const ys = cols[s.colIdx];
     const exponent = s.scale ?? 0;
     for (let i = 0; i < xs.length; i++){
-      if (timeRangeEnabled && (xs[i] < timeRangeMin || xs[i] > timeRangeMax)) continue;
+      const x = xs[i];
+      // Apply time range filtering in addition to chart zoom range
+      if (x < lo || x > hi) continue;
+      if (timeRangeEnabled && (x < timeRangeMin || x > timeRangeMax)) continue;
       const v = ys[i]; if (!Number.isFinite(v)) continue;
       const y = applyPowerScaling(v, exponent);
       if (Number.isFinite(y)) {
@@ -1106,22 +375,9 @@ function rescaleYToWindow(){
       }
     }
   }
-
   if (mn === +Infinity || mx === -Infinity) return;
   const pad = Math.max((mx - mn) * 0.05, 1e-6);
-
-  const updates = {
-    "yaxis.autorange": false,
-    "yaxis.range": [mn - pad, mx + pad],
-    "xaxis.autorange": false,
-    "xaxis.range": timeRangeEnabled ? [timeRangeMin, timeRangeMax] : chart.layout?.xaxis?.range || null
-  };
-
-  if (!timeRangeEnabled) {
-    updates["xaxis.autorange"] = true;
-  }
-
-  Plotly.relayout(chart, updates);
+  Plotly.relayout(chart, { "yaxis.autorange": false, "yaxis.range": [mn - pad, mx + pad] });
 }
 
 function updateScaleBox(i){
@@ -1326,7 +582,6 @@ function buildUI(){
     row.append(left,color,sel,scaleVal,valwrap,btns);
     axisPanel.appendChild(row);
   }
-  refreshAnalysisControls();
 }
 
 /* plotting */
@@ -1347,14 +602,12 @@ function plot(showToasts=true, preserveRange=false){
   let currentTimeSeries = [];
   let currentIndexMap = [];
 
-  const highlightTraces = [];
-
   for(let i=0;i<ySlots.length;i++){
     const s = ySlots[i];
     if(!s.enabled || s.colIdx===-1) continue;
     const rawY    = cols[s.colIdx];
     const exponent = s.scale ?? 0;
-    const scaledY = prepareSeries(rawY, exponent);
+    const scaledY = rawY.map(v => applyPowerScaling(v, exponent));
     const label = headers[s.colIdx];
 
     // Apply time range filtering
@@ -1377,64 +630,7 @@ function plot(showToasts=true, preserveRange=false){
       line: { width: 1, color: s.color },
       hoverinfo: "skip"
     });
-
-    if (compareLog && compareLog.headers?.includes(label) && compareLog.timeIdx >= 0){
-      const refIdx = compareLog.headers.indexOf(label);
-      const refYRaw = compareLog.cols?.[refIdx];
-      const refTime = compareLog.cols?.[compareLog.timeIdx];
-      if (refYRaw && refTime){
-        const refScaled = prepareSeries(refYRaw, exponent);
-        const refFiltered = filterDataByTimeRange(refTime, refScaled, refYRaw);
-        traces.push({
-          type: refFiltered.x.length > 5000 ? "scattergl" : "scatter",
-          mode: "lines",
-          x: refFiltered.x,
-          y: refFiltered.y ?? refScaled,
-          customdata: refFiltered.customdata,
-          name: `${label} (Ref)`,
-          line: { width: 1, dash: "dot", color: s.color },
-          hoverinfo: "skip",
-          opacity: 0.85
-        });
-      }
-    }
   }
-  if (highlightSettings.enabled && Number.isFinite(highlightSettings.threshold) && highlightSettings.columnIdx >=0){
-    const rawCol = cols[highlightSettings.columnIdx];
-    if (rawCol){
-      const slot = ySlots.find(s=>s.colIdx === highlightSettings.columnIdx);
-      const exponent = slot ? (slot.scale ?? 0) : 0;
-      const prepared = prepareSeries(rawCol, exponent);
-      const filtered = filterDataByTimeRange(cols[xIdx], prepared, rawCol);
-      const ptsX = [], ptsY = [], rawVals = [];
-      filtered.x.forEach((x, idx) => {
-        const rawVal = filtered.customdata ? filtered.customdata[idx] : prepared[idx];
-        if (!Number.isFinite(rawVal)) return;
-        const cond = highlightSettings.mode === "above"
-          ? rawVal >= highlightSettings.threshold
-          : rawVal <= highlightSettings.threshold;
-        if (cond){
-          ptsX.push(x);
-          const yVal = filtered.y ? filtered.y[idx] : prepared[idx];
-          ptsY.push(yVal);
-          rawVals.push(rawVal);
-        }
-      });
-      if (ptsX.length){
-        traces.push({
-          type: "scatter",
-          mode: "markers",
-          x: ptsX,
-          y: ptsY,
-          name: `${headers[highlightSettings.columnIdx]} Highlight`,
-          marker: { size: 8, color: "#ff944d", symbol: "diamond-open" },
-          customdata: rawVals,
-          hovertemplate: `${headers[highlightSettings.columnIdx]}<br>raw:%{customdata:.3f}<extra>Highlight</extra>`
-        });
-      }
-    }
-  }
-
   if(!traces.length){ if(showToasts) toastMsg("Enable at least one Y axis."); return; }
 
   // Ensure chart element exists
@@ -1552,10 +748,7 @@ function plot(showToasts=true, preserveRange=false){
   });
 
   updateReadouts();
-  if (autoY) rescaleYToWindow();
-  else if (timeRangeEnabled) {
-    Plotly.relayout(chart, { "xaxis.autorange": false, "xaxis.range": [timeRangeMin, timeRangeMax] });
-  }
+  if (autoY) rescaleYToWindow(chart.layout?.xaxis?.range || null);
 }
 
 // Container click handler function
@@ -1658,7 +851,7 @@ function tryLoadCached(){
     // Initialize time range controls
     initializeTimeRange();
 
-    autoSelectYs(); buildUI(); refreshHighlightOptions(); syncHighlightControls(); chart.innerHTML=""; toastMsg("Loaded cached CSV. Configure axes, then Generate Plot.","ok");
+    autoSelectYs(); buildUI(); chart.innerHTML=""; toastMsg("Loaded cached CSV. Configure axes, then Generate Plot.","ok");
     return true;
   }catch(e){ console.warn("cache parse fail",e); return false; }
 }
@@ -1692,7 +885,7 @@ function wireInitialEventListeners(){
           hideLoading();
 
           fileInfo.classList.remove("hidden"); fileInfo.textContent=`Selected: ${f.name} · ${fmtBytes(f.size)}`;
-          autoSelectYs(); buildUI(); refreshHighlightOptions(); syncHighlightControls(); chart.innerHTML=""; toastMsg("Parsed. Configure axes, then Generate Plot.","ok");
+          autoSelectYs(); buildUI(); chart.innerHTML=""; toastMsg("Parsed. Configure axes, then Generate Plot.","ok");
           
         }catch(err){ 
           hideLoading();
@@ -1713,9 +906,7 @@ function wireInitialEventListeners(){
         timeRangeMin = newMin;
         if (timeMinInput) timeMinInput.value = newMin.toFixed(1);
         updateTimeRangeDisplays();
-        refreshTimeRangeState();
-        plot(false, false);
-        if (autoAnomaly.enabled) applyAnomalyDetection();
+        plot(false, true);
       } else {
         // Reset slider if invalid
         e.target.value = timeRangeMin;
@@ -1730,9 +921,7 @@ function wireInitialEventListeners(){
         timeRangeMax = newMax;
         if (timeMaxInput) timeMaxInput.value = newMax.toFixed(1);
         updateTimeRangeDisplays();
-        refreshTimeRangeState();
-        plot(false, false);
-        if (autoAnomaly.enabled) applyAnomalyDetection();
+        plot(false, true);
       } else {
         // Reset slider if invalid
         e.target.value = timeRangeMax;
@@ -1747,9 +936,7 @@ function wireInitialEventListeners(){
         timeRangeMin = newMin;
         if (timeMinSlider) timeMinSlider.value = newMin;
         updateTimeRangeDisplays();
-        refreshTimeRangeState();
-        plot(false, false);
-        if (autoAnomaly.enabled) applyAnomalyDetection();
+        plot(false, true);
       } else {
         e.target.value = timeRangeMin.toFixed(1);
       }
@@ -1763,9 +950,7 @@ function wireInitialEventListeners(){
         timeRangeMax = newMax;
         if (timeMaxSlider) timeMaxSlider.value = newMax;
         updateTimeRangeDisplays();
-        refreshTimeRangeState();
-        plot(false, false);
-        if (autoAnomaly.enabled) applyAnomalyDetection();
+        plot(false, true);
       } else {
         e.target.value = timeRangeMax.toFixed(1);
       }
@@ -1777,9 +962,7 @@ function wireInitialEventListeners(){
       timeRangeMin = xMin;
       timeRangeMax = xMax;
       initializeTimeRange();
-      refreshTimeRangeState();
-      plot(false, false);
-      if (autoAnomaly.enabled) applyAnomalyDetection();
+      plot(false, true);
     });
   }
 
@@ -1788,99 +971,7 @@ function wireInitialEventListeners(){
       timeRangeMin = xMin;
       timeRangeMax = xMax;
       initializeTimeRange();
-      refreshTimeRangeState();
-      plot(false, false);
-      if (autoAnomaly.enabled) applyAnomalyDetection();
-    });
-  }
-
-  if (smoothSelect) {
-    smoothSelect.addEventListener("change", () => {
-      smoothingWindow = Number(smoothSelect.value) || 0;
-      setSmoothingPresetActive(smoothSelect.value);
       plot(false, true);
-    });
-  }
-  if (highlightToggle) {
-    highlightToggle.addEventListener("change", (e) => {
-      highlightSettings.enabled = e.target.checked;
-      syncHighlightControls();
-      plot(false, true);
-      if (!highlightSettings.enabled && anomalySummary) {
-        anomalySummary.textContent = "Auto detection off.";
-      }
-    });
-  }
-  if (highlightColumn) {
-    highlightColumn.addEventListener("change", (e) => {
-      highlightSettings.columnIdx = Number(e.target.value);
-      syncHighlightControls();
-      plot(false, true);
-      if (autoAnomaly.enabled) applyAnomalyDetection();
-    });
-  }
-  if (highlightModeSel) {
-    highlightModeSel.addEventListener("change", (e) => {
-      highlightSettings.mode = e.target.value;
-      syncHighlightControls();
-      plot(false, true);
-    });
-  }
-  if (highlightThresholdInput) {
-    highlightThresholdInput.addEventListener("input", (e) => {
-      const val = parseFloat(e.target.value);
-      if (Number.isFinite(val)) {
-        highlightSettings.threshold = val;
-        syncHighlightControls();
-        if (highlightSettings.enabled) plot(false, true);
-      }
-    });
-  }
-  if (derivedComputeBtn) {
-    derivedComputeBtn.addEventListener("click", handleDerivedCompute);
-  }
-  if (smoothingPresetGroup) {
-    smoothingPresetGroup.addEventListener("click", (e) => {
-      const btn = e.target.closest("button");
-      if (!btn) return;
-      const val = btn.dataset.smooth;
-      if (smoothSelect) smoothSelect.value = val;
-      smoothingWindow = Number(val) || 0;
-      setSmoothingPresetActive(val);
-      plot(false, true);
-    });
-  }
-  if (anomalyAutoToggle) {
-    anomalyAutoToggle.addEventListener("change", (e) => {
-      autoAnomaly.enabled = e.target.checked;
-      applyAnomalyDetection();
-    });
-  }
-  if (correlationRunBtn) {
-    correlationRunBtn.addEventListener("click", handleCorrelationRun);
-  }
-  if (statsComputeBtn) {
-    statsComputeBtn.addEventListener("click", handleStatsCompute);
-  }
-  if (statsColumnSelect) {
-    statsColumnSelect.addEventListener("change", handleStatsCompute);
-  }
-  if (rangeComputeBtn) {
-    rangeComputeBtn.addEventListener("click", handleRangeCompute);
-  }
-  if (performanceComputeBtn) {
-    performanceComputeBtn.addEventListener("click", handlePerformanceCompute);
-  }
-  if (csvCompareFile){
-    csvCompareFile.addEventListener("change", (e) => {
-      const file = e.target.files[0] || null;
-      if (!file){
-        compareLog = null;
-        updateCompareInfo();
-        plot(false, true);
-        return;
-      }
-      loadComparisonFile(file);
     });
   }
 
@@ -1895,58 +986,6 @@ function wireInitialEventListeners(){
       if (e.target === scaleHelpModal) closeScaleHelp();
     });
   }
-  if (autoScaleBtn) {
-    autoScaleBtn.addEventListener("click", autoScaleTraces);
-  }
-  if (dataAnalysisLink) {
-    dataAnalysisLink.addEventListener("click", (e)=>{ e.preventDefault(); openDataAnalysisModal(); });
-  }
-  if (statsLink) {
-    statsLink.addEventListener("click", (e)=>{ e.preventDefault(); openStatsModal(); });
-  }
-  if (performanceLink) {
-    performanceLink.addEventListener("click", (e)=>{ e.preventDefault(); openPerformanceModal(); });
-  }
-  if (changelogBtn) {
-    changelogBtn.addEventListener("click", openChangelog);
-  }
-  if (changelogClose) {
-    changelogClose.addEventListener("click", closeChangelog);
-  }
-  if (changelogModal) {
-    changelogModal.addEventListener("click", (e) => {
-      if (e.target === changelogModal) closeChangelog();
-    });
-  }
-  if (dataAnalysisClose) dataAnalysisClose.addEventListener("click", () => closeModal(dataAnalysisModal));
-  if (dataAnalysisModal) {
-    dataAnalysisModal.addEventListener("click", (e) => {
-      if (e.target === dataAnalysisModal) closeModal(dataAnalysisModal);
-    });
-  }
-  if (statsClose) statsClose.addEventListener("click", () => closeModal(statsModal));
-  if (statsModal) {
-    statsModal.addEventListener("click", (e) => {
-      if (e.target === statsModal) closeModal(statsModal);
-    });
-  }
-  if (performanceClose) performanceClose.addEventListener("click", () => closeModal(performanceModal));
-  if (performanceModal) {
-    performanceModal.addEventListener("click", (e) => {
-      if (e.target === performanceModal) closeModal(performanceModal);
-    });
-  }
-  if (hintsBtn) {
-    hintsBtn.addEventListener("click", openHints);
-  }
-  if (hintsClose) {
-    hintsClose.addEventListener("click", closeHints);
-  }
-  if (hintsModal) {
-    hintsModal.addEventListener("click", (e) => {
-      if (e.target === hintsModal) closeHints();
-    });
-  }
 
   // Back to top button
   const toTopBtn = document.getElementById("toTop");
@@ -1959,11 +998,6 @@ function wireInitialEventListeners(){
     timeRangeMin = 0; timeRangeMax = 0; timeRangeEnabled = false;
     activeTimeSeries = [];
     activeIndexMap = [];
-    compareLog = null;
-    updateCompareInfo();
-    if (csvFile) csvFile.value = "";
-    if (csvCompareFile) csvCompareFile.value = "";
-    refreshHighlightOptions();
     toastMsg("Cleared page state. Cached CSV retained.","ok");
   });
 }
@@ -1989,23 +1023,23 @@ function initDropdowns() {
         case "Export Data":
           toastMsg("Export functionality coming soon!", "ok");
           break;
-        case "Correlation Lab":
-          // Already on correlation lab
+        case "Mega Plot":
+          // Already on mega plot
           break;
-        case "Signal Matrix":
+        case "Multi Plot":
           window.location.href = "index.html";
           break;
         case "About":
           window.location.href = "about.html";
           break;
         case "Data Analysis":
-          openDataAnalysisModal();
+          toastMsg("Data analysis tools coming soon!", "ok");
           break;
         case "Statistics":
-          openStatsModal();
+          toastMsg("Statistics panel coming soon!", "ok");
           break;
         case "Performance Metrics":
-          openPerformanceModal();
+          toastMsg("Performance metrics coming soon!", "ok");
           break;
         case "Documentation":
           toastMsg("Documentation coming soon!", "ok");
@@ -2079,18 +1113,6 @@ function hideStartupLoading() {
   }
 }
 
-function handleStartupSplash(){
-  const navEntry = performance.getEntriesByType && performance.getEntriesByType("navigation")[0];
-  const shouldShow = !sessionStorage.getItem("splashShown") || (navEntry && navEntry.type === "reload");
-  if (shouldShow){
-    showStartupLoading();
-    sessionStorage.setItem("splashShown","1");
-    setTimeout(()=> hideStartupLoading(), 1500);
-  } else {
-    hideStartupLoading();
-  }
-}
-
 // ASCII Dot-Matrix Loading Animation
 function createAsciiAnimation() {
   const asciiContainer = document.querySelector('.ascii-loading .matrix');
@@ -2143,7 +1165,13 @@ function createAsciiAnimation() {
 }
 
 document.addEventListener("DOMContentLoaded", ()=>{ 
-  handleStartupSplash();
+  // Show startup loading screen
+  showStartupLoading();
+  
+  // Hide loading screen after 3-4 seconds
+  setTimeout(() => {
+    hideStartupLoading();
+  }, 3500);
   
   // Initialize theme system
   initTheme();
@@ -2168,16 +1196,6 @@ document.addEventListener("DOMContentLoaded", ()=>{
         toastMsg("Loading cancelled.", "error");
       } else if (scaleHelpModal && !scaleHelpModal.classList.contains("hidden")) {
         closeScaleHelp();
-      } else if (changelogModal && !changelogModal.classList.contains("hidden")) {
-        closeChangelog();
-      } else if (hintsModal && !hintsModal.classList.contains("hidden")) {
-        closeHints();
-      } else if (dataAnalysisModal && !dataAnalysisModal.classList.contains("hidden")) {
-        closeModal(dataAnalysisModal);
-      } else if (statsModal && !statsModal.classList.contains("hidden")) {
-        closeModal(statsModal);
-      } else if (performanceModal && !performanceModal.classList.contains("hidden")) {
-        closeModal(performanceModal);
       }
     }
   });

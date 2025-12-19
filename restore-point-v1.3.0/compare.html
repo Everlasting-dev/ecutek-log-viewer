@@ -84,19 +84,19 @@
           <div class="dropdown">
             <a href="#" class="nav-item">Tools</a>
             <div class="dropdown-content">
-              <a href="#" class="dropdown-item">
+              <a href="#" class="dropdown-item" id="dataAnalysisLink">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
                 </svg>
                 Data Analysis
               </a>
-              <a href="#" class="dropdown-item">
+              <a href="#" class="dropdown-item" id="statsLink">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
                 </svg>
                 Statistics
               </a>
-              <a href="#" class="dropdown-item">
+              <a href="#" class="dropdown-item" id="performanceLink">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
                 </svg>
@@ -250,6 +250,98 @@
           <div id="chart" class="plot big"></div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <div id="dataAnalysisModal" class="modal hidden">
+    <div class="modal-content wide">
+      <button class="modal-close" id="dataAnalysisClose" aria-label="Close data analysis">×</button>
+      <h3>Data Analysis</h3>
+      <section class="modal-section">
+        <h4>Derived Channel Builder</h4>
+        <div class="form-grid">
+          <select id="derivedInputA"></select>
+          <select id="derivedOperation">
+            <option value="subtract">Minus</option>
+            <option value="add">Add</option>
+            <option value="divide">Divide</option>
+            <option value="multiply">Multiply</option>
+          </select>
+          <select id="derivedInputB"></select>
+          <input type="text" id="derivedName" placeholder="Label e.g. Boost Delta" />
+          <button id="derivedComputeBtn" class="btn mini">Compute</button>
+        </div>
+        <div id="derivedResult" class="analysis-result muted">Select columns and click Compute to preview the custom channel.</div>
+      </section>
+      <section class="modal-section">
+        <h4>Smoothing Presets & Anomaly Detection</h4>
+        <div class="pill-group" id="smoothingPresetGroup">
+          <button data-smooth="0">Off</button>
+          <button data-smooth="3">3 pt</button>
+          <button data-smooth="5">5 pt</button>
+          <button data-smooth="9">9 pt</button>
+          <button data-smooth="15">15 pt</button>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="anomalyAutoToggle" />
+          Auto anomaly detection (z-score 2.0)
+        </label>
+        <div id="anomalySummary" class="analysis-result muted">Auto detection adjusts highlight thresholds based on mean + 2σ.</div>
+      </section>
+      <section class="modal-section">
+        <h4>Correlation Snapshot</h4>
+        <p class="muted">Pick up to four enabled traces to compute a quick Pearson correlation matrix.</p>
+        <div id="correlationChecklist" class="checklist-grid"></div>
+        <button id="correlationRunBtn" class="btn ghost mini">Run Correlation</button>
+        <div id="correlationResult" class="analysis-result scrollable"></div>
+      </section>
+    </div>
+  </div>
+
+  <div id="statsModal" class="modal hidden">
+    <div class="modal-content wide">
+      <button class="modal-close" id="statsClose" aria-label="Close stats">×</button>
+      <h3>Statistics</h3>
+      <section class="modal-section">
+        <h4>Distribution Overview</h4>
+        <div class="form-grid">
+          <select id="statsColumnSelect"></select>
+          <button id="statsComputeBtn" class="btn mini">Update</button>
+        </div>
+        <div id="statsSummary" class="analysis-result muted">Pick a parameter to see min/mean/max and percentile spread.</div>
+      </section>
+      <section class="modal-section">
+        <h4>Time in Range</h4>
+        <div class="form-grid">
+          <input type="number" id="rangeMinInput" placeholder="Min" step="0.1" />
+          <input type="number" id="rangeMaxInput" placeholder="Max" step="0.1" />
+          <button id="rangeComputeBtn" class="btn mini">Compute %</button>
+        </div>
+        <div id="rangeSummary" class="analysis-result muted">Enter a range to see how much of the run stayed inside.</div>
+      </section>
+      <section class="modal-section">
+        <h4>Session Comparison</h4>
+        <div id="sessionComparison" class="analysis-result muted">Load a comparison log to view deltas between runs.</div>
+      </section>
+    </div>
+  </div>
+
+  <div id="performanceModal" class="modal hidden">
+    <div class="modal-content wide">
+      <button class="modal-close" id="performanceClose" aria-label="Close performance metrics">×</button>
+      <h3>Performance Metrics</h3>
+      <section class="modal-section">
+        <h4>Acceleration Benchmarks</h4>
+        <div class="form-grid">
+          <select id="speedColumnSelect"></select>
+          <button id="performanceComputeBtn" class="btn mini">Analyze</button>
+        </div>
+        <div id="performanceSummary" class="analysis-result muted">Select a speed column (mph or km/h) to compute 0‑60, 100‑200, and peak acceleration.</div>
+      </section>
+      <section class="modal-section">
+        <h4>Health Indicators</h4>
+        <div id="healthSummary" class="analysis-result muted">Metrics for knock, fuel trims, boost/AFR compliance will appear here when relevant columns exist.</div>
+      </section>
     </div>
   </div>
 

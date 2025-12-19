@@ -2,6 +2,30 @@
 
 ## Version History
 
+### preAlpha 1.3.11 – GR6 Shift Lab & Log Archiver
+**Date:** November 2025  
+**Status:** 🚧 Pre-release
+
+#### ✨ Features
+- **Metadata Grid** – duration, sampling rate, RPM span, detected speed channel, GR6 shift deltas, and protection notes.
+- **Archive Current Log** – one-click download of a timestamped CSV (drop into `logs/` and commit via `logvault/*` branch).
+- **Line thickness sliders** – per-trace stroke control (primary + reference) to keep busy charts legible.
+- **Shift Strategy Lab** – tuner-friendly gearing sandbox inspired by [blocklayer.com](https://www.blocklayer.com/rpm-gear) with drop-RPM notes and clutch/slip reminders.
+- **Performance Benchmarks overhaul** – automatic speed-source detection, 0‑60 / 60‑130 / 100‑200 slices, peak G, and health overlays (boost, AFR, knock, torque cuts).
+- **Wheel-slip & torque intervention detection** – metadata and performance cards now flag traction/torque limiting events automatically.
+- **Correlation Lab trimmed** – only the essentials remain on-page; metadata, shift lab, and diagnostics moved under Tools with dedicated modals/tabs.
+
+#### 🐛 Fixes
+- Locked the X-axis to the Time Window sliders to eliminate random zooming while keeping Y auto-range active.
+- Event highlight dropdown stays in sync with whatever Y axes are currently enabled.
+- Cursor data box now uses semi-transparency so underlying traces remain visible.
+- Fixed the splash/loading overlay hang and the global line-width initialization so Correlation Lab renders immediately after load.
+
+#### 🔧 Technical
+- Added `logs/` (tracked with `.gitkeep`) plus README workflow for branch-based log archival.
+- `rescaleYToWindow` now respects the filtered time window and never toggles Plotly autorange.
+- Performance modal no longer needs a signal dropdown; it derives the cleanest speed channel automatically.
+
 ### preAlpha 1.3.10 – Dual Log Enhancements & Auto Scale
 **Date:** November 2025  
 **Status:** 🚧 Pre-release

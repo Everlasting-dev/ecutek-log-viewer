@@ -3,32 +3,21 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>EcuTek Log Viewer (TXT/CSV)</title>
+  <title>EcuTek Log Viewer (GR6 Scope)</title>
   <link rel="stylesheet" href="style.css?v=1.3.0" />
   <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 </head>
-<body>
-  <!-- Loading Screen -->
-  <div id="loadingScreen" class="loading-screen">
-    <div class="ascii-loading">
-      <div class="matrix"></div>
-      <div class="loading-text">ECU-TEK LOG VIEWER</div>
-      <div class="hint">loading…</div>
-    </div>
-  </div>
-
-  <!-- Taskbar -->
+<body class="gear-page">
   <div class="taskbar">
     <div class="taskbar-content">
       <div class="taskbar-left">
         <div class="brand">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
+            <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z" />
           </svg>
           EcuTek Log Viewer
         </div>
-        
         <nav class="nav-menu">
           <a href="#" class="nav-item active">Dashboard</a>
           <div class="dropdown">
@@ -59,7 +48,7 @@
           <div class="dropdown">
             <a href="#" class="nav-item">View</a>
             <div class="dropdown-content">
-              <a href="#" class="dropdown-item active">
+              <a href="index.html" class="dropdown-item">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/>
                 </svg>
@@ -71,18 +60,11 @@
                 </svg>
                 Correlation Lab
               </a>
-              <a href="gear.html" class="dropdown-item">
+              <a href="gear.html" class="dropdown-item active">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M7 10l5 5 5-5H7z"/>
                 </svg>
                 GR6 Gear Scope
-              </a>
-              <div class="dropdown-divider"></div>
-              <a href="#" class="dropdown-item" id="hintsBtn">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                </svg>
-                Hints
               </a>
             </div>
           </div>
@@ -124,7 +106,6 @@
           </div>
         </nav>
       </div>
-      
       <div class="taskbar-right">
         <div class="theme-toggle" id="themeToggle">
           <svg class="theme-icon" id="themeIcon" viewBox="0 0 24 24" fill="currentColor">
@@ -132,71 +113,40 @@
           </svg>
           <span id="themeText">Dark</span>
         </div>
-        <button id="changelogBtn" class="btn ghost mini">Change Log</button>
       </div>
     </div>
   </div>
-
-
 
   <div class="wrap">
     <div class="card uploader">
       <div class="pickers">
         <label class="filebtn">
-          <input id="csvFile" type="file" accept=".csv,.txt,.log,text/csv,text/plain" />
-          <span>Choose Log File (.txt/.csv)</span>
+          <input id="gearFile" type="file" accept=".csv,.txt,.log,text/csv,text/plain" />
+          <span>Load Log (CSV/TXT)</span>
         </label>
-        <button id="genBtn" class="btn primary" disabled>Generate Plots</button>
-        <button id="clearBtn" class="btn ghost">Clear</button>
+        <button id="gearReload" class="btn ghost">Use Cached Log</button>
       </div>
-      <div id="dropzone" class="drop">Drag & drop files here</div>
-      <div id="fileInfo" class="fileinfo"></div>
-
-      <div id="fileChips" class="filechips"></div>
-      <div id="toast" class="toast hidden"></div>
+      <div id="gearFileInfo" class="fileinfo muted">Uses the same cache as the other views. Upload here if you want to override.</div>
     </div>
 
-
-
-    <div class="section-heading" style="margin-top:22px;">Time Graphs</div>
-    <div class="plots" id="plots"></div>
-  </div>
-
-  <div class="footer">Made by AK Everlasting Dev · preAlpha 1.3.10</div>
-  <div class="floating-actions">
-    <label class="switch floating-switch" title="Toggle time window selection">
-      <input type="checkbox" id="timeWindowToggle" />
-      <span class="slider"></span>
-      <span class="label">Window</span>
-    </label>
-    <button id="resetWindow" class="totop action-btn" title="Reset time window">↺ Reset</button>
-    <button id="toTop" class="totop action-btn" title="Back to top">↑ Top</button>
-  </div>
-  <div id="changelogModal" class="modal hidden">
-    <div class="modal-content">
-      <button class="modal-close" id="changelogClose" aria-label="Close change log">×</button>
-      <h3>Change Log</h3>
-      <ul>
-        <li><strong>Signal Matrix snap:</strong> click any plot to read exact values.</li>
-        <li><strong>Power scaling:</strong> per-trace exponents with modifier shortcuts.</li>
-        <li><strong>Correlation Lab:</strong> dual-log overlays, smoothing, highlighting.</li>
-        <li><strong>Time window filter:</strong> isolate events without re-uploading.</li>
-      </ul>
-      <p>For the full story see <code>CHANGELOG.md</code>.</p>
+    <div class="card gear-card">
+      <div class="card-heading">
+        <span>GR6 Gear Scope</span>
+        <div class="mode-toggle" id="gearModeToggle">
+          <button data-mode="rpm-speed" class="active">RPM vs Speed</button>
+          <button data-mode="timeline">Timeline</button>
+        </div>
+      </div>
+      <p class="muted">View logged shift points and compare them with ideal GR6 drop targets. RPM traces follow the Engine Speed column while gear data is inferred from Gear Actual / Gear Desired.</p>
+      <div id="gearPlot" class="plot big"></div>
+      <div id="gearStatus" class="analysis-result muted">Load a log with Engine Speed, Vehicle Speed, and Gear channels to populate this view.</div>
     </div>
   </div>
-  <div id="hintsModal" class="modal hidden">
-    <div class="modal-content">
-      <button class="modal-close" id="hintsClose" aria-label="Close hints">×</button>
-      <h3>Hints</h3>
-      <ul>
-        <li>Signal Matrix shows every column; toggle plots off to declutter.</li>
-        <li>Use keyboard modifiers (Shift/Alt) for finer scaling steps on desktop.</li>
-        <li>Correlation Lab adds dual-log overlay, smoothing, and highlights.</li>
-        <li>New Comparison Plot view (coming soon) will combine multiple logs.</li>
-      </ul>
-    </div>
-  </div>
-  <script type="module" src="app.js?v=1.3.0"></script>
+
+  <div class="footer">Client-side parsing. Your file never leaves the device. · GR6 Scope</div>
+  <button id="toTop" class="totop" title="Back to top">↑ Top</button>
+  <script type="module" src="gear.js?v=1.3.0"></script>
 </body>
 </html>
+
+

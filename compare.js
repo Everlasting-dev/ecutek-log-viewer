@@ -1,4 +1,25 @@
-﻿// Compare view: aligned 5-col UI, value-only chips with ▲▼, fixed 50% step, preserve X-range, auto-select Ys.
+﻿function openShiftLabModal(){
+  if (shiftLabModal) {
+    shiftLabModal.classList.remove("hidden");
+    runShiftLab();
+  }
+}
+
+function closeShiftLabModal(){
+  if (shiftLabModal) shiftLabModal.classList.add("hidden");
+}
+
+function openMetadataModal(){
+  if (metadataModal) {
+    updateMetaSummary();
+    metadataModal.classList.remove("hidden");
+  }
+}
+
+function closeMetadataModal(){
+  if (metadataModal) metadataModal.classList.add("hidden");
+}
+// Compare view: aligned 5-col UI, value-only chips with ▲▼, fixed 50% step, preserve X-range, auto-select Ys.
 import { parseCSV, findTimeIndex, findRpmIndex, numericColumns } from "./parser.js";
 
 // ============================================================================
@@ -168,6 +189,60 @@ const changelogClose = $("changelogClose");
 const hintsBtn = $("hintsBtn");
 const hintsModal = $("hintsModal");
 const hintsClose = $("hintsClose");
+const dataAnalysisLink = $("dataAnalysisLink");
+const statsLink = $("statsLink");
+const performanceLink = $("performanceLink");
+const dataAnalysisModal = $("dataAnalysisModal");
+const dataAnalysisClose = $("dataAnalysisClose");
+const statsModal = $("statsModal");
+const statsClose = $("statsClose");
+const performanceModal = $("performanceModal");
+const performanceClose = $("performanceClose");
+const performanceTabs = $("performanceTabs");
+const derivedInputA = $("derivedInputA");
+const derivedInputB = $("derivedInputB");
+const derivedOperation = $("derivedOperation");
+const derivedNameInput = $("derivedName");
+const derivedComputeBtn = $("derivedComputeBtn");
+const derivedResult = $("derivedResult");
+const smoothingPresetGroup = $("smoothingPresetGroup");
+const anomalyAutoToggle = $("anomalyAutoToggle");
+const anomalySummary = $("anomalySummary");
+const correlationChecklist = $("correlationChecklist");
+const correlationRunBtn = $("correlationRunBtn");
+const correlationResult = $("correlationResult");
+const statsColumnSelect = $("statsColumnSelect");
+const statsComputeBtn = $("statsComputeBtn");
+const statsSummary = $("statsSummary");
+const rangeMinInput = $("rangeMinInput");
+const rangeMaxInput = $("rangeMaxInput");
+const rangeComputeBtn = $("rangeComputeBtn");
+const rangeSummary = $("rangeSummary");
+const sessionComparison = $("sessionComparison");
+const healthSummary = $("healthSummary");
+const highlightSummary = $("highlightSummary");
+const shiftLabModal = $("shiftLabModal");
+const shiftLabClose = $("shiftLabClose");
+const shiftLabLink = $("shiftLabLink");
+const shiftRedline = $("shiftRedline");
+const shiftFinal = $("shiftFinal");
+const shiftTire = $("shiftTire");
+const shiftRatios = $("shiftRatios");
+const shiftClutchFill = $("shiftClutchFill");
+const shiftSlip = $("shiftSlip");
+const shiftAnalyzeBtn = $("shiftAnalyzeBtn");
+const shiftResetBtn = $("shiftResetBtn");
+const shiftPlot = $("shiftPlot");
+const shiftNotes = $("shiftNotes");
+const lineWidthSlider = $("lineWidthSlider");
+const lineWidthValue = $("lineWidthValue");
+const resetYRangeBtn = $("resetYRangeBtn");
+const metadataModal = $("metadataModal");
+const metadataClose = $("metadataClose");
+const metadataLink = $("metadataLink");
+const metaSummary = $("metaSummary");
+const archiveLogBtn = $("archiveLogBtn");
+const archiveNoteInput = $("archiveNoteInput");
 
 // Time range slider elements
 const timeMinSlider = $("timeMinSlider");
@@ -200,12 +275,19 @@ let smoothingWindow = 0;
 let highlightSettings = {
   enabled:false,
   columnIdx:-1,
-  mode:'above',
+  mode:'gt',
   threshold:0
 };
 let compareLog = null;
 const AUTO_SCALE_TARGET = 200;
 const EPS = 1e-3;
+let autoAnomaly = { enabled:false, zScore:2.0 };
+let primaryLogRaw = "";
+let primaryLogName = "";
+let primaryLogSize = 0;
+let primaryMeta = null;
+let detectedSpeedIdx = -1;
+let lastYRange = null;
 
 if (smoothSelect) smoothSelect.value = String(smoothingWindow);
 if (highlightThresholdInput) highlightThresholdInput.value = highlightSettings.threshold;
@@ -213,10 +295,30 @@ refreshHighlightOptions();
 syncHighlightControls();
 
 const SLOT_COUNT = 5;
+const DEFAULT_LINE_WIDTH = 1.4;
 const ySlots = Array.from({length: SLOT_COUNT}, () => ({
-  enabled:false, colIdx:-1, color:"#00aaff", scale:0, ui:{}  // scale now stores exponent (power): x^scale
+  enabled:false,
+  colIdx:-1,
+  color:"#00aaff",
+  scale:0,
+  ui:{}  // ui hooks for inputs / displays
 }));
+let globalLineWidth = DEFAULT_LINE_WIDTH;
 const autoY = true;
+
+const HIGHLIGHT_TESTS = {
+  gt:(v,t)=>Number.isFinite(v) && v > t,
+  gte:(v,t)=>Number.isFinite(v) && v >= t,
+  lt:(v,t)=>Number.isFinite(v) && v < t,
+  lte:(v,t)=>Number.isFinite(v) && v <= t,
+  eq:(v,t)=>Number.isFinite(v) && v === t
+};
+
+if (lineWidthValue && lineWidthSlider) {
+  const initVal = parseFloat(lineWidthSlider.value) || DEFAULT_LINE_WIDTH;
+  if (lineWidthValue) lineWidthValue.textContent = `${initVal.toFixed(1)} px`;
+  globalLineWidth = initVal;
+}
 
 /* utils */
 const debounce = (fn, ms=60) => { let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; };
@@ -321,9 +423,13 @@ function updateCompareInfo(){
   if (compareLog){
     compareFileInfo.classList.remove("hidden");
     compareFileInfo.textContent = `Comparison loaded: ${compareLog.name} (${compareLog.rows} rows)`;
+    if (statsColumnSelect && statsColumnSelect.value) {
+      updateSessionComparison(Number(statsColumnSelect.value));
+    }
   } else {
     compareFileInfo.classList.add("hidden");
     compareFileInfo.textContent = "";
+    if (sessionComparison) sessionComparison.textContent = "Load a comparison log to see session deltas.";
   }
 }
 
@@ -373,6 +479,12 @@ function syncHighlightControls(){
     highlightThresholdInput.value = highlightSettings.threshold;
   }
   if (highlightModeSel) highlightModeSel.value = highlightSettings.mode;
+}
+
+function updateHighlightSummary(count){
+  if (!highlightSummary) return;
+  const total = highlightSettings.enabled ? count : 0;
+  highlightSummary.textContent = `Highlighted samples: ${total}`;
 }
 
 function closeScaleHelp(){
@@ -457,6 +569,7 @@ function autoScaleTraces(){
   }
 
   if (changed){
+    lastYRange = null;
     plot(false, true);
     if (Number.isFinite(lastIdx)) showPointInfoAt(lastIdx);
     toastMsg("Scaling normalized.", "ok");
@@ -514,6 +627,742 @@ function filterDataByTimeRange(xData, yData, customData) {
   };
 }
 
+function getFilteredSeries(colIdx){
+  if (!Number.isInteger(colIdx) || colIdx < 0 || !cols[colIdx] || !cols[xIdx]) return null;
+  return filterDataByTimeRange(cols[xIdx], cols[colIdx], cols[colIdx]);
+}
+
+function computeBasicStats(values){
+  const cleaned = values.filter(Number.isFinite);
+  if (!cleaned.length) return null;
+  cleaned.sort((a,b)=>a-b);
+  const count = cleaned.length;
+  const sum = cleaned.reduce((a,b)=>a+b,0);
+  const mean = sum / count;
+  const median = cleaned[Math.floor(count/2)];
+  const min = cleaned[0];
+  const max = cleaned[count-1];
+  const variance = cleaned.reduce((acc,v)=> acc + (v-mean)**2, 0) / count;
+  const std = Math.sqrt(variance);
+  const p90 = cleaned[Math.min(count-1, Math.floor(count*0.9))];
+  const p10 = cleaned[Math.min(count-1, Math.floor(count*0.1))];
+  return {count, mean, median, min, max, std, p90, p10};
+}
+
+const SPEED_PATTERNS = [
+  { regex:/vehicle\s*speed.*mph/i },
+  { regex:/vehicle\s*speed/i },
+  { regex:/\bmph\b/i },
+  { regex:/km\/?h|kmh|kph/i },
+  { regex:/\bspeed\b/i }
+];
+
+function detectSpeedColumn(){
+  for (const rule of SPEED_PATTERNS){
+    const idx = headers.findIndex(h => rule.regex.test(h));
+    if (idx !== -1) return idx;
+  }
+  return headers.findIndex(h => /speed|mph|kmh|kph/i.test(h));
+}
+
+function summarizeShiftFromLog(){
+  const gearIdx = headers.findIndex(h => /gear/i.test(h));
+  const rpmIdx = findRpmIndex(headers);
+  if (gearIdx < 0 || rpmIdx < 0 || !Number.isFinite(xIdx)) return ["Need Gear + RPM channels for shift analysis."];
+  const gear = cols[gearIdx];
+  const rpm = cols[rpmIdx];
+  const time = cols[xIdx];
+  const events = [];
+  for (let i=1;i<gear.length;i++){
+    const gPrev = gear[i-1];
+    const gCurr = gear[i];
+    if (!Number.isFinite(gPrev) || !Number.isFinite(gCurr)) continue;
+    if (Math.round(gCurr) > Math.round(gPrev)) {
+      const rpmBefore = findLastFinite(rpm, i-1);
+      const rpmAfter = findFirstFinite(rpm, i);
+      const tStamp = time[i] ?? time[i-1];
+      if (!Number.isFinite(rpmBefore) || !Number.isFinite(rpmAfter)) continue;
+      const drop = rpmBefore - rpmAfter;
+      events.push({
+        from: Math.round(gPrev),
+        to: Math.round(gCurr),
+        rpmBefore,
+        rpmAfter,
+        drop,
+        time: tStamp
+      });
+    }
+  }
+  if (!events.length) return ["No clear GR6 shifts detected (verify Gear channel)."];
+  return events.slice(0,4).map(evt=>{
+    return `G${evt.from}→G${evt.to} @ ${evt.rpmBefore.toFixed(0)} rpm (drops to ${evt.rpmAfter.toFixed(0)}, Δ${evt.drop.toFixed(0)} rpm)`;
+  });
+}
+
+function summarizeProtection(){
+  const result = { torque: [], slip: [], mil: [], wheel: [] };
+  const torqueIdx = headers.findIndex(h => /torque/i.test(h) && /(limit|reduc|cut)/i.test(h));
+  if (torqueIdx >= 0){
+    const series = getFilteredSeries(torqueIdx);
+    const exceed = (series?.y || []).filter(v => Number.isFinite(v) && v > 0).length;
+    if (exceed){
+      result.torque.push(`Torque intervention active ${exceed} samples`);
+    }
+  }
+  const slipIdx = headers.findIndex(h => /slip|traction/i.test(h));
+  if (slipIdx >= 0){
+    const series = getFilteredSeries(slipIdx);
+    const threshold = Number(shiftSlip?.value) || 6;
+    const slipEvents = (series?.y || []).filter(v => Number.isFinite(v) && v >= threshold).length;
+    if (slipEvents){
+      result.slip.push(`Wheel slip exceeded ${threshold}% on ${slipEvents} samples`);
+    }
+  }
+  const clutchIdx = headers.findIndex(h => /clutch.*(pressure|fill|duty)/i.test(h));
+  if (clutchIdx >= 0){
+    const stats = computeBasicStats((getFilteredSeries(clutchIdx)?.y) || []);
+    if (stats) result.torque.push(`Clutch control avg ${stats.mean.toFixed(1)} (peak ${stats.max.toFixed(1)})`);
+  }
+  const milIdx = headers.findIndex(h => /mil|dtc|flag|malf/i.test(h));
+  if (milIdx >= 0){
+    const series = getFilteredSeries(milIdx);
+    const triggered = (series?.y || []).some(v => Number.isFinite(v) && v !== 0);
+    if (triggered){
+      result.mil.push(`${headers[milIdx]} flagged during this run`);
+    }
+  }
+  return result;
+}
+
+function summarizeWheelSpeeds(){
+  const notes = [];
+  const frontIdx = headers.findIndex(h => /(front|lf|rf|fl)/i.test(h) && /wheel.*speed/i.test(h));
+  const rearIdx = headers.findIndex(h => /(rear|lr|rr)/i.test(h) && /wheel.*speed/i.test(h));
+  if (frontIdx >= 0 && rearIdx >= 0){
+    const frontSeries = getFilteredSeries(frontIdx);
+    const rearSeries = getFilteredSeries(rearIdx);
+    const len = Math.min(frontSeries?.y?.length || 0, rearSeries?.y?.length || 0);
+    let maxDiff = 0;
+    for (let i=0;i<len;i++){
+      const f = frontSeries.y[i];
+      const r = rearSeries.y[i];
+      if (!Number.isFinite(f) || !Number.isFinite(r)) continue;
+      maxDiff = Math.max(maxDiff, Math.abs(f-r));
+    }
+    if (maxDiff){
+      notes.push(`Front vs rear wheel speed delta peaks at ${maxDiff.toFixed(2)} (${headers[frontIdx]} vs ${headers[rearIdx]})`);
+    }
+  }
+  return notes;
+}
+
+function extractHeaderMeta(text){
+  const meta = {};
+  if (!text) return meta;
+  const lines = text.split(/\r?\n/);
+  for (const line of lines){
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    if (!trimmed.startsWith("#")) break;
+    const payload = trimmed.replace(/^#+/, "").trim();
+    if (!payload) continue;
+    const idx = payload.indexOf(":");
+    if (idx === -1) continue;
+    const key = payload.slice(0, idx).trim();
+    const value = payload.slice(idx+1).trim();
+    if (key) meta[key] = value;
+  }
+  return meta;
+}
+
+function updateMetaSummary(){
+  if (!metaSummary) return;
+  if (!headers.length || !cols.length || !Number.isFinite(xIdx)){
+    metaSummary.innerHTML = "<span>Upload a log to see VIN, ECU SW, sampling stats, and GR6 insights.</span>";
+    if (archiveLogBtn) archiveLogBtn.disabled = true;
+    return;
+  }
+  const timeSeries = cols[xIdx] || [];
+  const finiteTime = timeSeries.filter(Number.isFinite);
+  const samples = finiteTime.length;
+  const duration = samples >= 2 ? finiteTime[finiteTime.length-1] - finiteTime[0] : 0;
+  const sampleRate = duration > 0 ? samples / duration : 0;
+  const rpmIdx = findRpmIndex(headers);
+  const rpmStats = rpmIdx >= 0 ? computeBasicStats((cols[rpmIdx] || []).filter(Number.isFinite)) : null;
+  detectedSpeedIdx = detectSpeedColumn();
+  const speedLabel = detectedSpeedIdx >=0 ? headers[detectedSpeedIdx] : "—";
+  const shiftNotes = summarizeShiftFromLog();
+  const protection = summarizeProtection();
+  const wheelNotes = summarizeWheelSpeeds();
+  const durationStr = duration > 0 ? `${duration.toFixed(2)} s` : "—";
+  const rateStr = sampleRate > 0 ? `${sampleRate.toFixed(1)} Hz` : "—";
+  const rpmStr = rpmStats ? `${rpmStats.min.toFixed(0)} - ${rpmStats.max.toFixed(0)} rpm` : "Not found";
+  const vin = primaryMeta ? (primaryMeta.VIN || primaryMeta["Vehicle Identification Number"] || "—") : "—";
+  const ecuSw = primaryMeta ? (primaryMeta["ECU Software Number"] || primaryMeta["Software Number"] || "—") : "—";
+  const dongle = primaryMeta ? (primaryMeta["Programming Dongle"] || primaryMeta["Dongle ID"] || "—") : "—";
+  const protectionList = [...protection.torque, ...protection.slip, ...wheelNotes];
+  const milList = protection.mil.length ? protection.mil : ["No MIL or DTC flags detected."];
+  metaSummary.innerHTML = `
+    <div class="meta-pair"><span>File</span><strong>${primaryLogName || "—"}</strong></div>
+    <div class="meta-pair"><span>Size</span><strong>${primaryLogSize ? fmtBytes(primaryLogSize) : "—"}</strong></div>
+    <div class="meta-pair"><span>VIN</span><strong>${vin}</strong></div>
+    <div class="meta-pair"><span>ECU SW</span><strong>${ecuSw}</strong></div>
+    <div class="meta-pair"><span>Dongle</span><strong>${dongle}</strong></div>
+    <div class="meta-pair"><span>Samples</span><strong>${samples ? samples.toLocaleString() : "—"}</strong></div>
+    <div class="meta-pair"><span>Duration</span><strong>${durationStr}</strong></div>
+    <div class="meta-pair"><span>Sample Rate</span><strong>${rateStr}</strong></div>
+    <div class="meta-pair"><span>RPM Range</span><strong>${rpmStr}</strong></div>
+    <div class="meta-pair"><span>Speed Source</span><strong>${speedLabel}</strong></div>
+    <div class="meta-block">
+      <h5>Shift & Clutch Insights</h5>
+      <ul>${shiftNotes.map(note=>`<li>${note}</li>`).join("")}</ul>
+    </div>
+    <div class="meta-block">
+      <h5>Traction / Protection</h5>
+      <ul>${(protectionList.length ? protectionList : ["No traction events detected."]).map(note=>`<li>${note}</li>`).join("")}</ul>
+    </div>
+    <div class="meta-block">
+      <h5>MIL / Flags</h5>
+      <ul>${milList.map(note=>`<li>${note}</li>`).join("")}</ul>
+    </div>
+  `;
+  if (archiveLogBtn) archiveLogBtn.disabled = !primaryLogRaw;
+}
+
+function archiveCurrentLog(){
+  if (!primaryLogRaw){
+    toastMsg("Load a primary log before archiving.","error");
+    return;
+  }
+  const stamp = new Date().toISOString().replace(/[-:]/g,"").replace(/\..+/,"");
+  const base = (primaryLogName || "log").replace(/\.[^.]+$/,"");
+  const safeBase = base.replace(/[^a-z0-9-_]/gi,"_").slice(0,40) || "log";
+  const noteRaw = archiveNoteInput && typeof archiveNoteInput.value === "string" ? archiveNoteInput.value : "";
+  const note = noteRaw.trim();
+  const noteSlug = note ? "_" + note.toLowerCase().replace(/[^a-z0-9]+/g,"-").slice(0,20) : "";
+  const filename = `logs_${stamp}_${safeBase}${noteSlug}.csv`;
+  const payload = note ? `# CloudNote: ${note}\n${primaryLogRaw}` : primaryLogRaw;
+
+  const copyToClipboard = ()=>{
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(payload).then(()=>{
+        toastMsg("CSV copied to clipboard. Paste into logs/ and commit via logvault/<date>-<rand>.","ok");
+      }).catch(()=>{
+        toastMsg("Clipboard access denied. Copy manually from the dev tools console.", "error");
+        console.info("Manual CSV copy:\n", payload);
+      });
+    } else {
+      toastMsg("Clipboard unavailable. Copy the log manually.", "error");
+      console.info("Manual CSV copy:\n", payload);
+    }
+  };
+
+  if (window.showSaveFilePicker){
+    window.showSaveFilePicker({
+      suggestedName: filename,
+      types:[{description:"CSV Log", accept:{"text/csv":[".csv"]}}]
+    }).then(fileHandle=>{
+      if (!fileHandle) return;
+      return fileHandle.createWritable().then(writable=>{
+        writable.write(payload).then(()=> writable.close().then(()=>{
+          toastMsg("Archive saved. Push it via logvault/<date>-<rand>.","ok");
+        }));
+      });
+    }).catch(err=>{
+      if (err && err.name === "AbortError"){
+        toastMsg("Archive cancelled.","error");
+      } else {
+        toastMsg("Save failed. Copied to clipboard instead.","error");
+        copyToClipboard();
+      }
+    });
+  } else {
+    copyToClipboard();
+  }
+}
+
+function findLastFinite(arr, start){
+  for (let i=start;i>=0;i--){
+    if (Number.isFinite(arr[i])) return arr[i];
+  }
+  return NaN;
+}
+
+function findFirstFinite(arr, start){
+  for (let i=start;i<arr.length;i++){
+    if (Number.isFinite(arr[i])) return arr[i];
+  }
+  return NaN;
+}
+
+function parseShiftRatiosInput(){
+  if (!shiftRatios) return [];
+  return shiftRatios.value
+    .split(/[\s,]+/)
+    .map(r => parseFloat(r))
+    .filter(v => Number.isFinite(v) && v > 0.1);
+}
+
+function runShiftLab(){
+  if (!shiftPlot) return;
+  const ratios = parseShiftRatiosInput();
+  const redline = Number(shiftRedline?.value) || 7500;
+  const finalDrive = Number(shiftFinal?.value) || 3.7;
+  const tireDiameter = Number(shiftTire?.value) || 26.5;
+  if (!ratios.length){
+    Plotly.purge(shiftPlot);
+    if (shiftNotes) shiftNotes.textContent = "Enter at least one gear ratio to generate shift guidance.";
+    return;
+  }
+  const rpmAxis = [];
+  for (let rpm = 2000; rpm <= redline; rpm += 250) rpmAxis.push(rpm);
+  const tireCirc = Math.PI * tireDiameter;
+  const mphConstant = 1056; // mph = (rpm * tireCirc) / (gear * final * 1056)
+  const traces = ratios.map((ratio, idx) => ({
+    type:"scatter",
+    mode:"lines",
+    name:`G${idx+1}`,
+    x: rpmAxis,
+    y: rpmAxis.map(rpm => (rpm * tireCirc) / (ratio * finalDrive * mphConstant))
+  }));
+  Plotly.newPlot(shiftPlot, traces, {
+    paper_bgcolor:"transparent",
+    plot_bgcolor:"transparent",
+    margin:{l:45,r:10,t:10,b:40},
+    xaxis:{title:"Engine RPM"},
+    yaxis:{title:"Vehicle Speed (mph)", rangemode:"tozero"}
+  }, {displaylogo:false, responsive:true, staticPlot:true});
+
+  const dropNotes = [];
+  for (let i=0;i<ratios.length-1;i++){
+    const dropRpm = redline * (ratios[i+1]/ratios[i]);
+    dropNotes.push(`G${i+1}→G${i+2}: shift @ ${redline.toFixed(0)} rpm → lands near ${dropRpm.toFixed(0)} rpm (drop ${(redline-dropRpm).toFixed(0)}).`);
+  }
+  const clutchFill = Number(shiftClutchFill?.value) || 90;
+  const slipThreshold = Number(shiftSlip?.value) || 6;
+  const logShiftNotes = summarizeShiftFromLog().slice(0,3);
+  const userNotes = [
+    `Clutch fill reminder: ${clutchFill} ms; keep torque cuts shorter than this.`,
+    `Wheel slip target ≤ ${slipThreshold}% for launch + shifts.`
+  ];
+  const combined = [...dropNotes, ...logShiftNotes, ...userNotes];
+  if (shiftNotes) shiftNotes.innerHTML = `<ul>${combined.map(note=>`<li>${note}</li>`).join("")}</ul>`;
+}
+
+function resetShiftLabDefaults(){
+  if (shiftRatios) shiftRatios.value = "3.36, 2.10, 1.49, 1.20, 1.00, 0.79";
+  if (shiftRedline) shiftRedline.value = "7500";
+  if (shiftFinal) shiftFinal.value = "3.70";
+  if (shiftTire) shiftTire.value = "26.5";
+  if (shiftClutchFill) shiftClutchFill.value = "90";
+  if (shiftSlip) shiftSlip.value = "6";
+  runShiftLab();
+}
+
+function saveCompareState(){
+  if (!headers.length || !cols.length || !Number.isFinite(xIdx)){
+    sessionStorage.removeItem("compareState");
+    return;
+  }
+  try{
+    const state = {
+      xIdx: Number.isFinite(xIdx) ? xIdx : -1,
+      slots: ySlots.map(s=>({ enabled: s.enabled, colIdx:s.colIdx, color:s.color, scale:s.scale })),
+      highlight: {
+        enabled: !!highlightSettings.enabled,
+        columnIdx: Number.isFinite(highlightSettings.columnIdx) ? highlightSettings.columnIdx : -1,
+        threshold: Number(highlightSettings.threshold) || 0,
+        mode: highlightSettings.mode || "gt"
+      },
+      timeRange: {
+        min: Number.isFinite(timeRangeMin) ? timeRangeMin : xMin,
+        max: Number.isFinite(timeRangeMax) ? timeRangeMax : xMax,
+        enabled: !!timeRangeEnabled
+      },
+      globalLineWidth
+    };
+    sessionStorage.setItem("compareState", JSON.stringify(state));
+  }catch(err){
+    console.warn("Failed to persist compare state", err);
+  }
+}
+
+function restoreCompareState(){
+  const raw = sessionStorage.getItem("compareState");
+  if (!raw) return;
+  try{
+    const state = JSON.parse(raw);
+    if (Number.isFinite(state.xIdx) && state.xIdx >= 0 && state.xIdx < headers.length){
+      xIdx = state.xIdx;
+    }
+    if (Array.isArray(state.slots)){
+      state.slots.slice(0, ySlots.length).forEach((slot, idx)=>{
+        if (!slot) return;
+        ySlots[idx].enabled = !!slot.enabled;
+        ySlots[idx].colIdx = Number.isFinite(slot.colIdx) ? slot.colIdx : -1;
+        ySlots[idx].color = slot.color || ySlots[idx].color;
+        ySlots[idx].scale = Number.isFinite(slot.scale) ? slot.scale : 0;
+      });
+    }
+    if (state.timeRange){
+      if (Number.isFinite(state.timeRange.min)) {
+        timeRangeMin = Math.max(xMin, Math.min(state.timeRange.min, xMax));
+      }
+      if (Number.isFinite(state.timeRange.max)) {
+        timeRangeMax = Math.max(xMin, Math.min(state.timeRange.max, xMax));
+      }
+      if (timeRangeMin >= timeRangeMax){
+        timeRangeMin = xMin;
+        timeRangeMax = xMax;
+      }
+      if (typeof state.timeRange.enabled === "boolean") timeRangeEnabled = state.timeRange.enabled;
+      refreshTimeRangeState();
+    }
+    if (state.highlight){
+      highlightSettings.enabled = !!state.highlight.enabled;
+      highlightSettings.columnIdx = Number.isFinite(state.highlight.columnIdx) ? state.highlight.columnIdx : -1;
+      highlightSettings.threshold = Number(state.highlight.threshold) || 0;
+      highlightSettings.mode = state.highlight.mode || "gt";
+    }
+    if (Number.isFinite(state.globalLineWidth)){
+      globalLineWidth = state.globalLineWidth;
+      if (lineWidthSlider) lineWidthSlider.value = String(globalLineWidth);
+      if (lineWidthValue) lineWidthValue.textContent = `${globalLineWidth.toFixed(1)} px`;
+    }
+  }catch(err){
+    console.warn("Failed to restore compare state", err);
+  }
+}
+
+function renderStatsTable(stats){
+  if (!stats) return "<p>No numeric data.</p>";
+  return `
+    <table>
+      <tr><th>Count</th><td>${stats.count}</td><th>Mean</th><td>${stats.mean.toFixed(3)}</td></tr>
+      <tr><th>Median</th><td>${stats.median.toFixed(3)}</td><th>Std Dev</th><td>${stats.std.toFixed(3)}</td></tr>
+      <tr><th>Min</th><td>${stats.min.toFixed(3)}</td><th>Max</th><td>${stats.max.toFixed(3)}</td></tr>
+      <tr><th>P10</th><td>${stats.p10.toFixed(3)}</td><th>P90</th><td>${stats.p90.toFixed(3)}</td></tr>
+    </table>`;
+}
+
+function computeCorrelationMatrix(indices){
+  const series = indices.map(idx => getFilteredSeries(idx));
+  if (series.some(s => !s)) return null;
+  const data = series.map(s => s.y ?? []);
+  const length = Math.min(...data.map(arr => arr.length));
+  if (!length) return null;
+  const trimmed = data.map(arr => arr.slice(0,length));
+  const matrix = [];
+  for (let i=0;i<trimmed.length;i++){
+    matrix[i] = [];
+    for (let j=0;j<trimmed.length;j++){
+      matrix[i][j] = pearson(trimmed[i], trimmed[j]);
+    }
+  }
+  return matrix;
+}
+
+function pearson(a,b){
+  const len = Math.min(a.length, b.length);
+  if (!len) return 0;
+  let sumA=0,sumB=0,sumAB=0,sumASq=0,sumBSq=0,count=0;
+  for (let i=0;i<len;i++){
+    const va=a[i], vb=b[i];
+    if (!Number.isFinite(va) || !Number.isFinite(vb)) continue;
+    sumA+=va; sumB+=vb; sumAB+=va*vb; sumASq+=va*va; sumBSq+=vb*vb; count++;
+  }
+  if (!count) return 0;
+  const numerator = (count * sumAB) - (sumA * sumB);
+  const denom = Math.sqrt((count*sumASq - sumA**2) * (count*sumBSq - sumB**2));
+  return denom === 0 ? 0 : numerator/denom;
+}
+
+function computeTimeToSpeed(series, startSpeed, endSpeed){
+  if (!series) return null;
+  const times = series.x;
+  const speeds = series.y;
+  let startTime = null;
+  for (let i=1;i<speeds.length;i++){
+    const v1 = speeds[i-1];
+    const v2 = speeds[i];
+    const t1 = times[i-1];
+    const t2 = times[i];
+    if (!Number.isFinite(v1) || !Number.isFinite(v2) || !Number.isFinite(t1) || !Number.isFinite(t2)) continue;
+    if (startTime === null){
+      if (v1 >= startSpeed) startTime = t1;
+      else if (v2 >= startSpeed && v2 !== v1){
+        const frac = (startSpeed - v1)/(v2 - v1);
+        startTime = t1 + frac * (t2 - t1);
+      }
+    }
+    if (startTime !== null){
+      if (v1 >= endSpeed) return t1 - startTime;
+      if (v2 >= endSpeed && v2 !== v1){
+        const frac = (endSpeed - v1)/(v2 - v1);
+        const targetTime = t1 + frac * (t2 - t1);
+        return targetTime - startTime;
+      }
+    }
+  }
+  return null;
+}
+
+function detectGearChanges(rpmSeries){
+  if (!rpmSeries) return {count:0, times:[]};
+  const rpm = rpmSeries.y;
+  const times = rpmSeries.x;
+  const events = [];
+  for (let i=1;i<rpm.length;i++){
+    const delta = rpm[i] - rpm[i-1];
+    if (Number.isFinite(delta) && delta < -500) {
+      events.push(times[i]);
+    }
+  }
+  return {count:events.length, times:events};
+}
+
+function populateColumnSelect(select, opts = {}){
+  if (!select) return;
+  select.innerHTML = "";
+  headers.forEach((header, idx)=>{
+    if (opts.enabledOnly && !ySlots.some(s=>s.enabled && s.colIdx===idx)) return;
+    const option = document.createElement("option");
+    option.value = String(idx);
+    option.textContent = header;
+    select.appendChild(option);
+  });
+}
+
+function updateCorrelationChecklist(){
+  if (!correlationChecklist) return;
+  correlationChecklist.innerHTML = "";
+  ySlots.forEach(slot=>{
+    if (!slot.enabled || slot.colIdx === -1) return;
+    const id = `corr-${slot.colIdx}`;
+    const label = document.createElement("label");
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.value = String(slot.colIdx);
+    checkbox.id = id;
+    label.appendChild(checkbox);
+    const span = document.createElement("span");
+    span.textContent = headers[slot.colIdx];
+    label.appendChild(span);
+    correlationChecklist.appendChild(label);
+  });
+}
+
+function populateStatsControls(){
+  populateColumnSelect(statsColumnSelect);
+  populateColumnSelect(derivedInputA);
+  populateColumnSelect(derivedInputB);
+}
+
+function refreshAnalysisControls(){
+  populateStatsControls();
+  updateCorrelationChecklist();
+  if (statsColumnSelect && statsColumnSelect.options.length){
+    handleStatsCompute();
+  }
+}
+
+
+function handleDerivedCompute(){
+  if (!derivedInputA || !derivedInputB) return;
+  const idxA = Number(derivedInputA.value);
+  const idxB = Number(derivedInputB.value);
+  if (!Number.isFinite(idxA) || !Number.isFinite(idxB)){
+    derivedResult.textContent = "Select two columns.";
+    return;
+  }
+  const seriesA = getFilteredSeries(idxA);
+  const seriesB = getFilteredSeries(idxB);
+  if (!seriesA || !seriesB){
+    derivedResult.textContent = "Unable to read selected columns.";
+    return;
+  }
+  const len = Math.min(seriesA.y.length, seriesB.y.length);
+  const op = derivedOperation?.value || "subtract";
+  const output = [];
+  for (let i=0;i<len;i++){
+    const a = seriesA.y[i];
+    const b = seriesB.y[i];
+    if (!Number.isFinite(a) || !Number.isFinite(b)) {
+      output.push(NaN);
+      continue;
+    }
+    switch(op){
+      case "add": output.push(a + b); break;
+      case "multiply": output.push(a * b); break;
+      case "divide": output.push(b === 0 ? NaN : a / b); break;
+      default: output.push(a - b); break;
+    }
+  }
+  const stats = computeBasicStats(output);
+  const preview = output.filter(Number.isFinite).slice(0,8).map(v=>v.toFixed(3)).join(", ");
+  const label = derivedNameInput?.value?.trim() || `${headers[idxA]} ${op} ${headers[idxB]}`;
+  derivedResult.innerHTML = `<strong>${label}</strong>${renderStatsTable(stats)}<p>Preview: ${preview || "No numeric samples"}.</p><p class="muted">Derived channels preview only for now—add to Correlation Lab manually if desired.</p>`;
+}
+
+function setSmoothingPresetActive(val){
+  if (!smoothingPresetGroup) return;
+  smoothingPresetGroup.querySelectorAll("button").forEach(btn=>{
+    btn.classList.toggle("active", btn.dataset.smooth === String(val));
+  });
+}
+
+function applyAnomalyDetection(){
+  if (!autoAnomaly.enabled){
+    anomalySummary.textContent = "Auto detection off.";
+    return;
+  }
+  if (highlightSettings.columnIdx === -1){
+    anomalySummary.textContent = "Enable a highlight column first.";
+    return;
+  }
+  const series = getFilteredSeries(highlightSettings.columnIdx);
+  if (!series){
+    anomalySummary.textContent = "No data for highlight column.";
+    return;
+  }
+  const stats = computeBasicStats(series.y || []);
+  if (!stats){
+    anomalySummary.textContent = "Insufficient numeric data.";
+    return;
+  }
+  const threshold = stats.mean + autoAnomaly.zScore * stats.std;
+  highlightSettings.threshold = threshold;
+  highlightSettings.mode = "gt";
+  highlightSettings.enabled = true;
+  if (highlightToggle) highlightToggle.checked = true;
+  if (highlightThresholdInput) highlightThresholdInput.value = threshold.toFixed(3);
+  if (highlightModeSel) highlightModeSel.value = "gt";
+  anomalySummary.textContent = `Highlighting values greater than ${threshold.toFixed(3)} (${stats.mean.toFixed(3)} + ${autoAnomaly.zScore}σ).`;
+  plot(false,true);
+}
+
+function handleCorrelationRun(){
+  if (!correlationChecklist){
+    correlationResult.textContent = "No enabled traces.";
+    return;
+  }
+  const selected = Array.from(correlationChecklist.querySelectorAll("input:checked")).map(cb=>Number(cb.value));
+  if (selected.length < 2){
+    correlationResult.textContent = "Select at least two traces.";
+    return;
+  }
+  const limited = selected.slice(0,4);
+  const matrix = computeCorrelationMatrix(limited);
+  if (!matrix){
+    correlationResult.textContent = "Not enough numeric data.";
+    return;
+  }
+  let html = "<table><tr><th></th>";
+  limited.forEach(idx => html += `<th>${headers[idx]}</th>`);
+  html += "</tr>";
+  matrix.forEach((row,i)=>{
+    html += `<tr><th>${headers[limited[i]]}</th>`;
+    row.forEach(val=>{
+      html += `<td>${val.toFixed(3)}</td>`;
+    });
+    html += "</tr>";
+  });
+  html += "</table>";
+  correlationResult.innerHTML = html;
+}
+
+function handleStatsCompute(){
+  if (!statsColumnSelect){
+    statsSummary.textContent = "No columns available.";
+    return;
+  }
+  const idx = Number(statsColumnSelect.value);
+  const series = getFilteredSeries(idx);
+  if (!series){
+    statsSummary.textContent = "Select a parameter.";
+    return;
+  }
+  const stats = computeBasicStats(series.y || []);
+  statsSummary.innerHTML = renderStatsTable(stats);
+  updateSessionComparison(idx);
+}
+
+function handleRangeCompute(){
+  if (!statsColumnSelect){
+    rangeSummary.textContent = "Select a parameter first.";
+    return;
+  }
+  const idx = Number(statsColumnSelect.value);
+  const series = getFilteredSeries(idx);
+  if (!series){
+    rangeSummary.textContent = "No data for selected parameter.";
+    return;
+  }
+  const min = parseFloat(rangeMinInput.value);
+  const max = parseFloat(rangeMaxInput.value);
+  if (!Number.isFinite(min) || !Number.isFinite(max)){
+    rangeSummary.textContent = "Enter min/max bounds.";
+    return;
+  }
+  const values = (series.y || []).filter(Number.isFinite);
+  if (!values.length){
+    rangeSummary.textContent = "No numeric samples.";
+    return;
+  }
+  const inside = values.filter(v => v >= Math.min(min,max) && v <= Math.max(min,max)).length;
+  const pct = (inside / values.length) * 100;
+  rangeSummary.textContent = `${pct.toFixed(2)}% of samples between ${min} and ${max}.`;
+}
+
+function getComparisonSeriesByHeader(header){
+  if (!compareLog || !header) return null;
+  const idx = compareLog.headers.indexOf(header);
+  if (idx === -1) return null;
+  const time = compareLog.cols[compareLog.timeIdx];
+  const series = compareLog.cols[idx];
+  if (!time || !series) return null;
+  if (!timeRangeEnabled) return {x:time.slice(), y:series.slice()};
+  const filtered = {x:[], y:[]};
+  for (let i=0;i<time.length;i++){
+    const t = time[i];
+    if (!Number.isFinite(t)) continue;
+    if (t < timeRangeMin || t > timeRangeMax) continue;
+    filtered.x.push(t);
+    filtered.y.push(series[i]);
+  }
+  return filtered;
+}
+
+function updateSessionComparison(primaryIdx){
+  if (!sessionComparison) return;
+  if (!compareLog){
+    sessionComparison.textContent = "Load a comparison log to see session deltas.";
+    return;
+  }
+  const header = headers[primaryIdx];
+  const refSeries = getComparisonSeriesByHeader(header);
+  const series = getFilteredSeries(primaryIdx);
+  if (!refSeries || !series){
+    sessionComparison.textContent = "Selected parameter not available in comparison log.";
+    return;
+  }
+  const statsA = computeBasicStats(series.y || []);
+  const statsB = computeBasicStats(refSeries.y || []);
+  if (!statsA || !statsB){
+    sessionComparison.textContent = "Not enough numeric samples.";
+    return;
+  }
+  sessionComparison.innerHTML = `
+    <table>
+      <tr><th></th><th>Primary</th><th>Comparison</th><th>Delta</th></tr>
+      <tr><td>Mean</td><td>${statsA.mean.toFixed(3)}</td><td>${statsB.mean.toFixed(3)}</td><td>${(statsA.mean-statsB.mean).toFixed(3)}</td></tr>
+      <tr><td>Peak</td><td>${statsA.max.toFixed(3)}</td><td>${statsB.max.toFixed(3)}</td><td>${(statsA.max-statsB.max).toFixed(3)}</td></tr>
+      <tr><td>Std Dev</td><td>${statsA.std.toFixed(3)}</td><td>${statsB.std.toFixed(3)}</td><td>${(statsA.std-statsB.std).toFixed(3)}</td></tr>
+    </table>`;
+}
+
+
+
 function updateTimeRangeDisplays() {
   if (timeMinDisplay) timeMinDisplay.textContent = `${timeRangeMin.toFixed(1)}s`;
   if (timeMaxDisplay) timeMaxDisplay.textContent = `${timeRangeMax.toFixed(1)}s`;
@@ -522,6 +1371,22 @@ function updateTimeRangeDisplays() {
 function refreshTimeRangeState(){
   const full = Math.abs(timeRangeMin - xMin) < EPS && Math.abs(timeRangeMax - xMax) < EPS;
   timeRangeEnabled = !full;
+}
+
+function syncTimeRangeControls(){
+  if (timeMinSlider && Number.isFinite(timeRangeMin)) {
+    timeMinSlider.value = timeRangeMin;
+  }
+  if (timeMaxSlider && Number.isFinite(timeRangeMax)) {
+    timeMaxSlider.value = timeRangeMax;
+  }
+  if (timeMinInput && Number.isFinite(timeRangeMin)) {
+    timeMinInput.value = timeRangeMin.toFixed(1);
+  }
+  if (timeMaxInput && Number.isFinite(timeRangeMax)) {
+    timeMaxInput.value = timeRangeMax.toFixed(1);
+  }
+  updateTimeRangeDisplays();
 }
 
 function initializeTimeRange() {
@@ -600,6 +1465,7 @@ function rescaleYToWindow(){
     const ys = cols[s.colIdx];
     const exponent = s.scale ?? 0;
     for (let i = 0; i < xs.length; i++){
+      // Always respect the current time window if enabled
       if (timeRangeEnabled && (xs[i] < timeRangeMin || xs[i] > timeRangeMax)) continue;
       const v = ys[i]; if (!Number.isFinite(v)) continue;
       const y = applyPowerScaling(v, exponent);
@@ -611,19 +1477,27 @@ function rescaleYToWindow(){
 
   if (mn === +Infinity || mx === -Infinity) return;
   const pad = Math.max((mx - mn) * 0.05, 1e-6);
-
-  const updates = {
-    "yaxis.autorange": false,
-    "yaxis.range": [mn - pad, mx + pad],
-    "xaxis.autorange": false,
-    "xaxis.range": timeRangeEnabled ? [timeRangeMin, timeRangeMax] : chart.layout?.xaxis?.range || null
-  };
-
-  if (!timeRangeEnabled) {
-    updates["xaxis.autorange"] = true;
+  const targetRange = [mn - pad, mx + pad];
+  if (!lastYRange){
+    lastYRange = targetRange;
+  } else {
+    const blend = 0.25;
+    lastYRange = [
+      targetRange[0] * blend + lastYRange[0] * (1 - blend),
+      targetRange[1] * blend + lastYRange[1] * (1 - blend)
+    ];
+    lastYRange[0] = Math.min(lastYRange[0], targetRange[0]);
+    lastYRange[1] = Math.max(lastYRange[1], targetRange[1]);
   }
 
-  Plotly.relayout(chart, updates);
+  const rangeX = timeRangeEnabled ? [timeRangeMin, timeRangeMax] : [xMin, xMax];
+
+  Plotly.relayout(chart, {
+    "yaxis.autorange": false,
+    "yaxis.range": lastYRange,
+    "xaxis.autorange": false,
+    "xaxis.range": rangeX
+  });
 }
 
 function updateScaleBox(i){
@@ -657,6 +1531,7 @@ function showPointInfoAt(idx){
   const rows = (chart.data||[])
     .filter(tr => tr && tr.visible !== "legendonly")
     .map(tr=>{
+      // customdata uses the same filtered index space as x
       const raw = tr.customdata?.[idx];
       const yRaw = Number.isFinite(raw) ? Number(raw).toFixed(3) : "—";
       return `${tr.name}<br>${yRaw}`;   // RAW displayed
@@ -668,7 +1543,8 @@ function showPointInfoAt(idx){
       xref:"paper", yref:"paper", x:1, y:1, xanchor:"right", yanchor:"top",
       text:`Time<br>${t.toFixed(3)} s<br><br>${rows}`,
       bgcolor:cardBg, bordercolor:lineColor, borderwidth:1, borderpad:8,
-      font:{color:fgColor, size:11}, align:"left", showarrow:false, captureevents:false
+      font:{color:fgColor, size:11}, align:"left", showarrow:false, captureevents:false,
+      opacity:0.85
     }]
   });
   
@@ -787,9 +1663,29 @@ function buildUI(){
     btns.append(reset);
 
     // events
-    tick.addEventListener("change", ()=>{ ySlots[i].enabled=tick.checked; plot(false,true); });
-    color.addEventListener("input", ()=>{ ySlots[i].color=color.value; plot(false,true); });
-    sel.addEventListener("change", ()=>{ ySlots[i].colIdx=Number(sel.value); ySlots[i].scale=0; plot(false,true); });
+    tick.addEventListener("change", ()=>{
+      ySlots[i].enabled=tick.checked;
+      // Refresh highlight options when enabled Y columns change
+      refreshHighlightOptions();
+      syncHighlightControls();
+      plot(false,true);
+      if (Number.isFinite(lastIdx)) showPointInfoAt(lastIdx);
+    });
+    color.addEventListener("input", ()=>{
+      ySlots[i].color=color.value;
+      plot(false,true);
+      if (Number.isFinite(lastIdx)) showPointInfoAt(lastIdx);
+    });
+    sel.addEventListener("change", ()=>{
+      ySlots[i].colIdx=Number(sel.value);
+      ySlots[i].scale=0;
+      updateScaleBox(i);
+      // Column selection also affects which series are eligible for event highlighting
+      refreshHighlightOptions();
+      syncHighlightControls();
+      plot(false,true);
+      if (Number.isFinite(lastIdx)) showPointInfoAt(lastIdx);
+    });
     scaleVal.addEventListener("input", ()=>{ 
       const newExponent = parseFloat(scaleVal.value);
       if (Number.isFinite(newExponent) && newExponent >= -10 && newExponent <= 10) {
@@ -828,6 +1724,7 @@ function buildUI(){
     row.append(left,color,sel,scaleVal,valwrap,btns);
     axisPanel.appendChild(row);
   }
+  refreshAnalysisControls();
 }
 
 /* plotting */
@@ -856,6 +1753,7 @@ function plot(showToasts=true, preserveRange=false){
     const rawY    = cols[s.colIdx];
     const exponent = s.scale ?? 0;
     const scaledY = prepareSeries(rawY, exponent);
+    const lineWidth = globalLineWidth;
     const label = headers[s.colIdx];
 
     // Apply time range filtering
@@ -875,7 +1773,7 @@ function plot(showToasts=true, preserveRange=false){
       y: traceY,
       customdata: filteredData.customdata,
       name: label,
-      line: { width: 1, color: s.color },
+      line: { width: lineWidth, color: s.color },
       hoverinfo: "skip"
     });
 
@@ -893,7 +1791,7 @@ function plot(showToasts=true, preserveRange=false){
           y: refFiltered.y ?? refScaled,
           customdata: refFiltered.customdata,
           name: `${label} (Ref)`,
-          line: { width: 1, dash: "dot", color: s.color },
+          line: { width: Math.max(0.8, lineWidth - 0.4), dash: "dot", color: s.color },
           hoverinfo: "skip",
           opacity: 0.85
         });
@@ -908,19 +1806,18 @@ function plot(showToasts=true, preserveRange=false){
       const prepared = prepareSeries(rawCol, exponent);
       const filtered = filterDataByTimeRange(cols[xIdx], prepared, rawCol);
       const ptsX = [], ptsY = [], rawVals = [];
+      const predicate = HIGHLIGHT_TESTS[highlightSettings.mode] || HIGHLIGHT_TESTS.gt;
       filtered.x.forEach((x, idx) => {
         const rawVal = filtered.customdata ? filtered.customdata[idx] : prepared[idx];
         if (!Number.isFinite(rawVal)) return;
-        const cond = highlightSettings.mode === "above"
-          ? rawVal >= highlightSettings.threshold
-          : rawVal <= highlightSettings.threshold;
-        if (cond){
+        if (predicate(rawVal, highlightSettings.threshold)){
           ptsX.push(x);
           const yVal = filtered.y ? filtered.y[idx] : prepared[idx];
           ptsY.push(yVal);
           rawVals.push(rawVal);
         }
       });
+      updateHighlightSummary(ptsX.length);
       if (ptsX.length){
         traces.push({
           type: "scatter",
@@ -934,6 +1831,8 @@ function plot(showToasts=true, preserveRange=false){
         });
       }
     }
+  } else {
+    updateHighlightSummary(0);
   }
 
   if(!traces.length){ if(showToasts) toastMsg("Enable at least one Y axis."); return; }
@@ -1149,6 +2048,11 @@ function tryLoadCached(){
     timeIdx=parsed.timeIdx; rpmIdx=findRpmIndex(headers);
     xIdx=Number.isFinite(timeIdx)?timeIdx:NaN;
 
+    primaryLogRaw = text;
+    primaryLogName = name;
+    primaryLogSize = size;
+    primaryMeta = extractHeaderMeta(text);
+
     if (Number.isFinite(xIdx)){
       const x = cols[xIdx].filter(Number.isFinite);
       xMin = x.length ? x[0] : 0;
@@ -1159,7 +2063,16 @@ function tryLoadCached(){
     // Initialize time range controls
     initializeTimeRange();
 
-    autoSelectYs(); buildUI(); refreshHighlightOptions(); syncHighlightControls(); chart.innerHTML=""; toastMsg("Loaded cached CSV. Configure axes, then Generate Plot.","ok");
+    autoSelectYs();
+    restoreCompareState();
+    syncTimeRangeControls();
+    buildUI();
+    refreshHighlightOptions();
+    syncHighlightControls();
+    chart.innerHTML="";
+    toastMsg("Loaded cached CSV. Configure axes, then Generate Plot.","ok");
+    if (highlightSummary) updateHighlightSummary(0);
+    updateMetaSummary();
     return true;
   }catch(e){ console.warn("cache parse fail",e); return false; }
 }
@@ -1193,7 +2106,12 @@ function wireInitialEventListeners(){
           hideLoading();
 
           fileInfo.classList.remove("hidden"); fileInfo.textContent=`Selected: ${f.name} · ${fmtBytes(f.size)}`;
-          autoSelectYs(); buildUI(); refreshHighlightOptions(); syncHighlightControls(); chart.innerHTML=""; toastMsg("Parsed. Configure axes, then Generate Plot.","ok");
+          primaryLogRaw = text;
+          primaryLogName = f.name;
+          primaryLogSize = f.size;
+          primaryMeta = extractHeaderMeta(text);
+          autoSelectYs(); restoreCompareState(); syncTimeRangeControls(); buildUI(); refreshHighlightOptions(); syncHighlightControls(); chart.innerHTML=""; toastMsg("Parsed. Configure axes, then Generate Plot.","ok");
+          updateMetaSummary();
           
         }catch(err){ 
           hideLoading();
@@ -1216,6 +2134,7 @@ function wireInitialEventListeners(){
         updateTimeRangeDisplays();
         refreshTimeRangeState();
         plot(false, false);
+        if (autoAnomaly.enabled) applyAnomalyDetection();
       } else {
         // Reset slider if invalid
         e.target.value = timeRangeMin;
@@ -1232,6 +2151,7 @@ function wireInitialEventListeners(){
         updateTimeRangeDisplays();
         refreshTimeRangeState();
         plot(false, false);
+        if (autoAnomaly.enabled) applyAnomalyDetection();
       } else {
         // Reset slider if invalid
         e.target.value = timeRangeMax;
@@ -1248,6 +2168,7 @@ function wireInitialEventListeners(){
         updateTimeRangeDisplays();
         refreshTimeRangeState();
         plot(false, false);
+        if (autoAnomaly.enabled) applyAnomalyDetection();
       } else {
         e.target.value = timeRangeMin.toFixed(1);
       }
@@ -1263,6 +2184,7 @@ function wireInitialEventListeners(){
         updateTimeRangeDisplays();
         refreshTimeRangeState();
         plot(false, false);
+        if (autoAnomaly.enabled) applyAnomalyDetection();
       } else {
         e.target.value = timeRangeMax.toFixed(1);
       }
@@ -1276,6 +2198,7 @@ function wireInitialEventListeners(){
       initializeTimeRange();
       refreshTimeRangeState();
       plot(false, false);
+      if (autoAnomaly.enabled) applyAnomalyDetection();
     });
   }
 
@@ -1286,12 +2209,14 @@ function wireInitialEventListeners(){
       initializeTimeRange();
       refreshTimeRangeState();
       plot(false, false);
+      if (autoAnomaly.enabled) applyAnomalyDetection();
     });
   }
 
   if (smoothSelect) {
     smoothSelect.addEventListener("change", () => {
       smoothingWindow = Number(smoothSelect.value) || 0;
+      setSmoothingPresetActive(smoothSelect.value);
       plot(false, true);
     });
   }
@@ -1300,6 +2225,10 @@ function wireInitialEventListeners(){
       highlightSettings.enabled = e.target.checked;
       syncHighlightControls();
       plot(false, true);
+      if (!highlightSettings.enabled && anomalySummary) {
+        anomalySummary.textContent = "Auto detection off.";
+      }
+      if (!highlightSettings.enabled) updateHighlightSummary(0);
     });
   }
   if (highlightColumn) {
@@ -1307,11 +2236,12 @@ function wireInitialEventListeners(){
       highlightSettings.columnIdx = Number(e.target.value);
       syncHighlightControls();
       plot(false, true);
+      if (autoAnomaly.enabled) applyAnomalyDetection();
     });
   }
   if (highlightModeSel) {
     highlightModeSel.addEventListener("change", (e) => {
-      highlightSettings.mode = e.target.value;
+      highlightSettings.mode = e.target.value || "gt";
       syncHighlightControls();
       plot(false, true);
     });
@@ -1326,6 +2256,88 @@ function wireInitialEventListeners(){
       }
     });
   }
+  if (derivedComputeBtn) {
+    derivedComputeBtn.addEventListener("click", handleDerivedCompute);
+  }
+  if (smoothingPresetGroup) {
+    smoothingPresetGroup.addEventListener("click", (e) => {
+      const btn = e.target.closest("button");
+      if (!btn) return;
+      const val = btn.dataset.smooth;
+      if (smoothSelect) smoothSelect.value = val;
+      smoothingWindow = Number(val) || 0;
+      setSmoothingPresetActive(val);
+      plot(false, true);
+    });
+  }
+  if (anomalyAutoToggle) {
+    anomalyAutoToggle.addEventListener("change", (e) => {
+      autoAnomaly.enabled = e.target.checked;
+      applyAnomalyDetection();
+    });
+  }
+  if (correlationRunBtn) {
+    correlationRunBtn.addEventListener("click", handleCorrelationRun);
+  }
+  if (statsComputeBtn) {
+    statsComputeBtn.addEventListener("click", handleStatsCompute);
+  }
+  if (statsColumnSelect) {
+    statsColumnSelect.addEventListener("change", handleStatsCompute);
+  }
+  if (rangeComputeBtn) {
+    rangeComputeBtn.addEventListener("click", handleRangeCompute);
+  }
+  if (lineWidthSlider) {
+    const updateLineWidthLabel = (val)=>{ if (lineWidthValue) lineWidthValue.textContent = `${val.toFixed(1)} px`; };
+    lineWidthSlider.addEventListener("input", (e)=>{
+      const val = parseFloat(e.target.value) || DEFAULT_LINE_WIDTH;
+      globalLineWidth = val;
+      updateLineWidthLabel(val);
+      if (headers.length) plot(false,true);
+    });
+    updateLineWidthLabel(parseFloat(lineWidthSlider.value) || DEFAULT_LINE_WIDTH);
+  }
+  if (archiveLogBtn) {
+    archiveLogBtn.addEventListener("click", archiveCurrentLog);
+  }
+  if (resetYRangeBtn) {
+    resetYRangeBtn.addEventListener("click", ()=>{
+      lastYRange = null;
+      rescaleYToWindow();
+    });
+  }
+  if (performanceTabs) {
+    performanceTabs.addEventListener("click", (e)=>{
+      const btn = e.target.closest("button");
+      if (!btn) return;
+      e.preventDefault();
+      setPerformanceTab(btn.dataset.tab);
+    });
+  }
+  if (metadataLink) {
+    metadataLink.addEventListener("click", (e)=>{ e.preventDefault(); openMetadataModal(); });
+  }
+  if (metadataClose) {
+    metadataClose.addEventListener("click", closeMetadataModal);
+  }
+  if (metadataModal) {
+    metadataModal.addEventListener("click", (e)=>{ if (e.target === metadataModal) closeMetadataModal(); });
+  }
+  if (shiftLabLink) {
+    shiftLabLink.addEventListener("click", (e)=>{ e.preventDefault(); openShiftLabModal(); });
+  }
+  if (shiftLabClose) shiftLabClose.addEventListener("click", closeShiftLabModal);
+  if (shiftLabModal) {
+    shiftLabModal.addEventListener("click", (e)=>{ if (e.target === shiftLabModal) closeShiftLabModal(); });
+  }
+  if (shiftAnalyzeBtn) {
+    shiftAnalyzeBtn.addEventListener("click", runShiftLab);
+  }
+  if (shiftResetBtn) {
+    shiftResetBtn.addEventListener("click", resetShiftLabDefaults);
+  }
+  runShiftLab();
   if (csvCompareFile){
     csvCompareFile.addEventListener("change", (e) => {
       const file = e.target.files[0] || null;
@@ -1353,6 +2365,15 @@ function wireInitialEventListeners(){
   if (autoScaleBtn) {
     autoScaleBtn.addEventListener("click", autoScaleTraces);
   }
+  if (dataAnalysisLink) {
+    dataAnalysisLink.addEventListener("click", (e)=>{ e.preventDefault(); openDataAnalysisModal(); });
+  }
+  if (statsLink) {
+    statsLink.addEventListener("click", (e)=>{ e.preventDefault(); openStatsModal(); });
+  }
+  if (performanceLink) {
+    performanceLink.addEventListener("click", (e)=>{ e.preventDefault(); openPerformanceModal(); });
+  }
   if (changelogBtn) {
     changelogBtn.addEventListener("click", openChangelog);
   }
@@ -1362,6 +2383,24 @@ function wireInitialEventListeners(){
   if (changelogModal) {
     changelogModal.addEventListener("click", (e) => {
       if (e.target === changelogModal) closeChangelog();
+    });
+  }
+  if (dataAnalysisClose) dataAnalysisClose.addEventListener("click", () => closeModal(dataAnalysisModal));
+  if (dataAnalysisModal) {
+    dataAnalysisModal.addEventListener("click", (e) => {
+      if (e.target === dataAnalysisModal) closeModal(dataAnalysisModal);
+    });
+  }
+  if (statsClose) statsClose.addEventListener("click", () => closeModal(statsModal));
+  if (statsModal) {
+    statsModal.addEventListener("click", (e) => {
+      if (e.target === statsModal) closeModal(statsModal);
+    });
+  }
+  if (performanceClose) performanceClose.addEventListener("click", () => closeModal(performanceModal));
+  if (performanceModal) {
+    performanceModal.addEventListener("click", (e) => {
+      if (e.target === performanceModal) closeModal(performanceModal);
     });
   }
   if (hintsBtn) {
@@ -1393,6 +2432,15 @@ function wireInitialEventListeners(){
     if (csvCompareFile) csvCompareFile.value = "";
     refreshHighlightOptions();
     toastMsg("Cleared page state. Cached CSV retained.","ok");
+    primaryLogRaw = "";
+    primaryLogName = "";
+    primaryLogSize = 0;
+    primaryMeta = null;
+    lastYRange = null;
+    if (archiveLogBtn) archiveLogBtn.disabled = true;
+    if (archiveNoteInput) archiveNoteInput.value = "";
+    sessionStorage.removeItem("compareState");
+    updateMetaSummary();
   });
 }
 
@@ -1423,17 +2471,14 @@ function initDropdowns() {
         case "Signal Matrix":
           window.location.href = "index.html";
           break;
+        case "GR6 Gear Scope":
+          window.location.href = "gear.html";
+          break;
         case "About":
           window.location.href = "about.html";
           break;
-        case "Data Analysis":
-          toastMsg("Data analysis tools coming soon!", "ok");
-          break;
-        case "Statistics":
-          toastMsg("Statistics panel coming soon!", "ok");
-          break;
-        case "Performance Metrics":
-          toastMsg("Performance metrics coming soon!", "ok");
+        case "Data Analysis Suite":
+          window.location.href = "analysis.html";
           break;
         case "Documentation":
           toastMsg("Documentation coming soon!", "ok");
@@ -1600,12 +2645,23 @@ document.addEventListener("DOMContentLoaded", ()=>{
         closeChangelog();
       } else if (hintsModal && !hintsModal.classList.contains("hidden")) {
         closeHints();
+      } else if (dataAnalysisModal && !dataAnalysisModal.classList.contains("hidden")) {
+        closeModal(dataAnalysisModal);
+      } else if (statsModal && !statsModal.classList.contains("hidden")) {
+        closeModal(statsModal);
+      } else if (performanceModal && !performanceModal.classList.contains("hidden")) {
+        closeModal(performanceModal);
       }
     }
+    saveCompareState();
   });
-  
+  updateMetaSummary();
   tryLoadCached(); 
   wireInitialEventListeners(); 
+  if (location.hash === "#shift-lab") {
+    setTimeout(()=> openShiftLabModal(), 400);
+  }
+  updateHighlightSummary(0);
 });
 
 
