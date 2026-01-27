@@ -451,7 +451,7 @@ function updateMetaSummary(){
   const rateStr = sampleRate > 0 ? `${sampleRate.toFixed(1)} Hz` : "—";
   metaSummary.innerHTML = `
     <div class="meta-pair"><span>File</span><strong>${S.name || "—"}</strong></div>
-    <div class="meta-pair"><span>Size</span><strong>${S.size ? fmt(S.size) : "—"}</strong></div>
+    <div class="meta-pair"><span>Size</span><strong>${S.size ? formatBytes(S.size) : "—"}</strong></div>
     <div class="meta-pair"><span>Samples</span><strong>${samples}</strong></div>
     <div class="meta-pair"><span>Duration</span><strong>${durationStr}</strong></div>
     <div class="meta-pair"><span>Sample Rate</span><strong>${rateStr}</strong></div>
