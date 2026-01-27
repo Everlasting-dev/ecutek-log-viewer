@@ -5,6 +5,7 @@ import { storeLog, getRecentLog, storeParsed, getParsed, addToRecent, migrateFro
 import { downsampleLTTB } from "./modules/downsample.js";
 import { registerShortcut, initShortcuts, getModifierKey } from "./modules/shortcuts.js";
 import { exportPlotPNG, exportPlotSVG, exportAllPlots, exportPDFReport } from "./modules/export.js";
+import { initMobile } from "./modules/mobile.js";
 
 // Classic loader (startup + runtime)
 const sleep = (ms)=> new Promise(r=>setTimeout(r, ms));
@@ -520,6 +521,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   // Initialize keyboard shortcuts
   initShortcuts();
+  
+  // Initialize mobile features
+  initMobile();
   
   // Register keyboard shortcuts
   registerShortcut('o', {
