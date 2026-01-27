@@ -1573,3 +1573,55 @@ body{ margin:0; background:var(--bg); color:var(--fg);
   padding: 10px 16px;
   font-size: 13px;
 }
+
+/* Quick search indicator */
+.quick-search-indicator {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  background: var(--card-bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-family: ui-monospace, monospace;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fg);
+  z-index: 1000;
+  box-shadow: var(--shadow);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+  user-select: none;
+}
+
+.quick-search-indicator.hidden {
+  opacity: 0;
+  transform: translateY(-10px);
+  pointer-events: none;
+}
+
+.quick-search-indicator.has-match {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Highlighted plot card for quick search */
+.plot-card.quick-search-match {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  background: var(--hover-bg);
+  transition: outline 0.2s ease, background 0.2s ease;
+  animation: quick-search-pulse 0.5s ease;
+}
+
+@keyframes quick-search-pulse {
+  0% {
+    outline-width: 2px;
+  }
+  50% {
+    outline-width: 4px;
+  }
+  100% {
+    outline-width: 2px;
+  }
+}

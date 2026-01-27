@@ -509,6 +509,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Initialize keyboard shortcuts
   initShortcuts();
   
+  // Initialize quick search
+  initQuickSearch();
+  
   // Initialize mobile features
   initMobile();
   
@@ -955,6 +958,155 @@ function navigatePlots(direction){
     setTimeout(() => {
       targetCard.style.outline = '';
     }, 1000);
+  }
+}
+
+// Quick search jump-to feature
+let quickSearchState = {
+  query: '',
+  timeout: null,
+  lastKeyTime: 0
+};
+
+function initQuickSearch(){
+  document.addEventListener('keydown', (e) => {
+    // Don't capture if typing in input/textarea
+    const target = e.target;
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable){
+      // Allow Escape to reset search even when in input
+      if (e.key === 'Escape'){
+        resetQuickSearch();
+      }
+      return;
+    }
+    
+    // Ignore modifier keys and special keys
+    if (e.ctrlKey || e.altKey || e.metaKey || 
+        ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', 'Tab'].includes(e.key)){
+      return;
+    }
+    
+    // Handle Escape to reset search
+    if (e.key === 'Escape'){
+      resetQuickSearch();
+      return;
+    }
+    
+    // Only capture printable characters
+    if (e.key.length === 1 && !e.shiftKey || (e.shiftKey && /[A-Z]/.test(e.key))){
+      handleQuickSearchInput(e.key.toLowerCase());
+    }
+  });
+}
+
+function handleQuickSearchInput(char){
+  const now = Date.now();
+  
+  // Reset if too much time passed (2 seconds)
+  if (now - quickSearchState.lastKeyTime > 2000){
+    quickSearchState.query = '';
+  }
+  
+  quickSearchState.query += char.toLowerCase();
+  quickSearchState.lastKeyTime = now;
+  
+  // Clear previous timeout
+  if (quickSearchState.timeout){
+    clearTimeout(quickSearchState.timeout);
+  }
+  
+  // Find matching plot
+  const match = findPlotByPrefix(quickSearchState.query);
+  if (match){
+    scrollToPlot(match);
+    highlightPlot(match);
+  }
+  
+  // Update search indicator
+  updateSearchIndicator(quickSearchState.query, match !== null);
+  
+  // Reset after 2 seconds of inactivity
+  quickSearchState.timeout = setTimeout(() => {
+    resetQuickSearch();
+  }, 2000);
+}
+
+function findPlotByPrefix(prefix){
+  const plotCards = Array.from(document.querySelectorAll('.plot-card'));
+  const lowerPrefix = prefix.toLowerCase();
+  
+  for (const card of plotCards){
+    const titleElement = card.querySelector('.plot-title span');
+    if (titleElement){
+      const title = titleElement.textContent.toLowerCase();
+      if (title.startsWith(lowerPrefix)){
+        return card;
+      }
+    }
+  }
+  return null;
+}
+
+function scrollToPlot(plotCard){
+  plotCard.scrollIntoView({ 
+    behavior: 'smooth', 
+    block: 'center' 
+  });
+}
+
+function highlightPlot(plotCard){
+  // Remove previous highlight
+  document.querySelectorAll('.plot-card').forEach(card => {
+    card.classList.remove('quick-search-match');
+  });
+  
+  // Add highlight to matched plot
+  plotCard.classList.add('quick-search-match');
+  
+  // Remove highlight after 1.5 seconds
+  setTimeout(() => {
+    plotCard.classList.remove('quick-search-match');
+  }, 1500);
+}
+
+function resetQuickSearch(){
+  quickSearchState.query = '';
+  quickSearchState.lastKeyTime = 0;
+  if (quickSearchState.timeout){
+    clearTimeout(quickSearchState.timeout);
+    quickSearchState.timeout = null;
+  }
+  hideSearchIndicator();
+  
+  // Remove all highlights
+  document.querySelectorAll('.plot-card').forEach(card => {
+    card.classList.remove('quick-search-match');
+  });
+}
+
+function updateSearchIndicator(query, hasMatch){
+  let indicator = document.getElementById('quickSearchIndicator');
+  if (!indicator){
+    indicator = document.createElement('div');
+    indicator.id = 'quickSearchIndicator';
+    indicator.className = 'quick-search-indicator';
+    document.body.appendChild(indicator);
+  }
+  
+  indicator.textContent = `Search: ${query}`;
+  indicator.classList.remove('hidden');
+  
+  if (hasMatch){
+    indicator.classList.add('has-match');
+  } else {
+    indicator.classList.remove('has-match');
+  }
+}
+
+function hideSearchIndicator(){
+  const indicator = document.getElementById('quickSearchIndicator');
+  if (indicator){
+    indicator.classList.add('hidden');
   }
 }
 
