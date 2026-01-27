@@ -459,19 +459,6 @@ function getActivePlot(){
   const firstPlot = document.querySelector('.plot-card .plot');
   return firstPlot && firstPlot._rendered !== false ? firstPlot : null;
 }
-  
-  // Handle navigation menu active states
-  const navItems = document.querySelectorAll(".nav-item");
-  navItems.forEach(item => {
-    item.addEventListener("click", (e) => {
-      if (!item.parentElement.classList.contains("dropdown")) {
-        e.preventDefault();
-        navItems.forEach(nav => nav.classList.remove("active"));
-        item.classList.add("active");
-      }
-    });
-  });
-}
 
 // Start ASCII animation when page loads
 // ============================================================================
