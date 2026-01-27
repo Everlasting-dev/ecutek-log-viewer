@@ -1004,7 +1004,7 @@ if (els.resetWindow){
   }, 150));
 }
 
-document.addEventListener("DOMContentLoaded", ()=>{
+document.addEventListener("DOMContentLoaded", async ()=>{
   // Add click handler to hide loading screen if stuck
   els.loadingScreen.addEventListener("click", () => {
     hideLoading();
