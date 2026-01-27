@@ -352,8 +352,43 @@ document.addEventListener('DOMContentLoaded', async () => {
       closeHints();
     } else if (e.key === "Escape" && metadataModal && !metadataModal.classList.contains("hidden")) {
       closeMetadataModal();
+    } else if (e.key === "Escape" && els.loadingScreen && !els.loadingScreen.classList.contains("hidden")) {
+      hideLoading();
+      toast("Loading cancelled.", "error");
     }
   });
+  
+  // Add click handler to hide loading screen if stuck
+  if (els.loadingScreen) {
+    els.loadingScreen.addEventListener("click", () => {
+      hideLoading();
+      toast("Loading cancelled.", "error");
+    });
+  }
+  
+  // Try to load from IndexedDB first, then fallback to sessionStorage
+  try {
+    const recentLog = await getRecentLog();
+    if (recentLog){
+      await cacheSet(recentLog.text, recentLog.name, recentLog.size);
+      stageParsed(recentLog.text, recentLog.name, recentLog.size);
+    } else {
+      const text = sessionStorage.getItem("csvText");
+      if (text){ 
+        await cacheSet(text, sessionStorage.getItem("csvName")||"cached.csv", Number(sessionStorage.getItem("csvSize")||0));
+        stageParsed(text, sessionStorage.getItem("csvName")||"cached.csv", Number(sessionStorage.getItem("csvSize")||0)); 
+      }
+    }
+  } catch (error) {
+    console.warn("Failed to load from IndexedDB:", error);
+    const text = sessionStorage.getItem("csvText");
+    if (text){ stageParsed(text, sessionStorage.getItem("csvName")||"cached.csv", Number(sessionStorage.getItem("csvSize")||0)); }
+  }
+
+  // Back to top button
+  const toTopBtn = document.getElementById("toTop");
+  if (toTopBtn) toTopBtn.onclick = () => window.scrollTo({ top: 0, behavior: "smooth" });
+  updatePlotFooters();
 });
 
 const els = {
@@ -1004,42 +1039,3 @@ if (els.resetWindow){
   }, 150));
 }
 
-document.addEventListener("DOMContentLoaded", async ()=>{
-  // Add click handler to hide loading screen if stuck
-  els.loadingScreen.addEventListener("click", () => {
-    hideLoading();
-    toast("Loading cancelled.", "error");
-  });
-  
-  // Add keyboard escape handler
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && !els.loadingScreen.classList.contains("hidden")) {
-      hideLoading();
-      toast("Loading cancelled.", "error");
-    }
-  });
-  
-  // Try to load from IndexedDB first, then fallback to sessionStorage
-  try {
-    const recentLog = await getRecentLog();
-    if (recentLog){
-      await cacheSet(recentLog.text, recentLog.name, recentLog.size);
-      stageParsed(recentLog.text, recentLog.name, recentLog.size);
-    } else {
-      const text = sessionStorage.getItem("csvText");
-      if (text){ 
-        await cacheSet(text, sessionStorage.getItem("csvName")||"cached.csv", Number(sessionStorage.getItem("csvSize")||0));
-        stageParsed(text, sessionStorage.getItem("csvName")||"cached.csv", Number(sessionStorage.getItem("csvSize")||0)); 
-      }
-    }
-  } catch (error) {
-    console.warn("Failed to load from IndexedDB:", error);
-    const text = sessionStorage.getItem("csvText");
-    if (text){ stageParsed(text, sessionStorage.getItem("csvName")||"cached.csv", Number(sessionStorage.getItem("csvSize")||0)); }
-  }
-
-  // Back to top button
-  const toTopBtn = document.getElementById("toTop");
-  if (toTopBtn) toTopBtn.onclick = () => window.scrollTo({ top: 0, behavior: "smooth" });
-  updatePlotFooters();
-});
