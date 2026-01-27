@@ -1625,3 +1625,171 @@ body{ margin:0; background:var(--bg); color:var(--fg);
     outline-width: 2px;
   }
 }
+
+/* Annotation markers */
+.annotation-marker {
+  pointer-events: none;
+  position: absolute;
+  z-index: 100;
+}
+
+.annotation-pin {
+  transition: transform 0.2s ease;
+}
+
+.annotation-pin:hover {
+  transform: scale(1.3);
+}
+
+/* Annotation details */
+.annotation-details {
+  margin: 16px 0;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.detail-item:last-child {
+  border-bottom: none;
+}
+
+.detail-item label {
+  font-weight: 600;
+  color: var(--muted);
+  min-width: 100px;
+}
+
+.detail-item span {
+  color: var(--fg);
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+  color: var(--fg);
+  font-size: 13px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--input-bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--fg);
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.form-group input[readonly] {
+  background: var(--line);
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.btn.danger {
+  background: var(--danger);
+  color: #fff;
+  border-color: var(--danger);
+}
+
+.btn.danger:hover {
+  background: #cc2e24;
+  border-color: #cc2e24;
+}
+
+/* Annotations list */
+.annotations-list {
+  max-height: 400px;
+  overflow-y: auto;
+  margin: 16px 0;
+}
+
+.annotation-item {
+  padding: 12px;
+  background: var(--input-bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  transition: background 0.2s ease;
+}
+
+.annotation-item:hover {
+  background: var(--hover-bg);
+}
+
+.annotation-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.annotation-type {
+  font-weight: 700;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.annotation-time {
+  font-family: ui-monospace, monospace;
+  color: var(--muted);
+  font-size: 12px;
+  margin-left: auto;
+}
+
+.annotation-delete {
+  background: transparent;
+  border: none;
+  color: var(--danger);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.annotation-delete:hover {
+  background: rgba(255, 59, 48, 0.1);
+}
+
+.annotation-param {
+  font-weight: 600;
+  color: var(--fg);
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+.annotation-note {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}

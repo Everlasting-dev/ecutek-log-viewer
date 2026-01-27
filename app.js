@@ -6,6 +6,7 @@ import { downsampleLTTB } from "./modules/downsample.js";
 import { registerShortcut, initShortcuts, getModifierKey } from "./modules/shortcuts.js";
 import { exportPlotPNG, exportPlotSVG, exportAllPlots, exportPDFReport } from "./modules/export.js";
 import { initMobile } from "./modules/mobile.js";
+import { initAnnotations, addAnnotation, getAllAnnotations, exportAnnotations } from "./modules/annotations.js";
 
 // Classic loader (startup + runtime)
 const sleep = (ms)=> new Promise(r=>setTimeout(r, ms));
@@ -324,6 +325,9 @@ function initDropdowns() {
         case "Shift Strategy Lab":
           window.location.href = "compare.html#shift-lab";
           break;
+        case "Annotations":
+          openAnnotationsPanel();
+          break;
         case "Log Metadata & Archive":
           openMetadataModal();
           break;
@@ -460,6 +464,104 @@ function getActivePlot(){
   return firstPlot && firstPlot._rendered !== false ? firstPlot : null;
 }
 
+// Annotations panel
+function openAnnotationsPanel(){
+  const panel = document.getElementById('annotationsPanel');
+  if (!panel){
+    createAnnotationsPanel();
+    return;
+  }
+  panel.classList.remove('hidden');
+  updateAnnotationsList();
+}
+
+function closeAnnotationsPanel(){
+  const panel = document.getElementById('annotationsPanel');
+  if (panel){
+    panel.classList.add('hidden');
+  }
+}
+
+function createAnnotationsPanel(){
+  const panel = document.createElement('div');
+  panel.id = 'annotationsPanel';
+  panel.className = 'modal';
+  panel.innerHTML = `
+    <div class="modal-content wide">
+      <button class="modal-close" id="annotationsPanelClose">×</button>
+      <h3>Annotations</h3>
+      <div id="annotationsList" class="annotations-list"></div>
+      <div class="form-actions">
+        <button id="exportAnnotationsBtn" class="btn ghost">Export</button>
+        <button id="annotationsPanelCloseBtn" class="btn ghost">Close</button>
+      </div>
+      <p class="muted" style="margin-top: 12px; font-size: 12px;">
+        Tip: Ctrl/Cmd + Click on a plot to add an annotation at that timestamp.
+      </p>
+    </div>
+  `;
+  
+  document.body.appendChild(panel);
+  
+  document.getElementById('annotationsPanelClose').onclick = closeAnnotationsPanel;
+  document.getElementById('annotationsPanelCloseBtn').onclick = closeAnnotationsPanel;
+  document.getElementById('exportAnnotationsBtn').onclick = () => {
+    const json = exportAnnotations();
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `annotations-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('Annotations exported', 'ok');
+  };
+  
+  panel.addEventListener('click', (e) => {
+    if (e.target === panel) closeAnnotationsPanel();
+  });
+  
+  updateAnnotationsList();
+}
+
+function updateAnnotationsList(){
+  const list = document.getElementById('annotationsList');
+  if (!list) return;
+  
+  const allAnnotations = getAllAnnotations();
+  
+  if (allAnnotations.length === 0){
+    list.innerHTML = '<p class="muted">No annotations yet. Ctrl/Cmd + Click on a plot to add one.</p>';
+    return;
+  }
+  
+  list.innerHTML = allAnnotations.map(ann => `
+    <div class="annotation-item">
+      <div class="annotation-header">
+        <span class="annotation-type" style="color: ${ann.color}">${ann.type}</span>
+        <span class="annotation-time">${ann.timestamp.toFixed(3)}s</span>
+        <button class="annotation-delete" data-id="${ann.id}" title="Delete">×</button>
+      </div>
+      ${ann.parameter ? `<div class="annotation-param">${ann.parameter}</div>` : ''}
+      ${ann.note ? `<div class="annotation-note">${ann.note}</div>` : ''}
+    </div>
+  `).join('');
+  
+  list.querySelectorAll('.annotation-delete').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = parseInt(btn.dataset.id);
+      removeAnnotation(id);
+      updateAnnotationsList();
+    });
+  });
+}
+
+// Wrapper to update UI after removal
+function removeAnnotation(id){
+  removeAnn(id);
+  updateAnnotationsList();
+}
+
 // Start ASCII animation when page loads
 // ============================================================================
 // STARTUP LOADING SCREEN
@@ -511,6 +613,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   // Initialize quick search
   initQuickSearch();
+  
+  // Initialize annotations system
+  initAnnotations();
   
   // Initialize mobile features
   initMobile();
