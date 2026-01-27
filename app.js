@@ -2,6 +2,7 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 import { findTimeIndex } from "./parser.js";
 import { debounce, throttle, formatBytes, supportsWebWorkers } from "./modules/utils.js";
 import { storeLog, getRecentLog, storeParsed, getParsed, addToRecent, migrateFromSessionStorage } from "./modules/storage.js";
+import { downsampleLTTB } from "./modules/downsample.js";
 
 // Classic loader (startup + runtime)
 const sleep = (ms)=> new Promise(r=>setTimeout(r, ms));
@@ -776,6 +777,43 @@ function createSkeletonPlots(count = 6){
   }
 }
 
+// Intersection Observer for lazy rendering
+let plotObserver = null;
+
+function initPlotObserver(){
+  if (!('IntersectionObserver' in window)) return null;
+  
+  return new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting){
+        const plotCard = entry.target;
+        const plotDiv = plotCard.querySelector('.plot');
+        const plotData = plotCard._plotData;
+        
+        if (plotData && !plotDiv._rendered){
+          plotDiv._rendered = true;
+          renderSinglePlot(plotDiv, plotData);
+          plotObserver?.unobserve(plotCard);
+        }
+      }
+    });
+  }, {
+    rootMargin: '200px' // Start loading 200px before entering viewport
+  });
+}
+
+function renderSinglePlot(div, { trace, layout, config, originalX, originalY, header, footer }){
+  Plotly.newPlot(div, [trace], layout, config)
+    .then(() => {
+      applyTheme(document.documentElement.getAttribute('data-theme') === 'light', [div]);
+      wirePlotSnap(div, originalX, originalY, footer, header);
+      wirePlotSelection(div);
+      setPlotDragMode(div);
+      plotRegistry.push({ div, xSeries: originalX, footer, readout: null });
+      applyWindowRangeToPlot(div);
+    });
+}
+
 function renderPlots(){
   if (!S.ready){ toast("Upload a file first."); return; }
   
@@ -784,6 +822,11 @@ function renderPlots(){
   // Show skeleton screens immediately
   const estimatedPlotCount = Math.min(S.headers.length - 1, 10);
   createSkeletonPlots(estimatedPlotCount);
+  
+  // Initialize observer if not already done
+  if (!plotObserver){
+    plotObserver = initPlotObserver();
+  }
   
   setTimeout(() => {
     els.plots.innerHTML = "";
@@ -802,6 +845,7 @@ function renderPlots(){
       if (valid < 5) continue;
 
       const card=document.createElement("div"); card.className="card plot-card";
+      card.setAttribute("data-lazy", "true"); // Mark for lazy loading
       const title=document.createElement("div"); title.className="plot-title";
       const titleText=document.createElement("span"); titleText.textContent=S.headers[i];
       const titleReadout=document.createElement("span"); titleReadout.className="plot-readout"; titleReadout.textContent="—";
@@ -811,26 +855,79 @@ function renderPlots(){
       const footer=document.createElement("div"); footer.className="plot-footer"; footer.textContent="Click to inspect";
       frame.appendChild(div); card.appendChild(title); card.appendChild(frame); card.appendChild(footer); els.plots.appendChild(card);
 
-      Plotly.newPlot(div, [{x, y:S.cols[i], mode:"lines", name:S.headers[i], line:{width:1}}],
-        { template, paper_bgcolor:paper, plot_bgcolor:plot, font:{color:text},
-          margin:{l:50,r:10,t:10,b:40},
-          xaxis:{title:S.headers[S.timeIdx]},
-          yaxis:{title:S.headers[i], automargin:true},
-          showlegend:false, hovermode:false, dragmode: timeWindow.enabled ? "select" : false, selectdirection:"h" },
-        { displaylogo:false, responsive:true, scrollZoom:false, staticPlot:false, doubleClick:false, displayModeBar:false })
-        .then(()=>{ 
-          applyTheme(document.documentElement.getAttribute('data-theme')==='light', [div]);
-          wirePlotSnap(div, x, S.cols[i], footer, S.headers[i]);
-          wirePlotSelection(div);
-          setPlotDragMode(div);
-          plotRegistry.push({div, xSeries:x, footer, readout:titleReadout});
-          applyWindowRangeToPlot(div);
-        });
+      // Prepare data with downsampling and scattergl optimization
+      let plotX = x;
+      let plotY = S.cols[i];
+      const dataLength = plotX.length;
+      const useScatterGL = dataLength > 10000; // Use scattergl for >10k points
+      
+      // Downsample if needed (for better performance)
+      if (dataLength > 5000 && !useScatterGL){
+        const viewportWidth = window.innerWidth || 1920;
+        const optimalSize = Math.min(viewportWidth / 2, 2000);
+        const downsampled = downsampleLTTB(plotX, plotY, optimalSize);
+        plotX = downsampled.x;
+        plotY = downsampled.y;
+      }
+      
+      const trace = {
+        x: plotX,
+        y: plotY,
+        mode: "lines",
+        type: useScatterGL ? "scattergl" : "scatter",
+        name: S.headers[i],
+        line: { width: 1 }
+      };
+
+      const layout = {
+        template,
+        paper_bgcolor: paper,
+        plot_bgcolor: plot,
+        font: { color: text },
+        margin: { l: 50, r: 10, t: 10, b: 40 },
+        xaxis: { title: S.headers[S.timeIdx] },
+        yaxis: { title: S.headers[i], automargin: true },
+        showlegend: false,
+        hovermode: false,
+        dragmode: timeWindow.enabled ? "select" : false,
+        selectdirection: "h"
+      };
+
+      const config = {
+        displaylogo: false,
+        responsive: true,
+        scrollZoom: false,
+        staticPlot: false,
+        doubleClick: false,
+        displayModeBar: false
+      };
+
+      // Store plot data for lazy rendering
+      card._plotData = {
+        trace,
+        layout,
+        config,
+        originalX: x,
+        originalY: S.cols[i],
+        header: S.headers[i],
+        footer
+      };
+
+      // Render immediately if observer not available, otherwise observe
+      if (!plotObserver){
+        renderSinglePlot(div, card._plotData);
+        plotRegistry.push({ div, xSeries: x, footer, readout: titleReadout });
+      } else {
+        plotObserver.observe(card);
+      }
     }
     
     hideLoading();
     toast("Plots generated successfully!", "ok");
     updatePlotFooters();
+    
+    // If observer is available, plots will render as they enter viewport
+    // Otherwise, they're already rendered above
   }, 300);
 }
 

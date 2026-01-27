@@ -1,5 +1,6 @@
-﻿import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm";
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm";
 import { parseCSV, findTimeIndex, findRpmIndex, numericColumns } from "./parser.js";
+import { downsampleLTTB, calculateOptimalSampleSize, shouldDownsample } from "./modules/downsample.js";
 
 function openShiftLabModal(){
   if (shiftLabModal) {
@@ -1883,7 +1884,21 @@ function plot(showToasts=true, preserveRange=false){
       currentIndexMap = filteredData.indices || [];
     }
 
-    const typ = timeWindowSelectEnabled ? "scatter" : (filteredData.x.length > 5000 ? "scattergl" : "scatter");
+    // Use scattergl for large datasets (>10k points) for better performance
+    const dataLength = filteredData.x.length;
+    const useScatterGL = !timeWindowSelectEnabled && dataLength > 10000;
+    const typ = useScatterGL ? "scattergl" : "scatter";
+    
+    // Downsample if needed (for datasets between 5k-10k points)
+    let plotX = filteredData.x;
+    let plotY = filteredData.y ?? scaled;
+    if (!useScatterGL && shouldDownsample(dataLength, 5000)){
+      const viewportWidth = window.innerWidth || 1920;
+      const optimalSize = calculateOptimalSampleSize(dataLength, viewportWidth, 2000);
+      const downsampled = downsampleLTTB(plotX, plotY, optimalSize);
+      plotX = downsampled.x;
+      plotY = downsampled.y;
+    }
     const traceY = filteredData.y ?? scaledY;
 
     traces.push({
@@ -1904,12 +1919,25 @@ function plot(showToasts=true, preserveRange=false){
       if (refYRaw && refTime){
         const refScaled = prepareSeries(refYRaw, exponent);
         const refFiltered = filterDataByTimeRange(refTime, refScaled, refYRaw);
-        const refTyp = timeWindowSelectEnabled ? "scatter" : (refFiltered.x.length > 5000 ? "scattergl" : "scatter");
+        // Downsample reference data if needed
+        let refPlotX = refFiltered.x;
+        let refPlotY = refFiltered.y ?? refScaled;
+        const refDataLength = refFiltered.x.length;
+        const refUseScatterGL = !timeWindowSelectEnabled && refDataLength > 10000;
+        const refTyp = refUseScatterGL ? "scattergl" : "scatter";
+        
+        if (!refUseScatterGL && shouldDownsample(refDataLength, 5000)){
+          const viewportWidth = window.innerWidth || 1920;
+          const optimalSize = calculateOptimalSampleSize(refDataLength, viewportWidth, 2000);
+          const downsampled = downsampleLTTB(refPlotX, refPlotY, optimalSize);
+          refPlotX = downsampled.x;
+          refPlotY = downsampled.y;
+        }
         traces.push({
           type: refTyp,
           mode: "lines",
-          x: refFiltered.x,
-          y: refFiltered.y ?? refScaled,
+          x: refPlotX,
+          y: refPlotY,
           customdata: refFiltered.customdata,
           name: `${label} (Ref)`,
           line: { width: Math.max(0.8, lineWidth - 0.4), dash: "dot", color: s.color },
