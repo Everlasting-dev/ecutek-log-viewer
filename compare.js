@@ -1891,7 +1891,7 @@ function plot(showToasts=true, preserveRange=false){
     
     // Downsample if needed (for datasets between 5k-10k points)
     let plotX = filteredData.x;
-    let plotY = filteredData.y ?? scaled;
+    let plotY = filteredData.y ?? scaledY;
     if (!useScatterGL && shouldDownsample(dataLength, 5000)){
       const viewportWidth = window.innerWidth || 1920;
       const optimalSize = calculateOptimalSampleSize(dataLength, viewportWidth, 2000);
