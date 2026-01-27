@@ -148,9 +148,14 @@ body{ margin:0; background:var(--bg); color:var(--fg);
 .btn.primary{background:var(--accent); color:#06130b; border-color:#0b2b19}
 .toolbar{margin-top:12px; display:flex; gap:10px; align-items:center}
 .btn.ghost{background:transparent}
-.drop{ margin-top:12px; display:flex; align-items:center; justify-content:center; gap:10px;
-  padding:18px; border-radius:12px; border:1px dashed var(--line); background:var(--input-bg); color:var(--muted) }
-.drop.dragover{border-color:var(--accent-2); color:#0f141a; background:var(--hover-bg)}
+.drop{ margin-top:12px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
+  padding:32px 18px; border-radius:12px; border:2px dashed var(--line); background:var(--input-bg); color:var(--muted);
+  transition: all 0.3s ease; cursor: pointer; }
+.drop:hover{ border-color:var(--accent-2); background:var(--hover-bg); transform: translateY(-2px); }
+.drop.dragover{ border-color:var(--accent); border-width:3px; color:var(--accent); background:var(--hover-bg);
+  transform: scale(1.02); box-shadow: 0 8px 24px rgba(0, 255, 102, 0.2); }
+.drop.dragover svg{ opacity: 1; transform: scale(1.1); }
+.drop svg{ transition: all 0.3s ease; }
 .fileinfo{margin-top:10px; color:var(--muted)}
 .hidden{display:none}
 .toast{ margin-top:10px; padding:10px 12px; border-radius:10px; border:1px solid #3b0b0b; background:#3b0b0b; color:#fff; }
@@ -1377,4 +1382,104 @@ body{ margin:0; background:var(--bg); color:var(--fg);
     rgba(0, 0, 0, 0.05),
     transparent
   );
+}
+
+/* Keyboard shortcuts modal */
+.shortcuts-list {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.shortcut-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.shortcut-item:last-child {
+  border-bottom: none;
+}
+
+.shortcut-item kbd {
+  background: var(--input-bg);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg);
+  min-width: 80px;
+  text-align: center;
+}
+
+.shortcut-item span {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* Recent files dropdown */
+.recent-files-dropdown {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.recent-file-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.recent-file-item:hover {
+  background: var(--hover-bg);
+}
+
+.recent-file-icon {
+  width: 32px;
+  height: 32px;
+  background: var(--input-bg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.recent-file-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.recent-file-name {
+  font-weight: 600;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recent-file-meta {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px 6px;
+  background: var(--accent);
+  color: #06130b;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  min-width: 18px;
+  text-align: center;
 }

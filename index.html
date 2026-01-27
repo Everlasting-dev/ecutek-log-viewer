@@ -47,11 +47,12 @@
                 Export Data
               </a>
               <div class="dropdown-divider"></div>
-              <a href="#" class="dropdown-item">
+              <a href="#" class="dropdown-item" id="recentFilesMenu">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
                 </svg>
                 Recent Files
+                <span id="recentFilesCount" class="badge" style="margin-left: auto; display: none;">0</span>
               </a>
             </div>
           </div>
@@ -161,7 +162,15 @@
         <button id="genBtn" class="btn primary" disabled>Generate Plots</button>
         <button id="clearBtn" class="btn ghost">Clear</button>
       </div>
-      <div id="dropzone" class="drop">Drag & drop files here</div>
+      <div id="dropzone" class="drop">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity: 0.5; margin-bottom: 8px;">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="17 8 12 3 7 8"></polyline>
+          <line x1="12" y1="3" x2="12" y2="15"></line>
+        </svg>
+        <span>Drag & drop files here</span>
+        <small style="margin-top: 8px; opacity: 0.7;">or click to browse</small>
+      </div>
       <div id="fileInfo" class="fileinfo"></div>
       
       <!-- Progress indicator for CSV parsing -->

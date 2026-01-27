@@ -1,8 +1,9 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm";
 import { findTimeIndex } from "./parser.js";
 import { debounce, throttle, formatBytes, supportsWebWorkers } from "./modules/utils.js";
-import { storeLog, getRecentLog, storeParsed, getParsed, addToRecent, migrateFromSessionStorage } from "./modules/storage.js";
+import { storeLog, getRecentLog, storeParsed, getParsed, addToRecent, migrateFromSessionStorage, getRecentFiles } from "./modules/storage.js";
 import { downsampleLTTB } from "./modules/downsample.js";
+import { registerShortcut, initShortcuts, getModifierKey } from "./modules/shortcuts.js";
 
 // Classic loader (startup + runtime)
 const sleep = (ms)=> new Promise(r=>setTimeout(r, ms));
@@ -190,6 +191,73 @@ function updateThemeUI(theme) {
 // DROPDOWN INTERACTIONS
 // ============================================================================
 
+async function updateRecentFilesMenu(){
+  try {
+    const recentFiles = await getRecentFiles(10);
+    const recentFilesMenu = document.getElementById('recentFilesMenu');
+    const recentFilesCount = document.getElementById('recentFilesCount');
+    
+    if (recentFilesCount){
+      if (recentFiles.length > 0){
+        recentFilesCount.textContent = recentFiles.length;
+        recentFilesCount.style.display = 'inline-block';
+      } else {
+        recentFilesCount.style.display = 'none';
+      }
+    }
+    
+    // Create dropdown content for recent files
+    if (recentFilesMenu && recentFiles.length > 0){
+      const dropdown = recentFilesMenu.closest('.dropdown');
+      if (dropdown){
+        let recentFilesContent = dropdown.querySelector('.recent-files-content');
+        if (!recentFilesContent){
+          recentFilesContent = document.createElement('div');
+          recentFilesContent.className = 'recent-files-dropdown';
+          const dropdownContent = dropdown.querySelector('.dropdown-content');
+          if (dropdownContent){
+            dropdownContent.appendChild(recentFilesContent);
+          }
+        }
+        
+        recentFilesContent.innerHTML = recentFiles.map((file, idx) => `
+          <div class="recent-file-item" data-log-id="${file.logId}">
+            <div class="recent-file-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/>
+              </svg>
+            </div>
+            <div class="recent-file-info">
+              <div class="recent-file-name">${file.name}</div>
+              <div class="recent-file-meta">${formatBytes(file.size)} · ${new Date(file.timestamp).toLocaleDateString()}</div>
+            </div>
+          </div>
+        `).join('');
+        
+        // Add click handlers
+        recentFilesContent.querySelectorAll('.recent-file-item').forEach(item => {
+          item.addEventListener('click', async () => {
+            const logId = parseInt(item.dataset.logId);
+            try {
+              const log = await getLog(logId);
+              if (log){
+                await cacheSet(log.text, log.name, log.size);
+                stageParsed(log.text, log.name, log.size);
+                toast(`Loaded ${log.name}`, "ok");
+              }
+            } catch (error) {
+              console.error("Failed to load recent file:", error);
+              toast("Failed to load file", "error");
+            }
+          });
+        });
+      }
+    }
+  } catch (error) {
+    console.warn("Failed to update recent files menu:", error);
+  }
+}
+
 function initDropdowns() {
   // Handle dropdown menu interactions
   const dropdownItems = document.querySelectorAll(".dropdown-item");
@@ -198,6 +266,14 @@ function initDropdowns() {
     item.addEventListener("click", (e) => {
       const href = item.getAttribute("href");
       const text = item.textContent.trim();
+      const id = item.id;
+      
+      // Handle recent files menu
+      if (id === 'recentFilesMenu'){
+        e.preventDefault();
+        updateRecentFilesMenu();
+        return;
+      }
       
       // Handle external links (target="_blank") - allow default or open programmatically
       if (item.hasAttribute("target") && item.getAttribute("target") === "_blank") {
@@ -259,6 +335,10 @@ function initDropdowns() {
     });
   });
   
+  // Update recent files menu on initialization
+  updateRecentFilesMenu();
+}
+  
   // Handle navigation menu active states
   const navItems = document.querySelectorAll(".nav-item");
   navItems.forEach(item => {
@@ -317,6 +397,47 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   // Initialize parser worker
   parserWorker = initParserWorker();
+  
+  // Initialize keyboard shortcuts
+  initShortcuts();
+  
+  // Register keyboard shortcuts
+  registerShortcut('o', {
+    handler: () => {
+      els.file?.click();
+    },
+    ctrl: true,
+    description: 'Open file',
+    preventDefault: true
+  });
+  
+  registerShortcut('s', {
+    handler: () => {
+      if (S.ready && archiveLogBtn && !archiveLogBtn.disabled){
+        openMetadataModal();
+        archiveNoteInput?.focus();
+      }
+    },
+    ctrl: true,
+    description: 'Save/Archive current log',
+    preventDefault: true
+  });
+  
+  registerShortcut('ArrowLeft', {
+    handler: () => {
+      navigatePlots(-1);
+    },
+    description: 'Navigate to previous plot',
+    preventDefault: true
+  });
+  
+  registerShortcut('ArrowRight', {
+    handler: () => {
+      navigatePlots(1);
+    },
+    description: 'Navigate to next plot',
+    preventDefault: true
+  });
   
   // Initialize theme system
   initTheme();
@@ -677,8 +798,11 @@ async function stageParsed(text, name, size){
       els.fileChips.appendChild(chip);
     }
     
-    toast("Upload success. Click Generate.", "ok");
-    
+      toast("Upload success. Click Generate.", "ok");
+      
+      // Update recent files menu
+      updateRecentFilesMenu();
+      
   } catch (err) {
     hideLoading();
     updateParseProgress(0);
@@ -695,6 +819,32 @@ function nearestIndex(arr,val){
     if(arr[mid] < val) lo=mid; else hi=mid;
   }
   return Math.abs(arr[lo]-val) <= Math.abs(arr[hi]-val) ? lo : hi;
+}
+
+// Plot navigation for keyboard shortcuts
+let currentPlotIndex = -1;
+
+function navigatePlots(direction){
+  const plotCards = Array.from(document.querySelectorAll('.plot-card'));
+  if (plotCards.length === 0) return;
+  
+  if (currentPlotIndex < 0){
+    currentPlotIndex = 0;
+  } else {
+    currentPlotIndex += direction;
+    if (currentPlotIndex < 0) currentPlotIndex = plotCards.length - 1;
+    if (currentPlotIndex >= plotCards.length) currentPlotIndex = 0;
+  }
+  
+  const targetCard = plotCards[currentPlotIndex];
+  if (targetCard){
+    targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // Highlight briefly
+    targetCard.style.outline = '2px solid var(--accent)';
+    setTimeout(() => {
+      targetCard.style.outline = '';
+    }, 1000);
+  }
 }
 
 function getTimeBounds(){
@@ -1004,26 +1154,58 @@ if (els.viewSwitcher) {
   });
 }
 
+// Enhanced drag and drop with visual feedback
+let dragCounter = 0;
+
 ["dragenter","dragover"].forEach(ev=>{
-  els.dropzone.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); els.dropzone.classList.add("dragover"); });
+  els.dropzone.addEventListener(ev, e=>{ 
+    e.preventDefault(); 
+    e.stopPropagation(); 
+    dragCounter++;
+    els.dropzone.classList.add("dragover");
+  });
 });
-["dragleave","drop"].forEach(ev=>{
-  els.dropzone.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); els.dropzone.classList.remove("dragover"); });
+
+["dragleave"].forEach(ev=>{
+  els.dropzone.addEventListener(ev, e=>{ 
+    e.preventDefault(); 
+    e.stopPropagation();
+    dragCounter--;
+    if (dragCounter === 0){
+      els.dropzone.classList.remove("dragover");
+    }
+  });
 });
+
 els.dropzone.addEventListener("drop", e=>{
+  e.preventDefault(); 
+  e.stopPropagation();
+  dragCounter = 0;
+  els.dropzone.classList.remove("dragover");
+  
   const f=e.dataTransfer.files?.[0];
-  if (!f || !/\.(csv|txt|log)$/i.test(f.name)) return toast("Drop a .csv/.txt/.log file.");
+  if (!f || !/\.(csv|txt|log)$/i.test(f.name)) {
+    toast("Drop a .csv/.txt/.log file.", "error");
+    return;
+  }
+  
+  showLoading();
   const r=new FileReader();
   r.onerror=()=>{
     hideLoading();
-    toast("Failed to read file.");
+    toast("Failed to read file.", "error");
   };
-  r.onload=ev=>{ 
+  r.onload=async ev=>{ 
     const text=String(ev.target.result||""); 
-    cacheSet(text,f.name,f.size);
+    await cacheSet(text,f.name,f.size);
     stageParsed(text,f.name,f.size);
   };
   r.readAsText(f);
+});
+
+// Make dropzone clickable
+els.dropzone.addEventListener("click", () => {
+  els.file?.click();
 });
 
 if (els.timeWindowToggle){
