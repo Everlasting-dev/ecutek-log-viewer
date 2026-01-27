@@ -1899,13 +1899,11 @@ function plot(showToasts=true, preserveRange=false){
       plotX = downsampled.x;
       plotY = downsampled.y;
     }
-    const traceY = filteredData.y ?? scaledY;
-
     traces.push({
       type: typ,
       mode: "lines",
-      x: filteredData.x,
-      y: traceY,
+      x: plotX,
+      y: plotY,
       customdata: filteredData.customdata,
       name: label,
       line: { width: lineWidth, color: s.color },
