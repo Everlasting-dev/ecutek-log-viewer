@@ -1,6 +1,8 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm";
 import { parseCSV, findTimeIndex, findRpmIndex, numericColumns } from "./parser.js";
 import { downsampleLTTB, calculateOptimalSampleSize, shouldDownsample } from "./modules/downsample.js";
+import { initAnnotations, getAllAnnotations, exportAnnotations, removeAnnotation } from "./modules/annotations.js";
+import { initTemplates, getAllTemplates, createTemplate, deleteTemplate, exportTemplates } from "./modules/templates.js";
 
 function openShiftLabModal(){
   if (shiftLabModal) {
@@ -22,6 +24,17 @@ function openMetadataModal(){
 
 function closeMetadataModal(){
   if (metadataModal) metadataModal.classList.add("hidden");
+}
+
+// Templates and Annotations panels for compare page
+function openTemplatesPanel(){
+  toastMsg("Templates feature available on Signal Matrix page", "ok");
+  // Could implement full panel here if needed
+}
+
+function openAnnotationsPanel(){
+  toastMsg("Annotations feature available on Signal Matrix page", "ok");
+  // Could implement full panel here if needed
 }
 // Compare view: aligned 5-col UI, value-only chips with ▲▼, fixed 50% step, preserve X-range, auto-select Ys.
 
@@ -318,6 +331,8 @@ const metadataModal = $("metadataModal");
 const metadataClose = $("metadataClose");
 const metadataLink = $("metadataLink");
 const metadataMenuCompare = $("metadataMenuCompare");
+const templatesMenuCompare = $("templatesMenuCompare");
+const annotationsMenuCompare = $("annotationsMenuCompare");
 const metaSummary = $("metaSummary");
 const archiveLogBtn = $("archiveLogBtn");
 const archiveNoteInput = $("archiveNoteInput");
@@ -2604,6 +2619,22 @@ function initDropdowns() {
       
       e.preventDefault();
       
+      const id = item.id;
+      
+      // Handle by ID first (more reliable)
+      if (id === 'templatesMenuCompare'){
+        openTemplatesPanel();
+        return;
+      }
+      if (id === 'annotationsMenuCompare'){
+        openAnnotationsPanel();
+        return;
+      }
+      if (id === 'metadataMenuCompare'){
+        openMetadataModal();
+        return;
+      }
+      
       // Handle different menu actions
       switch(text) {
         case "Open CSV File":
@@ -2620,6 +2651,15 @@ function initDropdowns() {
           break;
         case "GR6 Gear Scope":
           window.location.href = "gear.html";
+          break;
+        case "Annotations":
+          openAnnotationsPanel();
+          break;
+        case "Templates & Presets":
+          openTemplatesPanel();
+          break;
+        case "Log Metadata & Archive":
+          openMetadataModal();
           break;
         case "About":
           window.location.href = "about.html";
@@ -2760,6 +2800,9 @@ document.addEventListener("DOMContentLoaded", ()=>{
   // Initialize dropdown interactions
   try {
     initDropdowns();
+    // Initialize templates and annotations systems
+    initTemplates().catch(e => console.warn("Templates init failed:", e));
+    initAnnotations();
   } catch(e) {
     console.error("Dropdowns init error:", e);
   }

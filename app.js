@@ -280,6 +280,27 @@ function initDropdowns() {
         return;
       }
       
+      // Handle templates menu
+      if (id === 'templatesMenu'){
+        e.preventDefault();
+        openTemplatesPanel();
+        return;
+      }
+      
+      // Handle annotations menu
+      if (id === 'annotationsMenu'){
+        e.preventDefault();
+        openAnnotationsPanel();
+        return;
+      }
+      
+      // Handle metadata menu
+      if (id === 'metadataMenu'){
+        e.preventDefault();
+        openMetadataModal();
+        return;
+      }
+      
       // Handle external links (target="_blank") - allow default or open programmatically
       if (item.hasAttribute("target") && item.getAttribute("target") === "_blank") {
         // Check if it's a handled external link
