@@ -1,5 +1,7 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm";
-import { parseCSV, findTimeIndex } from "./parser.js";
+import { findTimeIndex } from "./parser.js";
+import { debounce, throttle, formatBytes, supportsWebWorkers } from "./modules/utils.js";
+import { storeLog, getRecentLog, storeParsed, getParsed, addToRecent, migrateFromSessionStorage } from "./modules/storage.js";
 
 // Classic loader (startup + runtime)
 const sleep = (ms)=> new Promise(r=>setTimeout(r, ms));
@@ -302,8 +304,18 @@ function handleStartupSplash(){
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   handleStartupSplash();
+  
+  // Initialize IndexedDB and migrate from sessionStorage
+  try {
+    await migrateFromSessionStorage();
+  } catch (error) {
+    console.warn("IndexedDB migration failed:", error);
+  }
+  
+  // Initialize parser worker
+  parserWorker = initParserWorker();
   
   // Initialize theme system
   initTheme();
@@ -382,10 +394,30 @@ const toast = (m,t="error")=>{
   els.toast.style.borderColor = t==="error" ? "#742020" : "#1a6a36";
   clearTimeout(toast._t); toast._t=setTimeout(()=>els.toast.style.display="none",3500);
 };
-const fmt = n=>{ if(!Number.isFinite(n))return""; const u=["B","KB","MB","GB"];let i=0;while(n>=1024&&i<u.length-1){n/=1024;i++;}return`${n.toFixed(1)} ${u[i]}`;};
+const fmt = formatBytes; // Use utility function
 
-const cacheSet=(txt,name,size)=>{ sessionStorage.setItem("csvText",txt); sessionStorage.setItem("csvName",name||""); sessionStorage.setItem("csvSize",String(size||0)); };
-const cacheClr=()=>{ ["csvText","csvName","csvSize"].forEach(k=>sessionStorage.removeItem(k)); };
+// Cache functions - now use IndexedDB
+let currentLogId = null;
+async function cacheSet(txt, name, size){
+  try {
+    const logId = await storeLog(txt, name || "", size || txt.length);
+    currentLogId = logId;
+    await addToRecent(name || "untitled.csv", size || txt.length, logId);
+    // Keep sessionStorage for backward compatibility during migration
+    sessionStorage.setItem("csvText", txt);
+    sessionStorage.setItem("csvName", name || "");
+    sessionStorage.setItem("csvSize", String(size || 0));
+  } catch (error) {
+    console.warn("IndexedDB storage failed, falling back to sessionStorage:", error);
+    sessionStorage.setItem("csvText", txt);
+    sessionStorage.setItem("csvName", name || "");
+    sessionStorage.setItem("csvSize", String(size || 0));
+  }
+}
+async function cacheClr(){
+  currentLogId = null;
+  ["csvText", "csvName", "csvSize"].forEach(k => sessionStorage.removeItem(k));
+}
 
 function openChangelog(){
   if (changelogModal) changelogModal.classList.remove("hidden");
@@ -494,40 +526,129 @@ function hideLoading() {
 
 
 
-function stageParsed(text, name, size){
-  showLoading();
-  
-  setTimeout(() => {
-    try {
-      const { headers, cols, timeIdx } = parseCSV(text);
-      S.headers=headers; S.cols=cols; S.timeIdx = Number.isFinite(timeIdx) ? timeIdx : findTimeIndex(headers);
-      if (S.timeIdx === -1) throw new Error("No 'Time' column found.");
-      S.name=name||""; S.size=size||0; S.ready=true;
+// Web Worker for CSV parsing
+let parserWorker = null;
+let parseRequestId = 0;
 
-      hideLoading();
-      
-      els.fileInfo.classList.remove("hidden");
-      els.fileInfo.textContent = `Selected: ${S.name} · ${fmt(S.size)}`;
-      els.genBtn.disabled = false;
-      
-      // file chip
-      if (els.fileChips){
-        els.fileChips.innerHTML = "";
-        const chip = document.createElement("div");
-        chip.className = "chip";
-        chip.innerHTML = `<span>${S.name} · ${fmt(S.size)}</span><button class="close" title="Remove">×</button>`;
-        chip.querySelector(".close").addEventListener("click", ()=> resetAll(true));
-        els.fileChips.appendChild(chip);
-      }
-      
-      toast("Upload success. Click Generate.", "ok");
-      
-    } catch (err) {
-      hideLoading();
-      resetAll(true);
-      toast(err.message || "Parse error");
+function initParserWorker(){
+  if (!supportsWebWorkers()) return null;
+  try {
+    return new Worker(new URL('./workers/parser-worker.js', import.meta.url));
+  } catch (error) {
+    console.warn("Failed to create parser worker:", error);
+    return null;
+  }
+}
+
+function updateParseProgress(progress){
+  // Update progress indicator if it exists
+  const progressBar = document.getElementById('parseProgress');
+  const progressContainer = document.getElementById('parseProgressContainer');
+  if (progressBar){
+    progressBar.style.width = `${progress}%`;
+    progressBar.textContent = `${progress}%`;
+  }
+  if (progressContainer){
+    if (progress > 0 && progress < 100){
+      progressContainer.classList.remove('hidden');
+    } else {
+      progressContainer.classList.add('hidden');
     }
-  }, 700);
+  }
+}
+
+async function stageParsed(text, name, size){
+  showLoading();
+  updateParseProgress(0);
+  
+  try {
+    // Try Web Worker first, fallback to synchronous parsing
+    const worker = parserWorker || initParserWorker();
+    parseRequestId++;
+    const requestId = parseRequestId;
+    
+    if (worker){
+      // Use Web Worker for non-blocking parsing
+      const result = await new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error("Parse timeout"));
+        }, 60000); // 60 second timeout
+        
+        worker.onmessage = (e) => {
+          const { type, progress, result, error, id } = e.data;
+          if (id !== requestId) return; // Ignore messages from other requests
+          
+          if (type === 'progress'){
+            updateParseProgress(progress);
+          } else if (type === 'done'){
+            clearTimeout(timeout);
+            resolve(result);
+          } else if (type === 'error'){
+            clearTimeout(timeout);
+            reject(new Error(error));
+          }
+        };
+        
+        worker.onerror = (error) => {
+          clearTimeout(timeout);
+          reject(error);
+        };
+        
+        worker.postMessage({ text, id: requestId });
+      });
+      
+      const { headers, cols, timeIdx } = result;
+      S.headers = headers;
+      S.cols = cols;
+      S.timeIdx = Number.isFinite(timeIdx) ? timeIdx : findTimeIndex(headers);
+    } else {
+      // Fallback to synchronous parsing (import parseCSV dynamically)
+      const { parseCSV } = await import('./parser.js');
+      const result = parseCSV(text);
+      S.headers = result.headers;
+      S.cols = result.cols;
+      S.timeIdx = Number.isFinite(result.timeIdx) ? result.timeIdx : findTimeIndex(result.headers);
+    }
+    
+    if (S.timeIdx === -1) throw new Error("No 'Time' column found.");
+    S.name = name || "";
+    S.size = size || 0;
+    S.ready = true;
+    
+    // Store parsed data in IndexedDB
+    if (currentLogId){
+      try {
+        await storeParsed(currentLogId, { headers: S.headers, cols: S.cols, timeIdx: S.timeIdx });
+      } catch (error) {
+        console.warn("Failed to store parsed data:", error);
+      }
+    }
+    
+    hideLoading();
+    updateParseProgress(100);
+    
+    els.fileInfo.classList.remove("hidden");
+    els.fileInfo.textContent = `Selected: ${S.name} · ${formatBytes(S.size)}`;
+    els.genBtn.disabled = false;
+    
+    // file chip
+    if (els.fileChips){
+      els.fileChips.innerHTML = "";
+      const chip = document.createElement("div");
+      chip.className = "chip";
+      chip.innerHTML = `<span>${S.name} · ${formatBytes(S.size)}</span><button class="close" title="Remove">×</button>`;
+      chip.querySelector(".close").addEventListener("click", () => resetAll(true));
+      els.fileChips.appendChild(chip);
+    }
+    
+    toast("Upload success. Click Generate.", "ok");
+    
+  } catch (err) {
+    hideLoading();
+    updateParseProgress(0);
+    resetAll(true);
+    toast(err.message || "Parse error");
+  }
 }
 
 function nearestIndex(arr,val){
@@ -641,10 +762,28 @@ function wirePlotSnap(div, xSeries, ySeries, readout, label){
   });
 }
 
+function createSkeletonPlots(count = 6){
+  els.plots.innerHTML = "";
+  for (let i = 0; i < count; i++){
+    const skeleton = document.createElement("div");
+    skeleton.className = "skeleton-plot";
+    skeleton.innerHTML = `
+      <div class="skeleton-plot-header"></div>
+      <div class="skeleton-plot-frame"></div>
+      <div class="skeleton-plot-footer"></div>
+    `;
+    els.plots.appendChild(skeleton);
+  }
+}
+
 function renderPlots(){
   if (!S.ready){ toast("Upload a file first."); return; }
   
   showLoading();
+  
+  // Show skeleton screens immediately
+  const estimatedPlotCount = Math.min(S.headers.length - 1, 10);
+  createSkeletonPlots(estimatedPlotCount);
   
   setTimeout(() => {
     els.plots.innerHTML = "";
@@ -756,16 +895,16 @@ els.dropzone.addEventListener("drop", e=>{
 });
 
 if (els.timeWindowToggle){
-  els.timeWindowToggle.addEventListener("change", (e)=>{
+  els.timeWindowToggle.addEventListener("change", debounce((e)=>{
     setSelectionMode(e.target.checked);
-  });
+  }, 150));
 }
 
 if (els.resetWindow){
-  els.resetWindow.addEventListener("click", ()=>{
+  els.resetWindow.addEventListener("click", debounce(()=>{
     applyWindowRange(null);
     plotRegistry.forEach(({div})=> Plotly.relayout(div, { shapes: [] }));
-  });
+  }, 150));
 }
 
 document.addEventListener("DOMContentLoaded", ()=>{
@@ -783,8 +922,24 @@ document.addEventListener("DOMContentLoaded", ()=>{
     }
   });
   
-  const text=sessionStorage.getItem("csvText");
-  if (text){ stageParsed(text, sessionStorage.getItem("csvName")||"cached.csv", Number(sessionStorage.getItem("csvSize")||0)); }
+  // Try to load from IndexedDB first, then fallback to sessionStorage
+  try {
+    const recentLog = await getRecentLog();
+    if (recentLog){
+      await cacheSet(recentLog.text, recentLog.name, recentLog.size);
+      stageParsed(recentLog.text, recentLog.name, recentLog.size);
+    } else {
+      const text = sessionStorage.getItem("csvText");
+      if (text){ 
+        await cacheSet(text, sessionStorage.getItem("csvName")||"cached.csv", Number(sessionStorage.getItem("csvSize")||0));
+        stageParsed(text, sessionStorage.getItem("csvName")||"cached.csv", Number(sessionStorage.getItem("csvSize")||0)); 
+      }
+    }
+  } catch (error) {
+    console.warn("Failed to load from IndexedDB:", error);
+    const text = sessionStorage.getItem("csvText");
+    if (text){ stageParsed(text, sessionStorage.getItem("csvName")||"cached.csv", Number(sessionStorage.getItem("csvSize")||0)); }
+  }
 
   // Back to top button
   const toTopBtn = document.getElementById("toTop");

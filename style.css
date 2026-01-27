@@ -1,4 +1,4 @@
-﻿:root{
+:root{
   /* Dark theme (default) */
   --bg:#0b0d10; --panel:#0f1318; --muted:#9aa7b2; --fg:#e7ecf2;
   --line:#1b1f25; --accent:#00ff66; --accent-2:#34a0ff; --danger:#ff3b30;
@@ -1261,4 +1261,120 @@ body{ margin:0; background:var(--bg); color:var(--fg);
 
 .modal-close:hover {
   color: var(--accent);
+}
+
+/* Progress indicator */
+.progress-container {
+  margin-top: 12px;
+  padding: 12px;
+  background: var(--input-bg);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  border-radius: 4px;
+  transition: width 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: #fff;
+  font-weight: 600;
+  min-width: 40px;
+}
+
+.progress-text {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* Skeleton screens */
+.skeleton-plot {
+  background: var(--card-bg);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 14px;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+.skeleton-plot-header {
+  height: 24px;
+  background: var(--line);
+  border-radius: 4px;
+  margin-bottom: 12px;
+  width: 60%;
+}
+
+.skeleton-plot-frame {
+  height: 300px;
+  background: var(--line);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-plot-frame::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  animation: skeleton-shimmer 1.5s infinite;
+}
+
+.skeleton-plot-footer {
+  height: 16px;
+  background: var(--line);
+  border-radius: 4px;
+  width: 40%;
+}
+
+@keyframes skeleton-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+[data-theme="light"] .skeleton-plot-frame::after {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(0, 0, 0, 0.05),
+    transparent
+  );
 }

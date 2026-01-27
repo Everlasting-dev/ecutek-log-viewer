@@ -163,6 +163,14 @@
       </div>
       <div id="dropzone" class="drop">Drag & drop files here</div>
       <div id="fileInfo" class="fileinfo"></div>
+      
+      <!-- Progress indicator for CSV parsing -->
+      <div id="parseProgressContainer" class="progress-container hidden">
+        <div class="progress-bar">
+          <div id="parseProgress" class="progress-fill" style="width: 0%">0%</div>
+        </div>
+        <div class="progress-text">Parsing CSV file...</div>
+      </div>
 
       <div id="fileChips" class="filechips"></div>
       <div id="toast" class="toast hidden"></div>
@@ -171,7 +179,9 @@
 
 
     <div class="section-heading" style="margin-top:22px;">Time Graphs</div>
-    <div class="plots" id="plots"></div>
+    <div class="plots" id="plots">
+      <!-- Skeleton screens will be inserted here when loading -->
+    </div>
   </div>
 
   <div class="footer">Made by AK Everlasting Dev · Beta 1.5</div>
