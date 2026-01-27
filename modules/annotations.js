@@ -202,7 +202,7 @@ function showAnnotationDialog(timestamp, plotCard){
 /**
  * Update annotation markers on plots
  */
-function updateAnnotationMarkers(){
+export function updateAnnotationMarkers(){
   // Remove existing markers
   document.querySelectorAll('.annotation-marker').forEach(marker => marker.remove());
   

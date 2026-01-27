@@ -114,6 +114,12 @@
                 </svg>
                 Annotations
               </a>
+              <a href="#" class="dropdown-item" id="templatesMenu">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+                </svg>
+                Templates & Presets
+              </a>
             <a href="#" class="dropdown-item" id="metadataMenu">
               <svg viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/>
@@ -259,6 +265,15 @@
           <button id="archiveLogBtn" class="btn primary mini" disabled>Archive Current Log</button>
         </div>
         <p class="muted">Uploads to cloud storage with your note as the filename. Your note helps identify the log file.</p>
+      </section>
+      <section class="modal-section" id="shareSection" style="display: none;">
+        <h4>Shareable Link</h4>
+        <div class="form-grid">
+          <input type="text" id="shareableLinkInput" readonly placeholder="Upload a log first to generate shareable link" />
+          <button id="generateShareBtn" class="btn primary mini" disabled>Generate Link</button>
+          <button id="copyShareBtn" class="btn ghost mini" disabled>Copy</button>
+        </div>
+        <p class="muted">Generate a shareable link to view this log with its current configuration.</p>
       </section>
     </div>
   </div>

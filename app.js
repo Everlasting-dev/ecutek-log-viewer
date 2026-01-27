@@ -6,7 +6,9 @@ import { downsampleLTTB } from "./modules/downsample.js";
 import { registerShortcut, initShortcuts, getModifierKey } from "./modules/shortcuts.js";
 import { exportPlotPNG, exportPlotSVG, exportAllPlots, exportPDFReport } from "./modules/export.js";
 import { initMobile } from "./modules/mobile.js";
-import { initAnnotations, addAnnotation, getAllAnnotations, exportAnnotations } from "./modules/annotations.js";
+import { initAnnotations, addAnnotation, getAllAnnotations, exportAnnotations, removeAnnotation as removeAnn, updateAnnotationMarkers } from "./modules/annotations.js";
+import { initTemplates, getAllTemplates, createTemplate, applyTemplate, deleteTemplate, exportTemplates, createPresets, getTemplate } from "./modules/templates.js";
+import { createShareableLinkFromCurrentView, copyShareableLink } from "./modules/shareable.js";
 
 // Classic loader (startup + runtime)
 const sleep = (ms)=> new Promise(r=>setTimeout(r, ms));
@@ -328,6 +330,9 @@ function initDropdowns() {
         case "Annotations":
           openAnnotationsPanel();
           break;
+        case "Templates & Presets":
+          openTemplatesPanel();
+          break;
         case "Log Metadata & Archive":
           openMetadataModal();
           break;
@@ -560,6 +565,7 @@ function updateAnnotationsList(){
 function removeAnnotation(id){
   removeAnn(id);
   updateAnnotationsList();
+  updateAnnotationMarkers();
 }
 
 // Start ASCII animation when page loads
@@ -616,6 +622,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   // Initialize annotations system
   initAnnotations();
+  
+  // Initialize templates system
+  await initTemplates();
+  await createPresets(); // Create default presets if they don't exist
   
   // Initialize mobile features
   initMobile();
@@ -685,6 +695,62 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
   if (archiveLogBtn) archiveLogBtn.addEventListener("click", archiveCurrentLog);
+  
+  // Shareable link handlers
+  const generateShareBtn = document.getElementById("generateShareBtn");
+  const copyShareBtn = document.getElementById("copyShareBtn");
+  const shareableLinkInput = document.getElementById("shareableLinkInput");
+  
+  if (generateShareBtn){
+    generateShareBtn.addEventListener("click", async () => {
+      if (!S.ready || !S.uploadedFileId){
+        toast("Please upload log to cloud first", "error");
+        return;
+      }
+      
+      try {
+        showLoading();
+        const selectedParams = Array.from(document.querySelectorAll('.plot-card')).map(card => {
+          const title = card.querySelector('.plot-title span');
+          return title ? title.textContent.trim() : null;
+        }).filter(Boolean);
+        
+        const timeRange = timeWindow.range ? { start: timeWindow.range[0], end: timeWindow.range[1] } : null;
+        
+        const shareUrl = await createShareableLinkFromCurrentView(S, selectedParams, timeRange);
+        
+        if (shareableLinkInput){
+          shareableLinkInput.value = shareUrl;
+        }
+        if (copyShareBtn){
+          copyShareBtn.disabled = false;
+        }
+        
+        toast("Shareable link generated!", "ok");
+      } catch (error) {
+        toast("Failed to generate link: " + error.message, "error");
+      } finally {
+        hideLoading();
+      }
+    });
+  }
+  
+  if (copyShareBtn && shareableLinkInput){
+    copyShareBtn.addEventListener("click", async () => {
+      const url = shareableLinkInput.value;
+      if (!url){
+        toast("No link to copy", "error");
+        return;
+      }
+      
+      const success = await copyShareableLink(url);
+      if (success){
+        toast("Link copied to clipboard!", "ok");
+      } else {
+        toast("Failed to copy link", "error");
+      }
+    });
+  }
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && changelogModal && !changelogModal.classList.contains("hidden")) {
       closeChangelog();
@@ -760,7 +826,7 @@ const metaSummary = document.getElementById("metaSummary");
 
 
 
-const S = { headers: [], cols: [], timeIdx: -1, name:"", size:0, ready:false };
+const S = { headers: [], cols: [], timeIdx: -1, name:"", size:0, ready:false, uploadedFileId: null };
 const plotRegistry = [];
 const timeWindow = { enabled:false, range:null };
 
@@ -839,7 +905,29 @@ function openMetadataModal(){
   const modal = document.getElementById("metadataModal");
   if (modal) {
     updateMetaSummary();
+    updateShareSection();
     modal.classList.remove("hidden");
+  }
+}
+
+function updateShareSection(){
+  const shareSection = document.getElementById("shareSection");
+  const generateBtn = document.getElementById("generateShareBtn");
+  const copyBtn = document.getElementById("copyShareBtn");
+  const linkInput = document.getElementById("shareableLinkInput");
+  
+  if (!shareSection || !generateBtn || !copyBtn || !linkInput) return;
+  
+  if (S.ready && S.uploadedFileId){
+    shareSection.style.display = "block";
+    generateBtn.disabled = false;
+    linkInput.value = "";
+  } else if (S.ready){
+    shareSection.style.display = "block";
+    generateBtn.disabled = false;
+    linkInput.placeholder = "Upload log to cloud first, then generate link";
+  } else {
+    shareSection.style.display = "none";
   }
 }
 
@@ -867,6 +955,8 @@ async function archiveCurrentLog(){
   showLoading();
   try {
     await uploadLogToSupabase(csvText, fileName, S.size, note);
+    // Store uploaded file ID for shareable links
+    S.uploadedFileId = fileName;
     closeMetadataModal();
     if (archiveNoteInput) archiveNoteInput.value = "";
   } catch (err) {
