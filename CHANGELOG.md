@@ -2,18 +2,44 @@
 
 ## Version History
 
-### Beta 1.5 – Performance & UX Overhaul Foundation
-**Date:** January 2026  
-**Status:** 🧪 Beta Release
+### Beta 1.5 – Performance & UX Overhaul
+**Date:** January 27, 2026  
+**Status:** ✅ Released
 
-#### 🚀 Upcoming Features (In Development)
-- **Performance Foundation** – Web Workers for CSV parsing, IndexedDB migration, skeleton screens, debounce/throttle
-- **Plot Optimization** – scattergl for large datasets, data downsampling, code splitting, lazy rendering
-- **Core UX Improvements** – Keyboard shortcuts, enhanced file handling, export options, mobile improvements
-- **Advanced Features** – Comparison mode, annotations system, templates & presets, shareable links
+#### 🚀 Performance Foundation
+- **Web Workers** – CSV parsing moved to background thread with progress reporting, preventing UI blocking
+- **IndexedDB Migration** – Replaced sessionStorage with IndexedDB for larger capacity and persistent storage
+- **Skeleton Screens** – Replaced full-screen loaders with skeleton placeholders for better perceived performance
+- **Progress Indicators** – Real-time progress bars for CSV parsing operations
+- **Debounce/Throttle** – Applied to slider updates and input handlers for smoother interactions
 
-#### 📝 Note
-This beta release marks the foundation for major performance and UX improvements. Full feature set will be rolled out incrementally.
+#### 📊 Plot Optimization
+- **scattergl Support** – Automatic use of WebGL rendering for datasets >10,000 points
+- **Data Downsampling** – LTTB (Largest-Triangle-Three-Buckets) algorithm for efficient rendering of large datasets
+- **Lazy Rendering** – Intersection Observer API for rendering plots only when entering viewport
+- **Performance Tuning** – Optimized rendering pipeline for faster initial load and smoother interactions
+
+#### ⌨️ Core UX Improvements
+- **Keyboard Shortcuts** – Ctrl/Cmd+O (open), Ctrl/Cmd+S (save), Esc (close modals), Arrow keys (navigate plots)
+- **Enhanced File Handling** – Improved drag-and-drop with visual feedback, clickable dropzone, recent files menu with thumbnails
+- **Export Options** – PNG/SVG export for individual plots, ZIP export for all plots, PDF report generation
+- **Mobile Improvements** – Touch gestures (swipe navigation, long-press context menu), bottom sheet modals, adaptive UI
+
+#### 🎯 Advanced Features
+- **Annotations System** – Mark events at specific timestamps (knock, shift points, boost spikes, etc.) with notes and color coding
+- **Templates & Presets** – Save plot configurations for quick reuse, includes default presets for common analysis scenarios
+- **Shareable Links** – Generate shareable URLs for cloud-uploaded logs with view configuration
+- **Quick Search** – Type to jump to plots by parameter name prefix (e.g., type "wh" to find "Wheel Speed")
+
+#### 🐛 Fixes
+- Fixed Templates & Presets and Annotations menu items not responding to clicks
+- Improved dropdown menu handling with ID-based event handlers
+- Enhanced error handling and user feedback throughout
+
+#### 🔧 Technical
+- Modular architecture with separate modules for utilities, storage, downsampling, shortcuts, export, mobile, annotations, templates, and shareable links
+- Cache-bust query params bumped to 1.5.0 across HTML/JS/CSS
+- Improved code organization and maintainability
 
 ### preAlpha 1.4 – Cloud archive + session logging
 **Date:** December 2025  
