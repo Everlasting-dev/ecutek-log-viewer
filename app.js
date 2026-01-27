@@ -4,6 +4,7 @@ import { debounce, throttle, formatBytes, supportsWebWorkers } from "./modules/u
 import { storeLog, getRecentLog, storeParsed, getParsed, addToRecent, migrateFromSessionStorage, getRecentFiles } from "./modules/storage.js";
 import { downsampleLTTB } from "./modules/downsample.js";
 import { registerShortcut, initShortcuts, getModifierKey } from "./modules/shortcuts.js";
+import { exportPlotPNG, exportPlotSVG, exportAllPlots, exportPDFReport } from "./modules/export.js";
 
 // Classic loader (startup + runtime)
 const sleep = (ms)=> new Promise(r=>setTimeout(r, ms));
@@ -299,8 +300,13 @@ function initDropdowns() {
         case "Open CSV File":
           document.getElementById("csvFile").click();
           break;
-        case "Export Data":
-          toast("Export functionality coming soon!", "ok");
+        case "Export":
+          // Handle export submenu toggle
+          const exportSubmenu = item.nextElementSibling;
+          if (exportSubmenu && exportSubmenu.classList.contains('export-submenu')){
+            e.stopPropagation();
+            exportSubmenu.style.display = exportSubmenu.style.display === 'none' ? 'block' : 'none';
+          }
           break;
         case "Signal Matrix":
           // Already on multi plot
@@ -337,6 +343,120 @@ function initDropdowns() {
   
   // Update recent files menu on initialization
   updateRecentFilesMenu();
+  
+  // Setup export handlers
+  setupExportHandlers();
+}
+
+// Export handlers
+function setupExportHandlers(){
+  const exportPNG = document.getElementById('exportPNG');
+  const exportSVG = document.getElementById('exportSVG');
+  const exportAllPNG = document.getElementById('exportAllPNG');
+  const exportPDF = document.getElementById('exportPDF');
+  
+  if (exportPNG){
+    exportPNG.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const activePlot = getActivePlot();
+      if (activePlot){
+        try {
+          const title = activePlot.closest('.plot-card')?.querySelector('.plot-title span')?.textContent || 'plot';
+          await exportPlotPNG(activePlot, title);
+          toast('Plot exported as PNG', 'ok');
+        } catch (error) {
+          toast('Export failed: ' + error.message, 'error');
+        }
+      } else {
+        toast('No plot selected', 'error');
+      }
+    });
+  }
+  
+  if (exportSVG){
+    exportSVG.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const activePlot = getActivePlot();
+      if (activePlot){
+        try {
+          const title = activePlot.closest('.plot-card')?.querySelector('.plot-title span')?.textContent || 'plot';
+          await exportPlotSVG(activePlot, title);
+          toast('Plot exported as SVG', 'ok');
+        } catch (error) {
+          toast('Export failed: ' + error.message, 'error');
+        }
+      } else {
+        toast('No plot selected', 'error');
+      }
+    });
+  }
+  
+  if (exportAllPNG){
+    exportAllPNG.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const plots = Array.from(document.querySelectorAll('.plot-card .plot')).filter(div => div._rendered !== false);
+      if (plots.length > 0){
+        try {
+          showLoading();
+          await exportAllPlots(plots, 'ecutek-plots');
+          hideLoading();
+          toast(`Exported ${plots.length} plots as ZIP`, 'ok');
+        } catch (error) {
+          hideLoading();
+          toast('Export failed: ' + error.message, 'error');
+        }
+      } else {
+        toast('No plots to export', 'error');
+      }
+    });
+  }
+  
+  if (exportPDF){
+    exportPDF.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const plots = Array.from(document.querySelectorAll('.plot-card .plot')).filter(div => div._rendered !== false);
+      if (plots.length > 0){
+        try {
+          showLoading();
+          const metadata = {
+            name: S.name || 'untitled',
+            size: formatBytes(S.size),
+            duration: S.cols[S.timeIdx]?.length ? `${(S.cols[S.timeIdx][S.cols[S.timeIdx].length - 1] - S.cols[S.timeIdx][0]).toFixed(2)}s` : '—',
+            samples: S.cols[S.timeIdx]?.length || 0
+          };
+          await exportPDFReport({ plots, metadata, filename: S.name || 'ecutek-report' });
+          hideLoading();
+          toast('PDF report generated', 'ok');
+        } catch (error) {
+          hideLoading();
+          toast('PDF export failed: ' + error.message, 'error');
+        }
+      } else {
+        toast('No plots to export', 'error');
+      }
+    });
+  }
+}
+
+function getActivePlot(){
+  // Get the plot that's currently in view or was last clicked
+  const plotCards = Array.from(document.querySelectorAll('.plot-card'));
+  for (const card of plotCards){
+    const rect = card.getBoundingClientRect();
+    if (rect.top >= 0 && rect.top < window.innerHeight){
+      const plot = card.querySelector('.plot');
+      if (plot && plot._rendered !== false){
+        return plot;
+      }
+    }
+  }
+  // Fallback to first rendered plot
+  const firstPlot = document.querySelector('.plot-card .plot');
+  return firstPlot && firstPlot._rendered !== false ? firstPlot : null;
 }
   
   // Handle navigation menu active states

@@ -1483,3 +1483,17 @@ body{ margin:0; background:var(--bg); color:var(--fg);
   min-width: 18px;
   text-align: center;
 }
+
+/* Export submenu */
+.export-submenu {
+  min-width: 220px;
+}
+
+.dropdown-item:hover .export-submenu {
+  display: block !important;
+}
+
+.export-submenu .dropdown-item {
+  padding: 10px 16px;
+  font-size: 13px;
+}
