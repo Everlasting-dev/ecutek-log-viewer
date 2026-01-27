@@ -1,6 +1,6 @@
 # EcuTek Log Viewer
 
-**Current build:** `preAlpha 1.3.11`
+**Current build:** `Beta 1.5`
 
 A modern, client-side web application for viewing and analyzing EcuTek CSV log files. Built with vanilla JavaScript, Plotly.js, and PapaParse for robust CSV parsing and interactive data visualization.
 

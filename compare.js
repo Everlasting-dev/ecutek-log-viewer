@@ -1,4 +1,7 @@
-﻿function openShiftLabModal(){
+﻿import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm";
+import { parseCSV, findTimeIndex, findRpmIndex, numericColumns } from "./parser.js";
+
+function openShiftLabModal(){
   if (shiftLabModal) {
     shiftLabModal.classList.remove("hidden");
     runShiftLab();
@@ -20,7 +23,123 @@ function closeMetadataModal(){
   if (metadataModal) metadataModal.classList.add("hidden");
 }
 // Compare view: aligned 5-col UI, value-only chips with ▲▼, fixed 50% step, preserve X-range, auto-select Ys.
-import { parseCSV, findTimeIndex, findRpmIndex, numericColumns } from "./parser.js";
+
+// Classic loader (startup + runtime)
+const sleep = (ms)=> new Promise(r=>setTimeout(r, ms));
+const classicLoaderState = { stop:false, req:null };
+function renderClassicMatrix(t){
+  const el = document.getElementById("classicMatrix");
+  if (!el) return;
+  const ROWS=8, COLS=8, SCALE=[' ','.',':','*','o','O','#','@'], CELL_W=2, SPEED=2.2, FREQ=1.2, GLOW=0.85;
+  let out="";
+  const cx=(COLS-1)/2, cy=(ROWS-1)/2;
+  for(let y=0;y<ROWS;y++){
+    let line="";
+    for(let x=0;x<COLS;x++){
+      const dx=x-cx, dy=y-cy;
+      const dist=Math.hypot(dx,dy);
+      const phase=dist*FREQ - t*SPEED;
+      let b=(Math.sin(phase)*0.5+0.5)**1.35;
+      b=Math.min(1, Math.max(0,b*GLOW));
+      const idx=Math.min(SCALE.length-1, Math.floor(b*(SCALE.length-1)));
+      const ch=SCALE[idx];
+      line += ch + ' '.repeat(CELL_W-1);
+    }
+    out += line + '\n';
+  }
+  el.textContent = out;
+}
+function tickClassic(startTs){
+  if (classicLoaderState.stop) return;
+  const ts = performance.now();
+  const t = (ts - startTs)/1000;
+  renderClassicMatrix(t);
+  classicLoaderState.req = requestAnimationFrame(()=>tickClassic(startTs));
+}
+function startClassicLoader(){
+  const classic = document.getElementById("classicLoader");
+  if (classic) classic.classList.remove("hidden");
+  classicLoaderState.stop = false;
+  if (classicLoaderState.req) cancelAnimationFrame(classicLoaderState.req);
+  const now = performance.now();
+  classicLoaderState.req = requestAnimationFrame(()=>tickClassic(now));
+}
+function stopClassicLoader(){
+  classicLoaderState.stop = true;
+  if (classicLoaderState.req) cancelAnimationFrame(classicLoaderState.req);
+  classicLoaderState.req = null;
+}
+
+// Supabase client (upload-only; no reads)
+const SUPABASE_URL = window.SUPABASE_URL || "";
+const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || "";
+const supabase = (SUPABASE_URL && SUPABASE_ANON_KEY)
+  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth:{ autoRefreshToken:false, persistSession:false } })
+  : null;
+let cachedIp = null;
+async function getClientIp(){
+  if (cachedIp) return cachedIp;
+  try{
+    const res = await fetch("https://api.ipify.org?format=json");
+    if (res.ok){
+      const data = await res.json();
+      cachedIp = data?.ip || "";
+    }
+  }catch(_e){
+    cachedIp = "";
+  }
+  return cachedIp || "";
+}
+
+async function logSession({ remark="", fileName="", size=0, page="compare" }){
+  if (!supabase) return;
+  const ip = await getClientIp();
+  const ua = navigator.userAgent || "";
+  await supabase.from("session_logs").insert({
+    remark,
+    file_name: fileName,
+    size: size || 0,
+    page,
+    user_agent: ua,
+    ip: ip || null,
+    logged_at: new Date().toISOString()
+  });
+}
+
+function makeUploadPath(name){
+  const safeName = (name || "log.txt").replace(/[^a-zA-Z0-9._-]/g,"_");
+  const uuid = (crypto.randomUUID?.() || Math.random().toString(16).slice(2));
+  return `logs/${Date.now()}-${uuid}-${safeName}`;
+}
+
+async function uploadLogToSupabase(text, name, size, remark, source="compare"){
+  if (!supabase) return;
+  const safeName = (remark || name || "log").replace(/[^a-zA-Z0-9._-]/g, "_");
+  const fileName = safeName.endsWith(".csv") ? safeName : safeName + ".csv";
+  const path = `logs/${Date.now()}-${crypto.randomUUID?.() || Math.random().toString(16).slice(2)}-${fileName}`;
+  const blob = new Blob([text], { type:"text/plain" });
+  const { error: storageError } = await supabase.storage.from("logs").upload(path, blob, { upsert:false });
+  if (storageError) {
+    console.warn("Supabase storage upload failed", storageError);
+    toastMsg("Cloud upload failed (storage).", "error");
+    return;
+  }
+  const { error: metaError } = await supabase.from("log_uploads").insert({
+    remark: remark || "",
+    path,
+    name: fileName,
+    size: size || text?.length || 0,
+    source,
+    uploaded_at: new Date().toISOString()
+  });
+  if (metaError) {
+    console.warn("Supabase metadata insert failed", metaError);
+    toastMsg("Cloud upload saved file; metadata failed.", "error");
+    return;
+  }
+  logSession({ remark, fileName: fileName, size, page:"compare" }).catch(()=>{});
+  toastMsg("Uploaded to cloud.", "ok");
+}
 
 // ============================================================================
 // Cursor helpers – dotted blue line, tap-to-snap + drag-to-scroll
@@ -125,49 +244,6 @@ function wireCursor(gd, data){
   layer.addEventListener('touchend',   onUp,     { passive:false });
 }
 
-// ASCII Dot-Matrix Animation
-const el = document.getElementById('led');
-const ROWS = 8, COLS = 8;
-const SCALE = [' ', '.', ':', '*', 'o', 'O', '#', '@'];
-const CELL_W = 2;
-const SPEED = 2.2;
-const FREQ = 1.2;
-const GLOW = 0.85;
-
-function render(t) {
-  let out = '';
-  const cx = (COLS - 1) / 2, cy = (ROWS - 1) / 2;
-
-  for (let y = 0; y < ROWS; y++) {
-    let line = '';
-    for (let x = 0; x < COLS; x++) {
-      const dx = x - cx, dy = y - cy;
-      const dist = Math.hypot(dx, dy);
-      const phase = dist * FREQ - t * SPEED;
-      let b = (Math.sin(phase) * 0.5 + 0.5) ** 1.35;
-      b = Math.min(1, Math.max(0, b * GLOW));
-      const idx = Math.min(SCALE.length - 1, Math.floor(b * (SCALE.length - 1)));
-      const ch = SCALE[idx];
-      line += ch + ' '.repeat(CELL_W - 1);
-    }
-    out += line + '\n';
-  }
-  return out;
-}
-
-let start;
-function tick(now) {
-  if (!start) start = now;
-  const t = (now - start) / 1000;
-  if (el) el.textContent = render(t);
-  requestAnimationFrame(tick);
-}
-
-// Start ASCII animation when page loads
-document.addEventListener('DOMContentLoaded', () => {
-  requestAnimationFrame(tick);
-});
-
 const $ = (id) => document.getElementById(id);
 
 const csvFile  = $("csvFile");
@@ -240,11 +316,12 @@ const resetYRangeBtn = $("resetYRangeBtn");
 const metadataModal = $("metadataModal");
 const metadataClose = $("metadataClose");
 const metadataLink = $("metadataLink");
+const metadataMenuCompare = $("metadataMenuCompare");
 const metaSummary = $("metaSummary");
 const archiveLogBtn = $("archiveLogBtn");
 const archiveNoteInput = $("archiveNoteInput");
-
-// Time range slider elements
+const timeSelectToggle = null;
+const timeWindowReset = null;
 const timeMinSlider = $("timeMinSlider");
 const timeMaxSlider = $("timeMaxSlider");
 const timeMinInput = $("timeMinInput");
@@ -252,7 +329,7 @@ const timeMaxInput = $("timeMaxInput");
 const timeMinDisplay = $("timeMinDisplay");
 const timeMaxDisplay = $("timeMaxDisplay");
 const resetTimeRange = $("resetTimeRange");
-const fullTimeRange = $("fullTimeRange");
+const fullTimeRange = null;
 const smoothSelect = $("smoothSelect");
 const highlightToggle = $("highlightToggle");
 const highlightColumn = $("highlightColumn");
@@ -272,6 +349,8 @@ let timeRangeEnabled = false;
 let activeTimeSeries = [];
 let activeIndexMap = [];
 let smoothingWindow = 0;
+let timeWindowSelectEnabled = false;
+let chartReady = false;
 let highlightSettings = {
   enabled:false,
   columnIdx:-1,
@@ -356,6 +435,53 @@ function openScaleHelp(){
   if (scaleHelpModal) {
     scaleHelpModal.classList.remove("hidden");
   }
+}
+
+function clearTimeWindowSelection(){
+  timeRangeEnabled = false;
+  timeRangeMin = xMin;
+  timeRangeMax = xMax;
+  lastYRange = null;
+  if (chart && chartReady && chart._fullLayout){
+    Plotly.relayout(chart, { 'xaxis.autorange': true, selections: [] });
+  }
+  plot(false, false);
+  rescaleYToWindow();
+  syncTimeRangeControls();
+}
+
+function applyDragSelection(ev){
+  if (!chartReady || !chart || !chart._fullLayout) return;
+  if (!timeWindowSelectEnabled) return;
+  const rx = ev?.range?.x;
+  if (!Array.isArray(rx) || rx.length < 2) return;
+  let t0 = Math.min(rx[0], rx[1]);
+  let t1 = Math.max(rx[0], rx[1]);
+  t0 = Math.max(t0, xMin);
+  t1 = Math.min(t1, xMax);
+  if (t1 - t0 <= EPS) return;
+  timeRangeMin = t0;
+  timeRangeMax = t1;
+  timeRangeEnabled = true;
+  lastYRange = null;
+  plot(false, false);
+  rescaleYToWindow();
+  syncTimeRangeControls();
+}
+
+function setChartDragMode(){
+  if (!chart || !chartReady || !chart._fullLayout) return;
+  const dragmode = timeWindowSelectEnabled ? "select" : false;
+  Plotly.relayout(chart, { dragmode, selectdirection:"h" });
+}
+
+function wirePlotSelectionHandlers(){
+  if (!chart || !chartReady || typeof chart.on !== "function") return;
+  chart.removeAllListeners?.('plotly_selected');
+  chart.removeAllListeners?.('plotly_doubleclick');
+  chart.on('plotly_selected', applyDragSelection);
+  chart.on('plotly_doubleclick', () => clearTimeWindowSelection());
+  setChartDragMode();
 }
 
 function applySmoothing(series, window){
@@ -834,51 +960,23 @@ function archiveCurrentLog(){
     toastMsg("Load a primary log before archiving.","error");
     return;
   }
-  const stamp = new Date().toISOString().replace(/[-:]/g,"").replace(/\..+/,"");
-  const base = (primaryLogName || "log").replace(/\.[^.]+$/,"");
-  const safeBase = base.replace(/[^a-z0-9-_]/gi,"_").slice(0,40) || "log";
   const noteRaw = archiveNoteInput && typeof archiveNoteInput.value === "string" ? archiveNoteInput.value : "";
   const note = noteRaw.trim();
-  const noteSlug = note ? "_" + note.toLowerCase().replace(/[^a-z0-9]+/g,"-").slice(0,20) : "";
-  const filename = `logs_${stamp}_${safeBase}${noteSlug}.csv`;
-  const payload = note ? `# CloudNote: ${note}\n${primaryLogRaw}` : primaryLogRaw;
-
-  const copyToClipboard = ()=>{
-    if (navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(payload).then(()=>{
-        toastMsg("CSV copied to clipboard. Paste into logs/ and commit via logvault/<date>-<rand>.","ok");
-      }).catch(()=>{
-        toastMsg("Clipboard access denied. Copy manually from the dev tools console.", "error");
-        console.info("Manual CSV copy:\n", payload);
-      });
-    } else {
-      toastMsg("Clipboard unavailable. Copy the log manually.", "error");
-      console.info("Manual CSV copy:\n", payload);
-    }
-  };
-
-  if (window.showSaveFilePicker){
-    window.showSaveFilePicker({
-      suggestedName: filename,
-      types:[{description:"CSV Log", accept:{"text/csv":[".csv"]}}]
-    }).then(fileHandle=>{
-      if (!fileHandle) return;
-      return fileHandle.createWritable().then(writable=>{
-        writable.write(payload).then(()=> writable.close().then(()=>{
-          toastMsg("Archive saved. Push it via logvault/<date>-<rand>.","ok");
-        }));
-      });
-    }).catch(err=>{
-      if (err && err.name === "AbortError"){
-        toastMsg("Archive cancelled.","error");
-      } else {
-        toastMsg("Save failed. Copied to clipboard instead.","error");
-        copyToClipboard();
-      }
-    });
-  } else {
-    copyToClipboard();
+  if (!note) {
+    toastMsg("Please enter a Cloud Save Note.", "error");
+    return;
   }
+  archiveLogBtn.disabled = true;
+  uploadLogToSupabase(primaryLogRaw, primaryLogName, primaryLogSize, note, "compare")
+    ?.then(()=> {
+      toastMsg("Archived to cloud.", "ok");
+      closeMetadataModal();
+      if (archiveNoteInput) archiveNoteInput.value = "";
+    })
+    ?.catch(()=> toastMsg("Cloud archive failed.", "error"))
+    ?.finally(()=>{ 
+      archiveLogBtn.disabled = false; 
+    });
 }
 
 function findLastFinite(arr, start){
@@ -1373,6 +1471,22 @@ function refreshTimeRangeState(){
   timeRangeEnabled = !full;
 }
 
+function applyTimeRangeChange(){
+  if (!Number.isFinite(xMin) || !Number.isFinite(xMax)) return;
+  if (timeRangeMin > timeRangeMax) {
+    const mid = (timeRangeMin + timeRangeMax)/2;
+    timeRangeMin = mid - EPS;
+    timeRangeMax = mid + EPS;
+  }
+  timeRangeMin = Math.max(xMin, Math.min(timeRangeMin, xMax));
+  timeRangeMax = Math.max(xMin, Math.min(timeRangeMax, xMax));
+  refreshTimeRangeState();
+  syncTimeRangeControls();
+  plot(false, false);
+  rescaleYToWindow();
+  setChartDragMode();
+}
+
 function syncTimeRangeControls(){
   if (timeMinSlider && Number.isFinite(timeRangeMin)) {
     timeMinSlider.value = timeRangeMin;
@@ -1438,7 +1552,10 @@ function updateTimeRangeFromData() {
 let loadingTimeout = null;
 
 function showLoading() {
-  loadingScreen.classList.remove("hidden");
+  if (loadingScreen) {
+    loadingScreen.classList.remove("hidden");
+  }
+  startClassicLoader();
   
   if (loadingTimeout) clearTimeout(loadingTimeout);
   loadingTimeout = setTimeout(() => {
@@ -1452,7 +1569,10 @@ function hideLoading() {
     clearTimeout(loadingTimeout);
     loadingTimeout = null;
   }
-  loadingScreen.classList.add("hidden");
+  if (loadingScreen) {
+    loadingScreen.classList.add("hidden");
+  }
+  stopClassicLoader();
 }
 
 function rescaleYToWindow(){
@@ -1763,7 +1883,7 @@ function plot(showToasts=true, preserveRange=false){
       currentIndexMap = filteredData.indices || [];
     }
 
-    const typ = filteredData.x.length > 5000 ? "scattergl" : "scatter";
+    const typ = timeWindowSelectEnabled ? "scatter" : (filteredData.x.length > 5000 ? "scattergl" : "scatter");
     const traceY = filteredData.y ?? scaledY;
 
     traces.push({
@@ -1784,8 +1904,9 @@ function plot(showToasts=true, preserveRange=false){
       if (refYRaw && refTime){
         const refScaled = prepareSeries(refYRaw, exponent);
         const refFiltered = filterDataByTimeRange(refTime, refScaled, refYRaw);
+        const refTyp = timeWindowSelectEnabled ? "scatter" : (refFiltered.x.length > 5000 ? "scattergl" : "scatter");
         traces.push({
-          type: refFiltered.x.length > 5000 ? "scattergl" : "scatter",
+          type: refTyp,
           mode: "lines",
           x: refFiltered.x,
           y: refFiltered.y ?? refScaled,
@@ -1892,14 +2013,16 @@ function plot(showToasts=true, preserveRange=false){
     displaylogo:false,
     responsive:true,
     scrollZoom:false,
-    doubleClick:false,
+    doubleClick:'reset',
     staticPlot:false,
     modeBarButtonsToRemove:[
       "zoom2d","pan2d","select2d","lasso2d","zoomIn2d","zoomOut2d","autoScale2d","resetScale2d"
     ]
   }).then(()=>{
+    chartReady = true;
     activeTimeSeries = currentTimeSeries;
     activeIndexMap = currentIndexMap;
+    wirePlotSelectionHandlers();
     bindChartHandlers();
     const x = traces[0]?.x || [];
     const mid = Math.floor(x.length/2);
@@ -2079,6 +2202,10 @@ function tryLoadCached(){
 
 /* file flow */
 function wireInitialEventListeners(){
+  if (!csvFile) {
+    console.error("csvFile element not found");
+    return;
+  }
   csvFile.addEventListener("change",(e)=>{
     const f=e.target.files[0]||null; if(!f){ fileInfo.classList.add("hidden"); return; }
     const rd=new FileReader();
@@ -2124,92 +2251,53 @@ function wireInitialEventListeners(){
 
   genBtn.addEventListener("click", ()=>{ plot(true,false); updateReadouts(); });
 
-  // Time range slider event handlers
-  if (timeMinSlider) {
-    timeMinSlider.addEventListener("input", (e) => {
-      const newMin = parseFloat(e.target.value);
-      if (Number.isFinite(newMin) && newMin >= xMin && newMin < timeRangeMax - 0.1) { // Small gap to prevent overlap
-        timeRangeMin = newMin;
-        if (timeMinInput) timeMinInput.value = newMin.toFixed(1);
-        updateTimeRangeDisplays();
-        refreshTimeRangeState();
-        plot(false, false);
-        if (autoAnomaly.enabled) applyAnomalyDetection();
-      } else {
-        // Reset slider if invalid
-        e.target.value = timeRangeMin;
+  // Time window selection via sliders only (no toggle)
+  setChartDragMode();
+
+
+  // Time window sliders/inputs
+  if (timeMinSlider){
+    timeMinSlider.addEventListener("input", (e)=>{
+      const v = Number(e.target.value);
+      if (Number.isFinite(v)){
+        timeRangeMin = Math.min(v, timeRangeMax - EPS);
+        applyTimeRangeChange();
       }
     });
   }
-
-  if (timeMaxSlider) {
-    timeMaxSlider.addEventListener("input", (e) => {
-      const newMax = parseFloat(e.target.value);
-      if (Number.isFinite(newMax) && newMax <= xMax && newMax > timeRangeMin + 0.1) { // Small gap to prevent overlap
-        timeRangeMax = newMax;
-        if (timeMaxInput) timeMaxInput.value = newMax.toFixed(1);
-        updateTimeRangeDisplays();
-        refreshTimeRangeState();
-        plot(false, false);
-        if (autoAnomaly.enabled) applyAnomalyDetection();
-      } else {
-        // Reset slider if invalid
-        e.target.value = timeRangeMax;
+  if (timeMaxSlider){
+    timeMaxSlider.addEventListener("input", (e)=>{
+      const v = Number(e.target.value);
+      if (Number.isFinite(v)){
+        timeRangeMax = Math.max(v, timeRangeMin + EPS);
+        applyTimeRangeChange();
       }
     });
   }
-
-  if (timeMinInput) {
-    timeMinInput.addEventListener("input", (e) => {
-      const newMin = parseFloat(e.target.value);
-      if (Number.isFinite(newMin) && newMin >= xMin && newMin < timeRangeMax - 0.1) {
-        timeRangeMin = newMin;
-        if (timeMinSlider) timeMinSlider.value = newMin;
-        updateTimeRangeDisplays();
-        refreshTimeRangeState();
-        plot(false, false);
-        if (autoAnomaly.enabled) applyAnomalyDetection();
-      } else {
-        e.target.value = timeRangeMin.toFixed(1);
+  if (timeMinInput){
+    timeMinInput.addEventListener("change", (e)=>{
+      const v = Number(e.target.value);
+      if (Number.isFinite(v)){
+        timeRangeMin = Math.min(v, timeRangeMax - EPS);
+        applyTimeRangeChange();
       }
     });
   }
-
-  if (timeMaxInput) {
-    timeMaxInput.addEventListener("input", (e) => {
-      const newMax = parseFloat(e.target.value);
-      if (Number.isFinite(newMax) && newMax <= xMax && newMax > timeRangeMin + 0.1) {
-        timeRangeMax = newMax;
-        if (timeMaxSlider) timeMaxSlider.value = newMax;
-        updateTimeRangeDisplays();
-        refreshTimeRangeState();
-        plot(false, false);
-        if (autoAnomaly.enabled) applyAnomalyDetection();
-      } else {
-        e.target.value = timeRangeMax.toFixed(1);
+  if (timeMaxInput){
+    timeMaxInput.addEventListener("change", (e)=>{
+      const v = Number(e.target.value);
+      if (Number.isFinite(v)){
+        timeRangeMax = Math.max(v, timeRangeMin + EPS);
+        applyTimeRangeChange();
       }
     });
   }
-
-  if (resetTimeRange) {
-    resetTimeRange.addEventListener("click", () => {
+  if (resetTimeRange){
+    resetTimeRange.addEventListener("click", ()=>{
       timeRangeMin = xMin;
       timeRangeMax = xMax;
-      initializeTimeRange();
-      refreshTimeRangeState();
-      plot(false, false);
-      if (autoAnomaly.enabled) applyAnomalyDetection();
-    });
-  }
-
-  if (fullTimeRange) {
-    fullTimeRange.addEventListener("click", () => {
-      timeRangeMin = xMin;
-      timeRangeMax = xMax;
-      initializeTimeRange();
-      refreshTimeRangeState();
-      plot(false, false);
-      if (autoAnomaly.enabled) applyAnomalyDetection();
+      timeRangeEnabled = false;
+      applyTimeRangeChange();
     });
   }
 
@@ -2301,6 +2389,12 @@ function wireInitialEventListeners(){
   if (archiveLogBtn) {
     archiveLogBtn.addEventListener("click", archiveCurrentLog);
   }
+  if (metadataMenuCompare){
+    metadataMenuCompare.addEventListener("click", (e)=>{
+      e.preventDefault();
+      openMetadataModal();
+    });
+  }
   if (resetYRangeBtn) {
     resetYRangeBtn.addEventListener("click", ()=>{
       lastYRange = null;
@@ -2324,6 +2418,12 @@ function wireInitialEventListeners(){
   if (metadataModal) {
     metadataModal.addEventListener("click", (e)=>{ if (e.target === metadataModal) closeMetadataModal(); });
   }
+  if (metadataMenuCompare){
+    metadataMenuCompare.addEventListener("click", (e)=>{
+      e.preventDefault();
+      openMetadataModal();
+    });
+  }
   if (shiftLabLink) {
     shiftLabLink.addEventListener("click", (e)=>{ e.preventDefault(); openShiftLabModal(); });
   }
@@ -2339,16 +2439,18 @@ function wireInitialEventListeners(){
   }
   runShiftLab();
   if (csvCompareFile){
-    csvCompareFile.addEventListener("change", (e) => {
-      const file = e.target.files[0] || null;
-      if (!file){
-        compareLog = null;
-        updateCompareInfo();
-        plot(false, true);
-        return;
-      }
-      loadComparisonFile(file);
-    });
+    if (csvCompareFile) {
+      csvCompareFile.addEventListener("change", (e) => {
+        const file = e.target.files[0] || null;
+        if (!file){
+          compareLog = null;
+          updateCompareInfo();
+          plot(false, true);
+          return;
+        }
+        loadComparisonFile(file);
+      });
+    }
   }
 
   if (scaleHelpBtn) {
@@ -2454,8 +2556,27 @@ function initDropdowns() {
   
   dropdownItems.forEach(item => {
     item.addEventListener("click", (e) => {
-      e.preventDefault();
+      const href = item.getAttribute("href");
       const text = item.textContent.trim();
+      
+      // Handle external links (target="_blank") - allow default or open programmatically
+      if (item.hasAttribute("target") && item.getAttribute("target") === "_blank") {
+        // Check if it's a handled external link
+        if (href && href.includes("github.com/Everlasting-dev/ecutek-log-viewer")) {
+          e.preventDefault();
+          window.open("https://github.com/Everlasting-dev/ecutek-log-viewer", "_blank");
+          return;
+        }
+        if (href && href.includes("ecutek.atlassian.net")) {
+          e.preventDefault();
+          window.open("https://ecutek.atlassian.net/wiki/spaces/SUPPORT/pages/327698/EcuTek+Knowledge+Base", "_blank");
+          return;
+        }
+        // For other external links, allow default behavior
+        return;
+      }
+      
+      e.preventDefault();
       
       // Handle different menu actions
       switch(text) {
@@ -2481,10 +2602,13 @@ function initDropdowns() {
           window.location.href = "analysis.html";
           break;
         case "Documentation":
-          toastMsg("Documentation coming soon!", "ok");
+          window.open("https://github.com/Everlasting-dev/ecutek-log-viewer", "_blank");
+          break;
+        case "EcuTek Knowledge Base":
+          window.open("https://ecutek.atlassian.net/wiki/spaces/SUPPORT/pages/327698/EcuTek+Knowledge+Base", "_blank");
           break;
         default:
-          console.log("Menu item clicked:", text);
+          console.log("Menu item clicked:", text, "href:", href);
       }
     });
   });
@@ -2542,6 +2666,7 @@ function showStartupLoading() {
   const loadingScreen = document.getElementById("loadingScreen");
   if (loadingScreen) {
     loadingScreen.classList.remove("hidden");
+    startClassicLoader();
   }
 }
 
@@ -2549,94 +2674,82 @@ function hideStartupLoading() {
   const loadingScreen = document.getElementById("loadingScreen");
   if (loadingScreen) {
     loadingScreen.classList.add("hidden");
+    stopClassicLoader();
   }
 }
 
 function handleStartupSplash(){
-  const navEntry = performance.getEntriesByType && performance.getEntriesByType("navigation")[0];
-  const shouldShow = !sessionStorage.getItem("splashShown") || (navEntry && navEntry.type === "reload");
-  if (shouldShow){
-    showStartupLoading();
-    sessionStorage.setItem("splashShown","1");
-    setTimeout(()=> hideStartupLoading(), 1500);
-  } else {
-    hideStartupLoading();
-  }
-}
-
-// ASCII Dot-Matrix Loading Animation
-function createAsciiAnimation() {
-  const asciiContainer = document.querySelector('.ascii-loading .matrix');
-  if (!asciiContainer) return;
-  
-  const ROWS = 8, COLS = 8;
-  const SCALE = [' ', '.', ':', '*', 'o', 'O', '#', '@'];
-  const CELL_W = 2;
-  const SPEED = 2.2;
-  const FREQ = 1.2;
-  const GLOW = 0.85;
-  
-  function render(t) {
-    let out = '';
-    const cx = (COLS - 1) / 2, cy = (ROWS - 1) / 2;
-    
-    for (let y = 0; y < ROWS; y++) {
-      let line = '';
-      for (let x = 0; x < COLS; x++) {
-        const dx = x - cx, dy = y - cy;
-        const dist = Math.hypot(dx, dy);
-        const phase = dist * FREQ - t * SPEED;
-        let b = (Math.sin(phase) * 0.5 + 0.5) ** 1.35;
-        b = Math.min(1, Math.max(0, b * GLOW));
-        const idx = Math.min(SCALE.length - 1, Math.floor(b * (SCALE.length - 1)));
-        const ch = SCALE[idx];
-        line += ch + ' '.repeat(CELL_W - 1);
-      }
-      out += line + '\n';
+  try {
+    const navEntry = performance.getEntriesByType && performance.getEntriesByType("navigation")[0];
+    const shouldShow = !sessionStorage.getItem("splashShown") || (navEntry && navEntry.type === "reload");
+    if (shouldShow){
+      showStartupLoading();
+      sessionStorage.setItem("splashShown","1");
+      setTimeout(()=> {
+        hideStartupLoading();
+        // Extra safety: ensure it's hidden
+        const ls = document.getElementById("loadingScreen");
+        if (ls) ls.classList.add("hidden");
+      }, 1200);
+    } else {
+      hideStartupLoading();
     }
-    return out;
+  } catch(e) {
+    console.error("Splash error:", e);
+    // Always hide on error
+    const ls = document.getElementById("loadingScreen");
+    if (ls) ls.classList.add("hidden");
+    stopClassicLoader();
   }
-  
-  let start = null;
-  function tick(now) {
-    if (!start) start = now;
-    const t = (now - start) / 1000;
-    
-    if (asciiContainer) {
-      asciiContainer.textContent = render(t);
-    }
-    
-    // Continue animation for 3.5 seconds
-    if (t < 3.5) {
-      requestAnimationFrame(tick);
-    }
-  }
-  
-  requestAnimationFrame(tick);
 }
 
 document.addEventListener("DOMContentLoaded", ()=>{ 
-  handleStartupSplash();
+  // Ensure loading screen is hidden on startup (safety check)
+  try {
+    const ls = document.getElementById("loadingScreen");
+    if (ls && !ls.classList.contains("hidden")) {
+      ls.classList.add("hidden");
+      try { stopClassicLoader(); } catch(e) { console.warn("stopClassicLoader error:", e); }
+    }
+  } catch(e) {
+    console.warn("Loading screen hide error:", e);
+  }
+  
+  try {
+    handleStartupSplash();
+  } catch(e) {
+    console.error("Startup splash error:", e);
+    // Ensure loading screen is hidden even if splash fails
+    const ls = document.getElementById("loadingScreen");
+    if (ls) ls.classList.add("hidden");
+  }
   
   // Initialize theme system
-  initTheme();
+  try {
+    initTheme();
+  } catch(e) {
+    console.error("Theme init error:", e);
+  }
   
   // Initialize dropdown interactions
-  initDropdowns();
-  
-  // Start ASCII animation
-  createAsciiAnimation();
+  try {
+    initDropdowns();
+  } catch(e) {
+    console.error("Dropdowns init error:", e);
+  }
   
   // Add click handler to hide loading screen if stuck
-  loadingScreen.addEventListener("click", () => {
-    hideLoading();
-    toastMsg("Loading cancelled.", "error");
-  });
+  if (loadingScreen) {
+    loadingScreen.addEventListener("click", () => {
+      hideLoading();
+      toastMsg("Loading cancelled.", "error");
+    });
+  }
   
   // Add keyboard escape handler
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
-      if (!loadingScreen.classList.contains("hidden")) {
+      if (loadingScreen && !loadingScreen.classList.contains("hidden")) {
         hideLoading();
         toastMsg("Loading cancelled.", "error");
       } else if (scaleHelpModal && !scaleHelpModal.classList.contains("hidden")) {
@@ -2662,6 +2775,16 @@ document.addEventListener("DOMContentLoaded", ()=>{
     setTimeout(()=> openShiftLabModal(), 400);
   }
   updateHighlightSummary(0);
+  
+  // Final safety check: ensure loading screen is hidden after all initialization
+  setTimeout(() => {
+    const ls = document.getElementById("loadingScreen");
+    if (ls && !ls.classList.contains("hidden")) {
+      ls.classList.add("hidden");
+      stopClassicLoader();
+      console.log("Loading screen force-hidden after initialization");
+    }
+  }, 1500);
 });
 
 

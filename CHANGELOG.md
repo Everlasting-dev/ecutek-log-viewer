@@ -2,6 +2,48 @@
 
 ## Version History
 
+### Beta 1.5 – Performance & UX Overhaul Foundation
+**Date:** January 2026  
+**Status:** 🧪 Beta Release
+
+#### 🚀 Upcoming Features (In Development)
+- **Performance Foundation** – Web Workers for CSV parsing, IndexedDB migration, skeleton screens, debounce/throttle
+- **Plot Optimization** – scattergl for large datasets, data downsampling, code splitting, lazy rendering
+- **Core UX Improvements** – Keyboard shortcuts, enhanced file handling, export options, mobile improvements
+- **Advanced Features** – Comparison mode, annotations system, templates & presets, shareable links
+
+#### 📝 Note
+This beta release marks the foundation for major performance and UX improvements. Full feature set will be rolled out incrementally.
+
+### preAlpha 1.4 – Cloud archive + session logging
+**Date:** December 2025  
+**Status:** ✅ Released
+
+#### ✨ Features
+- **Archive modal upload** – Upload current log + remark to Supabase; entry lives under Tools ▸ Log Metadata & Archive.
+- **Remark-first metadata** – Supabase rows store your remark first, then path/name/size/page/timestamp.
+- **Session logging** – Client inserts IP, user agent, remark, file name, size, and page into Supabase (write-only anon).
+- **Classic loader only** – Retro loader removed; unified ASCII loader.
+- **Compare sliders restored** – Start/end sliders retained; toggle/reset row removed.
+- **Cloud Save Note as filename** – Uploaded files are renamed to the content of the Cloud Save Note box for easy identification.
+- **Auto-close archive modal** – Modal automatically closes after successful upload.
+- **Help dropdown links** – Added Documentation link to GitHub repo and EcuTek Knowledge Base link to help dropdown.
+- **Experimental label** – Comparison Log labeled as "(experimental)" to indicate it's not fully stable.
+
+#### 🐛 Fixes
+- Guards against cloud upload when no file is loaded; clearer errors when Supabase config is missing.
+- Fixed compare page loading screen stuck issue – loading screen now starts hidden and has multiple safety checks.
+- Removed blocking prompt() call that prevented CSV file uploads from working.
+- Added null checks for file input elements to prevent errors when elements aren't found.
+- Fixed index page Tools ▸ Log Metadata & Archive dropdown to properly open the modal.
+- Fixed compare page Top button positioning to match index page behavior.
+
+#### 🔧 Technical
+- Cache-bust query params bumped to 1.4.0 across HTML/JS/CSS.
+- Session log insert uses client IP fetch fallback and anon insert only.
+- Loading screen initialization improved with error handling and safety timeouts.
+- File upload handlers now include proper null checks and error handling.
+
 ### preAlpha 1.3.11 – GR6 Shift Lab & Log Archiver
 **Date:** November 2025  
 **Status:** 🚧 Pre-release

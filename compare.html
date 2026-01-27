@@ -1,20 +1,26 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>EcuTek Log Viewer (Compare)</title>
-  <link rel="stylesheet" href="style.css?v=1.3.0" />
+  <link rel="stylesheet" href="style.css?v=1.5.0" />
   <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script>
+    window.SUPABASE_URL = "https://qliilnxaqerekgqoqqxr.supabase.co";
+    window.SUPABASE_ANON_KEY = "sb_publishable__OIhCNmF5NJuUHfNl63uwg_ocsuHmNh";
+  </script>
 </head>
 <body class="compare-page">
   <!-- Loading Screen -->
-  <div id="loadingScreen" class="loading-screen">
-    <div class="ascii-loading">
-      <div class="matrix"></div>
-      <div class="loading-text">ECU-TEK LOG VIEWER</div>
-      <div class="hint">loading…</div>
+  <div id="loadingScreen" class="loading-screen hidden">
+    <div class="classic-loader" id="classicLoader">
+      <div class="ascii-loading">
+        <div class="matrix" id="classicMatrix"></div>
+        <div class="loading-text">ECU-TEK LOG VIEWER</div>
+        <div class="hint">loading…</div>
+      </div>
     </div>
   </div>
 
@@ -34,12 +40,6 @@
           <div class="dropdown">
             <a href="#" class="nav-item">File</a>
             <div class="dropdown-content">
-              <a href="#" class="dropdown-item">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/>
-                </svg>
-                Open CSV File
-              </a>
               <a href="#" class="dropdown-item">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
@@ -96,6 +96,12 @@
                 </svg>
                 Data Analysis Suite
               </a>
+              <a href="#" class="dropdown-item" id="metadataMenuCompare">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/>
+                </svg>
+                Log Metadata & Archive
+              </a>
               <a href="#" class="dropdown-item" id="shiftLabLink">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
@@ -108,11 +114,17 @@
           <div class="dropdown">
             <a href="#" class="nav-item">Help</a>
             <div class="dropdown-content">
-              <a href="#" class="dropdown-item">
+              <a href="https://github.com/Everlasting-dev/ecutek-log-viewer" target="_blank" class="dropdown-item">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/>
                 </svg>
                 Documentation
+              </a>
+              <a href="https://ecutek.atlassian.net/wiki/spaces/SUPPORT/pages/327698/EcuTek+Knowledge+Base" target="_blank" class="dropdown-item">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/>
+                </svg>
+                EcuTek Knowledge Base
               </a>
               <a href="about.html" class="dropdown-item">
                 <svg viewBox="0 0 24 24" fill="currentColor">
@@ -148,13 +160,12 @@
         </label>
         <label class="filebtn secondary">
           <input id="csvCompareFile" type="file" accept=".csv,.txt,.log,text/csv,text/plain" />
-          <span>Comparison Log (Optional)</span>
+          <span>Comparison Log (Optional) (experimental)</span>
         </label>
         <button id="clearBtn" class="btn ghost">Clear All</button>
       </div>
       <div class="toolbar">
         <button id="genBtnCompare" class="btn primary">Generate Plot</button>
-        <button id="metadataLink" class="btn ghost mini">Metadata &amp; Archive</button>
       </div>
       <div id="fileInfo" class="fileinfo"></div>
       <div id="compareFileInfo" class="fileinfo secondary hidden"></div>
@@ -220,37 +231,21 @@
       </div>
     </div>
 
-    <!-- Time Range Slider -->
-    <div class="card time-range-card">
-      <div class="time-range-header">
-        <h3>Time Window Filter</h3>
-        <div class="time-range-display">
-          <span id="timeMinDisplay">0.0s</span> - <span id="timeMaxDisplay">0.0s</span>
-        </div>
+    <div class="time-window-controls card">
+      <div class="tw-row">
+        <label for="timeMinSlider">Start (s)</label>
+        <input type="range" id="timeMinSlider" min="0" max="1" step="0.1" />
+        <input type="number" id="timeMinInput" step="0.1" />
+        <span id="timeMinDisplay" class="tw-display">0.0s</span>
       </div>
-      <div class="time-range-controls">
-        <div class="slider-row">
-          <label for="timeMinSlider">Start Time</label>
-          <input type="range" id="timeMinSlider" min="0" max="100" step="0.1" value="0" class="time-slider">
-        </div>
-        <div class="slider-row">
-          <label for="timeMaxSlider">End Time</label>
-          <input type="range" id="timeMaxSlider" min="0" max="100" step="0.1" value="100" class="time-slider">
-        </div>
-        <div class="time-inputs">
-          <div class="time-input-group">
-            <label for="timeMinInput">Start (s):</label>
-            <input type="number" id="timeMinInput" step="0.1" min="0" class="time-input">
-          </div>
-          <div class="time-input-group">
-            <label for="timeMaxInput">End (s):</label>
-            <input type="number" id="timeMaxInput" step="0.1" min="0" class="time-input">
-          </div>
-        </div>
-        <div class="time-range-buttons">
-          <button id="resetTimeRange" class="btn ghost mini">Reset Range</button>
-          <button id="fullTimeRange" class="btn ghost mini">Full Range</button>
-        </div>
+      <div class="tw-row">
+        <label for="timeMaxSlider">End (s)</label>
+        <input type="range" id="timeMaxSlider" min="0" max="1" step="0.1" />
+        <input type="number" id="timeMaxInput" step="0.1" />
+        <span id="timeMaxDisplay" class="tw-display">0.0s</span>
+      </div>
+      <div class="tw-actions">
+        <button id="resetTimeRange" class="btn ghost mini">Full Range</button>
       </div>
     </div>
 
@@ -356,9 +351,11 @@
     </div>
   </div>
 
-  <div class="footer">Client‑side parsing. Your file never leaves the device. · preAlpha 1.3.10</div>
-  <button id="toTop" class="totop" title="Back to top">↑ Top</button>
+  <div class="footer">Client‑side parsing. Your file never leaves the device. · Beta 1.5</div>
+  <div class="floating-actions">
+    <button id="toTop" class="totop action-btn" title="Back to top">↑ Top</button>
+  </div>
   <!-- ES module so compare.js can import parser.js -->
-  <script type="module" src="compare.js?v=1.3.0"></script>
+  <script type="module" src="compare.js?v=1.5.0"></script>
 </body>
 </html>

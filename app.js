@@ -1,54 +1,121 @@
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm";
 import { parseCSV, findTimeIndex } from "./parser.js";
 
-// ASCII Dot-Matrix Loading Animation
-function createAsciiAnimation() {
-  const asciiContainer = document.querySelector('.ascii-loading .matrix');
-  if (!asciiContainer) return;
-  
-  const ROWS = 8, COLS = 8;
-  const SCALE = [' ', '.', ':', '*', 'o', 'O', '#', '@'];
-  const CELL_W = 2;
-  const SPEED = 2.2;
-  const FREQ = 1.2;
-  const GLOW = 0.85;
-  
-  function render(t) {
-    let out = '';
-    const cx = (COLS - 1) / 2, cy = (ROWS - 1) / 2;
-    
-    for (let y = 0; y < ROWS; y++) {
-      let line = '';
-      for (let x = 0; x < COLS; x++) {
-        const dx = x - cx, dy = y - cy;
-        const dist = Math.hypot(dx, dy);
-        const phase = dist * FREQ - t * SPEED;
-        let b = (Math.sin(phase) * 0.5 + 0.5) ** 1.35;
-        b = Math.min(1, Math.max(0, b * GLOW));
-        const idx = Math.min(SCALE.length - 1, Math.floor(b * (SCALE.length - 1)));
-        const ch = SCALE[idx];
-        line += ch + ' '.repeat(CELL_W - 1);
-      }
-      out += line + '\n';
+// Classic loader (startup + runtime)
+const sleep = (ms)=> new Promise(r=>setTimeout(r, ms));
+const classicLoaderState = { stop:false, req:null };
+function renderClassicMatrix(t){
+  const el = document.getElementById("classicMatrix");
+  if (!el) return;
+  const ROWS=8, COLS=8, SCALE=[' ','.',':','*','o','O','#','@'], CELL_W=2, SPEED=2.2, FREQ=1.2, GLOW=0.85;
+  let out="";
+  const cx=(COLS-1)/2, cy=(ROWS-1)/2;
+  for(let y=0;y<ROWS;y++){
+    let line="";
+    for(let x=0;x<COLS;x++){
+      const dx=x-cx, dy=y-cy;
+      const dist=Math.hypot(dx,dy);
+      const phase=dist*FREQ - t*SPEED;
+      let b=(Math.sin(phase)*0.5+0.5)**1.35;
+      b=Math.min(1, Math.max(0,b*GLOW));
+      const idx=Math.min(SCALE.length-1, Math.floor(b*(SCALE.length-1)));
+      const ch=SCALE[idx];
+      line += ch + ' '.repeat(CELL_W-1);
     }
-    return out;
+    out += line + '\n';
   }
-  
-  let start = null;
-  function tick(now) {
-    if (!start) start = now;
-    const t = (now - start) / 1000;
-    
-    if (asciiContainer) {
-      asciiContainer.textContent = render(t);
+  el.textContent = out;
+}
+function tickClassic(startTs){
+  if (classicLoaderState.stop) return;
+  const ts = performance.now();
+  const t = (ts - startTs)/1000;
+  renderClassicMatrix(t);
+  classicLoaderState.req = requestAnimationFrame(()=>tickClassic(startTs));
+}
+function startClassicLoader(){
+  const classic = document.getElementById("classicLoader");
+  if (classic) classic.classList.remove("hidden");
+  classicLoaderState.stop = false;
+  if (classicLoaderState.req) cancelAnimationFrame(classicLoaderState.req);
+  const now = performance.now();
+  classicLoaderState.req = requestAnimationFrame(()=>tickClassic(now));
+}
+function stopClassicLoader(){
+  classicLoaderState.stop = true;
+  if (classicLoaderState.req) cancelAnimationFrame(classicLoaderState.req);
+  classicLoaderState.req = null;
+}
+
+// Supabase client (upload-only; no reads)
+const SUPABASE_URL = window.SUPABASE_URL || "";
+const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || "";
+const supabase = (SUPABASE_URL && SUPABASE_ANON_KEY)
+  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth:{ autoRefreshToken:false, persistSession:false } })
+  : null;
+let cachedIp = null;
+async function getClientIp(){
+  if (cachedIp) return cachedIp;
+  try{
+    const res = await fetch("https://api.ipify.org?format=json");
+    if (res.ok){
+      const data = await res.json();
+      cachedIp = data?.ip || "";
     }
-    
-    // Continue animation for 3.5 seconds
-    if (t < 3.5) {
-      requestAnimationFrame(tick);
-    }
+  }catch(_e){
+    cachedIp = "";
   }
-  
-  requestAnimationFrame(tick);
+  return cachedIp || "";
+}
+
+async function logSession({ remark="", fileName="", size=0, page="index" }){
+  if (!supabase) return;
+  const ip = await getClientIp();
+  const ua = navigator.userAgent || "";
+  await supabase.from("session_logs").insert({
+    remark,
+    file_name: fileName,
+    size: size || 0,
+    page,
+    user_agent: ua,
+    ip: ip || null,
+    logged_at: new Date().toISOString()
+  });
+}
+
+function makeUploadPath(name){
+  const safeName = (name || "log.txt").replace(/[^a-zA-Z0-9._-]/g,"_");
+  const uuid = (crypto.randomUUID?.() || Math.random().toString(16).slice(2));
+  return `logs/${Date.now()}-${uuid}-${safeName}`;
+}
+
+async function uploadLogToSupabase(text, name, size, remark){
+  if (!supabase) return;
+  const safeName = (remark || name || "log").replace(/[^a-zA-Z0-9._-]/g, "_");
+  const fileName = safeName.endsWith(".csv") ? safeName : safeName + ".csv";
+  const path = `logs/${Date.now()}-${crypto.randomUUID?.() || Math.random().toString(16).slice(2)}-${fileName}`;
+  const blob = new Blob([text], { type:"text/plain" });
+  const { error: storageError } = await supabase.storage.from("logs").upload(path, blob, { upsert:false });
+  if (storageError) {
+    console.warn("Supabase storage upload failed", storageError);
+    toast("Cloud upload failed (storage).", "error");
+    return;
+  }
+  const { error: metaError } = await supabase.from("log_uploads").insert({
+    remark: remark || "",
+    path,
+    name: fileName,
+    size: size || text?.length || 0,
+    source: "index",
+    uploaded_at: new Date().toISOString()
+  });
+  if (metaError) {
+    console.warn("Supabase metadata insert failed", metaError);
+    toast("Cloud upload saved file; metadata failed.", "error");
+    return;
+  }
+  logSession({ remark, fileName: fileName, size, page:"index" }).catch(()=>{});
+  toast("Uploaded to cloud.", "ok");
 }
 
 // ============================================================================
@@ -126,8 +193,27 @@ function initDropdowns() {
   
   dropdownItems.forEach(item => {
     item.addEventListener("click", (e) => {
-      e.preventDefault();
+      const href = item.getAttribute("href");
       const text = item.textContent.trim();
+      
+      // Handle external links (target="_blank") - allow default or open programmatically
+      if (item.hasAttribute("target") && item.getAttribute("target") === "_blank") {
+        // Check if it's a handled external link
+        if (href && href.includes("github.com/Everlasting-dev/ecutek-log-viewer")) {
+          e.preventDefault();
+          window.open("https://github.com/Everlasting-dev/ecutek-log-viewer", "_blank");
+          return;
+        }
+        if (href && href.includes("ecutek.atlassian.net")) {
+          e.preventDefault();
+          window.open("https://ecutek.atlassian.net/wiki/spaces/SUPPORT/pages/327698/EcuTek+Knowledge+Base", "_blank");
+          return;
+        }
+        // For other external links, allow default behavior
+        return;
+      }
+      
+      e.preventDefault();
       
       // Handle different menu actions
       switch(text) {
@@ -152,14 +238,20 @@ function initDropdowns() {
         case "Shift Strategy Lab":
           window.location.href = "compare.html#shift-lab";
           break;
+        case "Log Metadata & Archive":
+          openMetadataModal();
+          break;
         case "Documentation":
-          toast("Documentation coming soon!", "ok");
+          window.open("https://github.com/Everlasting-dev/ecutek-log-viewer", "_blank");
+          break;
+        case "EcuTek Knowledge Base":
+          window.open("https://ecutek.atlassian.net/wiki/spaces/SUPPORT/pages/327698/EcuTek+Knowledge+Base", "_blank");
           break;
         case "About":
           window.location.href = "about.html";
           break;
         default:
-          console.log("Menu item clicked:", text);
+          console.log("Menu item clicked:", text, "href:", href);
       }
     });
   });
@@ -186,6 +278,7 @@ function showStartupLoading() {
   const loadingScreen = document.getElementById("loadingScreen");
   if (loadingScreen) {
     loadingScreen.classList.remove("hidden");
+    startClassicLoader();
   }
 }
 
@@ -193,6 +286,7 @@ function hideStartupLoading() {
   const loadingScreen = document.getElementById("loadingScreen");
   if (loadingScreen) {
     loadingScreen.classList.add("hidden");
+    stopClassicLoader();
   }
 }
 
@@ -216,9 +310,6 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Initialize dropdown interactions
   initDropdowns();
-  
-  // Start ASCII animation
-  createAsciiAnimation();
 
   if (changelogBtn) changelogBtn.addEventListener("click", openChangelog);
   if (changelogClose) changelogClose.addEventListener("click", closeChangelog);
@@ -234,11 +325,20 @@ document.addEventListener('DOMContentLoaded', () => {
       if (e.target === hintsModal) closeHints();
     });
   }
+  if (metadataClose) metadataClose.addEventListener("click", closeMetadataModal);
+  if (metadataModal){
+    metadataModal.addEventListener("click", (e) => {
+      if (e.target === metadataModal) closeMetadataModal();
+    });
+  }
+  if (archiveLogBtn) archiveLogBtn.addEventListener("click", archiveCurrentLog);
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && changelogModal && !changelogModal.classList.contains("hidden")) {
       closeChangelog();
     } else if (e.key === "Escape" && hintsModal && !hintsModal.classList.contains("hidden")) {
       closeHints();
+    } else if (e.key === "Escape" && metadataModal && !metadataModal.classList.contains("hidden")) {
+      closeMetadataModal();
     }
   });
 });
@@ -264,6 +364,11 @@ const changelogClose = document.getElementById("changelogClose");
 const hintsBtn = document.getElementById("hintsBtn");
 const hintsModal = document.getElementById("hintsModal");
 const hintsClose = document.getElementById("hintsClose");
+const metadataModal = document.getElementById("metadataModal");
+const metadataClose = document.getElementById("metadataClose");
+const archiveLogBtn = document.getElementById("archiveLogBtn");
+const archiveNoteInput = document.getElementById("archiveNoteInput");
+const metaSummary = document.getElementById("metaSummary");
 
 
 
@@ -298,11 +403,77 @@ function closeHints(){
   if (hintsModal) hintsModal.classList.add("hidden");
 }
 
+function updateMetaSummary(){
+  if (!metaSummary) return;
+  if (!S.ready || !S.headers.length || !S.cols.length || S.timeIdx < 0){
+    metaSummary.innerHTML = "<span>Upload a log to see VIN, ECU SW numbers, dongle IDs, sampling stats, GR6 shifts, and torque interventions.</span>";
+    if (archiveLogBtn) archiveLogBtn.disabled = true;
+    return;
+  }
+  const timeSeries = S.cols[S.timeIdx] || [];
+  const finiteTime = timeSeries.filter(Number.isFinite);
+  const samples = finiteTime.length;
+  const duration = samples >= 2 ? finiteTime[finiteTime.length-1] - finiteTime[0] : 0;
+  const sampleRate = duration > 0 ? samples / duration : 0;
+  const durationStr = duration > 0 ? `${duration.toFixed(2)} s` : "—";
+  const rateStr = sampleRate > 0 ? `${sampleRate.toFixed(1)} Hz` : "—";
+  metaSummary.innerHTML = `
+    <div class="meta-pair"><span>File</span><strong>${S.name || "—"}</strong></div>
+    <div class="meta-pair"><span>Size</span><strong>${S.size ? fmt(S.size) : "—"}</strong></div>
+    <div class="meta-pair"><span>Samples</span><strong>${samples}</strong></div>
+    <div class="meta-pair"><span>Duration</span><strong>${durationStr}</strong></div>
+    <div class="meta-pair"><span>Sample Rate</span><strong>${rateStr}</strong></div>
+  `;
+  if (archiveLogBtn) archiveLogBtn.disabled = false;
+}
+
+function openMetadataModal(){
+  const modal = document.getElementById("metadataModal");
+  if (modal) {
+    updateMetaSummary();
+    modal.classList.remove("hidden");
+  }
+}
+
+function closeMetadataModal(){
+  const modal = document.getElementById("metadataModal");
+  if (modal) modal.classList.add("hidden");
+}
+
+async function archiveCurrentLog(){
+  if (!S.ready || !S.headers.length || !S.cols.length) {
+    toast("No log loaded.", "error");
+    return;
+  }
+  const note = archiveNoteInput ? archiveNoteInput.value.trim() : "";
+  if (!note) {
+    toast("Please enter a Cloud Save Note.", "error");
+    return;
+  }
+  const csvText = sessionStorage.getItem("csvText");
+  if (!csvText) {
+    toast("No CSV data available.", "error");
+    return;
+  }
+  const fileName = note.replace(/[^a-zA-Z0-9._-]/g, "_") + ".csv";
+  showLoading();
+  try {
+    await uploadLogToSupabase(csvText, fileName, S.size, note);
+    closeMetadataModal();
+    if (archiveNoteInput) archiveNoteInput.value = "";
+  } catch (err) {
+    toast("Upload failed: " + (err.message || "Unknown error"), "error");
+  } finally {
+    hideLoading();
+  }
+}
+
 // Loading screen functions
 let loadingTimeout = null;
 
 function showLoading() {
   els.loadingScreen.classList.remove("hidden");
+  startClassicLoader();
   
   // Safety timeout - hide loading after 10 seconds
   if (loadingTimeout) clearTimeout(loadingTimeout);
@@ -318,6 +489,7 @@ function hideLoading() {
     loadingTimeout = null;
   }
   els.loadingScreen.classList.add("hidden");
+  stopClassicLoader();
 }
 
 
