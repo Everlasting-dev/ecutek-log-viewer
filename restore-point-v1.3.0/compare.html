@@ -63,20 +63,20 @@
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
                 </svg>
-                Mega Plot
+                Correlation Lab
               </a>
               <a href="#" class="dropdown-item">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/>
                 </svg>
-                Multi Plot
+                Signal Matrix
               </a>
               <div class="dropdown-divider"></div>
-              <a href="about.html" class="dropdown-item">
+              <a href="#" class="dropdown-item" id="hintsBtn">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
                 </svg>
-                About
+                Hints
               </a>
             </div>
           </div>
@@ -84,19 +84,19 @@
           <div class="dropdown">
             <a href="#" class="nav-item">Tools</a>
             <div class="dropdown-content">
-              <a href="#" class="dropdown-item">
+              <a href="#" class="dropdown-item" id="dataAnalysisLink">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
                 </svg>
                 Data Analysis
               </a>
-              <a href="#" class="dropdown-item">
+              <a href="#" class="dropdown-item" id="statsLink">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
                 </svg>
                 Statistics
               </a>
-              <a href="#" class="dropdown-item">
+              <a href="#" class="dropdown-item" id="performanceLink">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
                 </svg>
@@ -132,8 +132,7 @@
           </svg>
           <span id="themeText">Dark</span>
         </div>
-        
-
+        <button id="changelogBtn" class="btn ghost mini">Change Log</button>
       </div>
     </div>
   </div>
@@ -145,25 +144,108 @@
       <div class="pickers">
         <label class="filebtn">
           <input id="csvFile" type="file" accept=".csv,.txt,.log,text/csv,text/plain" />
-          <span>Choose Log File (.txt/.csv)</span>
+          <span>Primary Log (CSV/TXT)</span>
         </label>
-        <button id="clearBtn" class="btn ghost">Clear</button>
+        <label class="filebtn secondary">
+          <input id="csvCompareFile" type="file" accept=".csv,.txt,.log,text/csv,text/plain" />
+          <span>Comparison Log (Optional)</span>
+        </label>
+        <button id="clearBtn" class="btn ghost">Clear All</button>
       </div>
       <div class="toolbar">
         <button id="genBtnCompare" class="btn primary">Generate Plot</button>
       </div>
       <div id="fileInfo" class="fileinfo"></div>
+      <div id="compareFileInfo" class="fileinfo secondary hidden"></div>
 
       <div id="toast" class="toast hidden"></div>
     </div>
 
-    <div class="card">
+    <div class="card axis-card">
+      <div class="card-heading">
+        <span>Axis Configuration</span>
+        <div class="heading-actions">
+          <button id="autoScaleBtn" class="btn ghost mini">Auto Scale</button>
+          <button id="scaleHelpBtn" class="btn ghost mini">Scaling Help</button>
+        </div>
+      </div>
       <div id="axisPanel" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="card enhancements-card">
+      <div class="card-heading">
+        <span>Data Enhancements</span>
+      </div>
+      <div class="enhance-grid">
+        <div class="enhance-block">
+          <label for="smoothSelect">Smoothing Window</label>
+          <select id="smoothSelect">
+            <option value="0">Off</option>
+            <option value="3">3 pt</option>
+            <option value="5">5 pt</option>
+            <option value="9">9 pt</option>
+            <option value="15">15 pt</option>
+          </select>
+          <small>Centered moving average applied before scaling.</small>
+        </div>
+        <div class="enhance-block">
+          <label for="highlightToggle">Event Highlighting</label>
+          <div class="highlight-controls">
+            <label class="toggle">
+              <input type="checkbox" id="highlightToggle" />
+              <span>Enable</span>
+            </label>
+            <select id="highlightColumn"></select>
+            <div class="threshold-row">
+              <select id="highlightMode">
+                <option value="above">above</option>
+                <option value="below">below</option>
+              </select>
+              <input type="number" id="highlightThreshold" step="0.1" placeholder="Threshold" />
+            </div>
+          </div>
+          <small>Highlighted points appear as accent markers.</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Time Range Slider -->
+    <div class="card time-range-card">
+      <div class="time-range-header">
+        <h3>Time Window Filter</h3>
+        <div class="time-range-display">
+          <span id="timeMinDisplay">0.0s</span> - <span id="timeMaxDisplay">0.0s</span>
+        </div>
+      </div>
+      <div class="time-range-controls">
+        <div class="slider-row">
+          <label for="timeMinSlider">Start Time</label>
+          <input type="range" id="timeMinSlider" min="0" max="100" step="0.1" value="0" class="time-slider">
+        </div>
+        <div class="slider-row">
+          <label for="timeMaxSlider">End Time</label>
+          <input type="range" id="timeMaxSlider" min="0" max="100" step="0.1" value="100" class="time-slider">
+        </div>
+        <div class="time-inputs">
+          <div class="time-input-group">
+            <label for="timeMinInput">Start (s):</label>
+            <input type="number" id="timeMinInput" step="0.1" min="0" class="time-input">
+          </div>
+          <div class="time-input-group">
+            <label for="timeMaxInput">End (s):</label>
+            <input type="number" id="timeMaxInput" step="0.1" min="0" class="time-input">
+          </div>
+        </div>
+        <div class="time-range-buttons">
+          <button id="resetTimeRange" class="btn ghost mini">Reset Range</button>
+          <button id="fullTimeRange" class="btn ghost mini">Full Range</button>
+        </div>
+      </div>
     </div>
 
     <div class="plots">
       <div class="plot-card">
-        <div class="plot-title">Comparison Plot</div>
+        <div class="plot-title">Performance Analytics Plot</div>
         <div class="plot-frame">
           <div id="chart" class="plot big"></div>
         </div>
@@ -171,7 +253,141 @@
     </div>
   </div>
 
-  <div class="footer">Client‑side parsing. Your file never leaves the device. · v1.3.0</div>
+  <div id="dataAnalysisModal" class="modal hidden">
+    <div class="modal-content wide">
+      <button class="modal-close" id="dataAnalysisClose" aria-label="Close data analysis">×</button>
+      <h3>Data Analysis</h3>
+      <section class="modal-section">
+        <h4>Derived Channel Builder</h4>
+        <div class="form-grid">
+          <select id="derivedInputA"></select>
+          <select id="derivedOperation">
+            <option value="subtract">Minus</option>
+            <option value="add">Add</option>
+            <option value="divide">Divide</option>
+            <option value="multiply">Multiply</option>
+          </select>
+          <select id="derivedInputB"></select>
+          <input type="text" id="derivedName" placeholder="Label e.g. Boost Delta" />
+          <button id="derivedComputeBtn" class="btn mini">Compute</button>
+        </div>
+        <div id="derivedResult" class="analysis-result muted">Select columns and click Compute to preview the custom channel.</div>
+      </section>
+      <section class="modal-section">
+        <h4>Smoothing Presets & Anomaly Detection</h4>
+        <div class="pill-group" id="smoothingPresetGroup">
+          <button data-smooth="0">Off</button>
+          <button data-smooth="3">3 pt</button>
+          <button data-smooth="5">5 pt</button>
+          <button data-smooth="9">9 pt</button>
+          <button data-smooth="15">15 pt</button>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="anomalyAutoToggle" />
+          Auto anomaly detection (z-score 2.0)
+        </label>
+        <div id="anomalySummary" class="analysis-result muted">Auto detection adjusts highlight thresholds based on mean + 2σ.</div>
+      </section>
+      <section class="modal-section">
+        <h4>Correlation Snapshot</h4>
+        <p class="muted">Pick up to four enabled traces to compute a quick Pearson correlation matrix.</p>
+        <div id="correlationChecklist" class="checklist-grid"></div>
+        <button id="correlationRunBtn" class="btn ghost mini">Run Correlation</button>
+        <div id="correlationResult" class="analysis-result scrollable"></div>
+      </section>
+    </div>
+  </div>
+
+  <div id="statsModal" class="modal hidden">
+    <div class="modal-content wide">
+      <button class="modal-close" id="statsClose" aria-label="Close stats">×</button>
+      <h3>Statistics</h3>
+      <section class="modal-section">
+        <h4>Distribution Overview</h4>
+        <div class="form-grid">
+          <select id="statsColumnSelect"></select>
+          <button id="statsComputeBtn" class="btn mini">Update</button>
+        </div>
+        <div id="statsSummary" class="analysis-result muted">Pick a parameter to see min/mean/max and percentile spread.</div>
+      </section>
+      <section class="modal-section">
+        <h4>Time in Range</h4>
+        <div class="form-grid">
+          <input type="number" id="rangeMinInput" placeholder="Min" step="0.1" />
+          <input type="number" id="rangeMaxInput" placeholder="Max" step="0.1" />
+          <button id="rangeComputeBtn" class="btn mini">Compute %</button>
+        </div>
+        <div id="rangeSummary" class="analysis-result muted">Enter a range to see how much of the run stayed inside.</div>
+      </section>
+      <section class="modal-section">
+        <h4>Session Comparison</h4>
+        <div id="sessionComparison" class="analysis-result muted">Load a comparison log to view deltas between runs.</div>
+      </section>
+    </div>
+  </div>
+
+  <div id="performanceModal" class="modal hidden">
+    <div class="modal-content wide">
+      <button class="modal-close" id="performanceClose" aria-label="Close performance metrics">×</button>
+      <h3>Performance Metrics</h3>
+      <section class="modal-section">
+        <h4>Acceleration Benchmarks</h4>
+        <div class="form-grid">
+          <select id="speedColumnSelect"></select>
+          <button id="performanceComputeBtn" class="btn mini">Analyze</button>
+        </div>
+        <div id="performanceSummary" class="analysis-result muted">Select a speed column (mph or km/h) to compute 0‑60, 100‑200, and peak acceleration.</div>
+      </section>
+      <section class="modal-section">
+        <h4>Health Indicators</h4>
+        <div id="healthSummary" class="analysis-result muted">Metrics for knock, fuel trims, boost/AFR compliance will appear here when relevant columns exist.</div>
+      </section>
+    </div>
+  </div>
+
+  <div id="scaleHelpModal" class="modal hidden">
+    <div class="modal-content">
+      <button class="modal-close" id="scaleHelpClose" aria-label="Close scaling help">×</button>
+      <h3>Scaling Shortcuts</h3>
+      <p>Use the ▲ / ▼ buttons (or the exponent input) to adjust each trace. Hold modifier keys for finer control:</p>
+      <ul>
+        <li><strong>Click</strong> – step by <code>±1</code></li>
+        <li><strong>Shift + Click</strong> – step by <code>±0.1</code></li>
+        <li><strong>Alt + Click</strong> – step by <code>±0.01</code></li>
+        <li><strong>Shift + Alt + Click</strong> – step by <code>±0.001</code></li>
+      </ul>
+      <p>The exponent shown (e.g., <code>0.01</code>) is applied as <code>value = raw ^ exponent</code>. Reset returns to <code>0</code> (no scaling).</p>
+    </div>
+  </div>
+
+  <div id="changelogModal" class="modal hidden">
+    <div class="modal-content">
+      <button class="modal-close" id="changelogClose" aria-label="Close change log">×</button>
+      <h3>Change Log</h3>
+      <ul>
+        <li><strong>Dual Log Overlay:</strong> load a reference CSV/TXT to plot dashed comparison traces.</li>
+        <li><strong>Smoothing & Highlights:</strong> moving averages plus threshold-based event markers.</li>
+        <li><strong>Time Window Filter:</strong> dual sliders + numeric inputs keep the chart focused.</li>
+        <li><strong>Power Scaling:</strong> per-trace exponents with modifier shortcuts for fine control.</li>
+      </ul>
+      <p>Full history lives in <code>CHANGELOG.md</code>.</p>
+    </div>
+  </div>
+
+  <div id="hintsModal" class="modal hidden">
+    <div class="modal-content">
+      <button class="modal-close" id="hintsClose" aria-label="Close hints">×</button>
+      <h3>Hints</h3>
+      <ul>
+        <li>Use Auto Scale to align wildly different signals before fine tuning.</li>
+        <li>Enable highlights only for the active traces to spot events quickly.</li>
+        <li>On mobile, swipe from the left edge to open analysis controls.</li>
+        <li>Load a reference log to compare runs without re-uploading data.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="footer">Client‑side parsing. Your file never leaves the device. · preAlpha 1.3.10</div>
   <button id="toTop" class="totop" title="Back to top">↑ Top</button>
   <!-- ES module so compare.js can import parser.js -->
   <script type="module" src="compare.js?v=1.3.0"></script>

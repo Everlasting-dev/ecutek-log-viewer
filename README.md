@@ -1,26 +1,41 @@
 # EcuTek Log Viewer
 
+**Current build:** `Beta 1.5`
+
 A modern, client-side web application for viewing and analyzing EcuTek CSV log files. Built with vanilla JavaScript, Plotly.js, and PapaParse for robust CSV parsing and interactive data visualization.
 
 ## 🚀 Features
 
-- **Multi-Plot View** - Individual parameter visualization with mini plots
-- **Mega Plot View** - Unified comparison interface with time slider
-- **Log Scale Support** - True logarithmic scaling with multiplicative controls
-- **File Upload** - Drag & drop + file picker support
-- **Session Storage** - Persistent file caching between sessions
-- **Mobile-First Design** - Responsive layout optimized for all devices
-- **Metadata Display** - Vehicle, VIN, ECU Call IDs, and Programming Dongle info
-- **Real-time Plotting** - Interactive charts with hover tooltips and annotations
+- **Signal Matrix (index.html)** – individual parameter plots with inline readouts
+- **Correlation Lab (compare.html)** – unified comparison interface with dual-log overlay
+- **Auto Scale + Power Scaling** – normalize wildly different signals before fine-grained exponent tweaks
+- **Smoothing & Highlights** – moving averages plus threshold-based event markers
+- **Change Log & Hints modals** – in-app documentation for every release
+- **Session Storage** – Persistent file caching between sessions
+- **Metadata Display** – Vehicle, VIN, ECU Call IDs, and Programming Dongle info
+- **Real-time Plotting** – Click-to-select with readouts; unified RAW readout in analysis
+- **Log Metadata & Archive Panel** – auto insights (duration, sampling, GR6 shifts) plus one-click archive downloads
+- **Shift Strategy Lab** – tuner-facing gearing sandbox inspired by [blocklayer.com](https://www.blocklayer.com/rpm-gear)
+- **Performance Benchmarks** – automatic 0‑60/60‑130/100‑200 computations with torque & traction watchers
+- **Correlation Lab simplified** – only the uploader, axis config, enhancements, time slider, and primary plot remain; all advanced labs live under the Tools menu.
+
+## 🆕 What’s new in preAlpha 1.3.11
+
+- **Archive-ready logs** – new “Archive Current Log” button downloads a timestamped CSV ready for `logs/`.
+- **Metadata Grid** – duration, sampling rate, RPM range, speed source, GR6 shift deltas, torque/traction notes.
+- **Line Weight control** – per-trace thickness sliders for both primary and comparison traces.
+- **Shift Strategy Lab** – GR6-friendly gearing visualizer + notes (built with inspiration from [blocklayer.com](https://www.blocklayer.com/rpm-gear)).
+- **Performance metrics overhaul** – automatic speed-channel detection, 0‑60/60‑130/100‑200, peak G, and health overlays.
+- **Random zoom fix** – X range now clamps exactly to the Time Window sliders while Y auto-rescales inside that window.
 
 ## 📁 Project Structure
 
 ```
 ecutek-log-viewer/
-├── index.html          # Multi-plot interface (main page)
-├── compare.html        # Mega plot interface (comparison page)
-├── app.js             # Multi-plot logic and file handling
-├── compare.js         # Mega plot logic and comparison features
+├── index.html          # Time Plot interface (main page)
+├── compare.html        # Analysis interface (comparison page)
+├── app.js             # Time Plot logic and file handling
+├── compare.js         # Analysis logic and comparison features
 ├── parser.js          # CSV parsing utilities and data processing
 ├── style.css          # Styling and responsive design
 ├── main.js            # Additional utilities (if present)
@@ -54,7 +69,6 @@ npm install -g http-server
 
 # Run server
 http-server -p 8000
-```
 
 #### Option 3: Live Server (VS Code Extension)
 1. Install "Live Server" extension in VS Code
@@ -67,35 +81,56 @@ http-server -p 8000
 2. **Open your browser** and navigate to:
    - `http://localhost:8000` (for Python/Node.js servers)
    - `http://127.0.0.1:5500` (for Live Server)
-3. **Upload EcuTek CSV files** using the file picker or drag & drop
-4. **Switch between views** using the dropdown menu:
-   - **Multi Plot**: Individual parameter visualization
-   - **Mega Plot**: Unified comparison interface
+3. **Upload EcuTek CSV files** using the file picker
+4. **Switch between views** using the dropdown (or mobile links in the taskbar):
+   - **Time Plot**: Individual parameter visualization
+   - **Analysis**: Unified comparison interface
+
+## 📦 Log Archiving Workflow
+
+1. **Load the log in `compare.html`** – once parsed, the Metadata & Archive card activates.
+2. **Add a Cloud Note & click “Archive Current Log”** – the note is prepended as `# CloudNote:` and the downloaded file is timestamped (e.g., `logs_20251124_0930_trackA.csv`).
+3. **Drop the file into `logs/`** (tracked via `.gitkeep`) so it’s versioned with the project.
+4. **Create an archive branch** for each upload to keep main clean:
+   ```bash
+   git checkout -b logvault/$(Get-Date -Format 'yyyyMMdd-HHmmss')-$(Get-Random -Maximum 9999)
+   git add logs/20251124_0930_trackA.csv
+   git commit -m "Archive: TrackA 2025-11-24 AM"
+   git push origin logvault/20251124-0930-5821
+   ```
+5. **Open a PR or stash for later** – this keeps heavyweight CSVs isolated yet accessible on demand.
+
+> Tip: the archive button uses the browser File System Access API when possible; otherwise it falls back to a plain download so the workflow still functions everywhere.
 
 ## 📊 Usage
 
 ### File Upload
 - **Supported formats**: `.csv`, `.txt`, `.log`
-- **Drag & drop** files directly onto the upload area
 - **File picker** - Click "Choose Log File" to browse
 - **Session persistence** - Files are cached in browser storage
 
-### Multi-Plot View (`index.html`)
+### Time Plot View (`index.html`)
 - **Individual parameter plots** with mini charts
-- **Hover tooltips** showing raw sensor values
-- **Time-based X-axis** with automatic detection
+- **Click-to-select**: highlight node and show RAW value below plot
+- **No in-plot hover**, no scrollZoom; X-axis = Time; skips Time-vs-Time
 - **Parameter filtering** - skips invalid/empty data columns
 
-### Mega Plot View (`compare.html`)
+### Analysis View (`compare.html`)
 - **Unified comparison interface** for multiple parameters
-- **Time slider** for range selection
-- **Log scale controls** with multiplicative scaling
-- **Series info box** with min/max values
-- **Click-to-snap** functionality for precise time selection
+- **Dual-log overlays** – load a comparison CSV/TXT for dashed reference traces
+- **Smoothing & event highlights** – moving-average windows and threshold markers
+- **Cursor snapping** and click-to-snap; unified readout with RAW values
+- **Auto Scale + exponent controls** – quick normalization followed by precise tweaks
+- **Auto Y rescale within current X window; X range preserved**
+- **Presets**: preloads Engine Speed, Fuel Pressure, Fuel Trim Short Term, MAP
+- **Metadata + Archive card** – sampling, duration, GR6 shift deltas, torque/traction interventions, archive downloads
+- **Shift Strategy Lab** – gearing sandbox for GR6 applications with clutch/slip hints inspired by [blocklayer.com](https://www.blocklayer.com/rpm-gear)
+- **Performance Metrics modal** – automatic speed-source detection, 0‑60/60‑130/100‑200, peak G, and health summaries (boost, AFR, knock, torque cuts)
 
-### Log Scale Features
+### Scaling & Normalization
 - **True logarithmic scaling** with base-10 decades
-- **Multiplicative controls** - Up (×1.2589) and Down (÷1.2589)
+- **Auto Scale** – aligns each enabled trace to a shared amplitude target
+- **Modifier shortcuts / fine controls** for desktop (Shift/Alt) and buttons for mobile
 - **Dynamic annotations** showing peak values
 - **Enhanced tooltips** with raw and scaled values
 
@@ -115,13 +150,13 @@ http-server -p 8000
 - Vehicle metadata parsing (VIN, ECU Call IDs, etc.)
 
 #### `app.js`
-- Multi-plot view logic
+- Time Plot view logic
 - File upload handling
 - Session storage management
 - Plot generation and rendering
 
 #### `compare.js`
-- Mega plot view logic
+- Analysis view logic
 - Time slider implementation
 - Log scale controls
 - Series comparison features
@@ -153,9 +188,9 @@ http-server -p 8000
 - **Accessibility** - Keyboard navigation and screen reader support
 
 ### Visualization
-- **Interactive plots** - Zoom, pan, hover, and click interactions
+- **Interactive plots** - Click selection and cursor snapping
 - **Color coding** - Consistent parameter colors across views
-- **Annotations** - Peak detection and value highlighting
+- **Readouts** - Time Plot shows value under each plot; Analysis shows unified RAW values box
 - **Time synchronization** - Coordinated time ranges across plots
 
 ## 🐛 Troubleshooting
@@ -171,6 +206,7 @@ http-server -p 8000
 - Verify CSV has numeric data columns
 - Check browser console for error messages
 - Ensure local server is running correctly
+ - Confirm a Time column exists (X-axis is Time)
 
 **Performance issues:**
 - Large files (>10MB) may load slowly
@@ -181,6 +217,9 @@ http-server -p 8000
 - Check for CORS issues when running locally
 - Ensure all JavaScript files are loading correctly
 - Verify Plotly.js and PapaParse CDN links are accessible
+
+### Loading Screen
+- Displayed only on initial page load/refresh. Switching between Time Plot and Analysis suppresses the startup loading screen.
 
 ## 📈 Development
 
@@ -214,5 +253,5 @@ For issues, questions, or feature requests:
 
 ---
 
-**Made by AK Everlasting Dev · v1.3.0**
+**Made by AK Everlasting Dev · v1.3.1**
 

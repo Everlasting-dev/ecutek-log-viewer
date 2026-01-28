@@ -3,10 +3,31 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>EcuTek Log Viewer (TXT/CSV)</title>
+  <title>About – EcuTek Log Viewer</title>
   <link rel="stylesheet" href="style.css?v=1.3.0" />
-  <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <style>
+    .page-title{font-size:28px;font-weight:800;text-align:center;margin:18px 0 6px}
+    .page-subtitle{color:var(--muted);text-align:center;margin:0 0 14px}
+    .kv{display:grid;grid-template-columns:160px 1fr;gap:8px 16px}
+    @media (max-width:600px){.kv{grid-template-columns:1fr}}
+    .kv dt{color:#b8c6d6;font-weight:600}
+    .kv dd{margin:0}
+    .feature-list{margin:0;padding-left:18px}
+    .about-section + .about-section{margin-top:14px}
+    
+    /* Animated ASCII Matrix Styles */
+    #asciiMatrix {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: clamp(8px, 1.4vw, 12px);
+      line-height: 1.0;
+      letter-spacing: 0.5px;
+      white-space: pre;
+      margin: 0;
+      text-align: center;
+      filter: drop-shadow(0 0 6px rgba(0,255,100,0.5));
+      color: var(--accent);
+    }
+  </style>
 </head>
 <body>
   <!-- Loading Screen -->
@@ -26,15 +47,15 @@
           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
             <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
           </svg>
-          EcuTek Log Viewer <span class="badge">MULTI</span>
+          EcuTek Log Viewer <span class="badge">ABOUT</span>
         </div>
         
         <nav class="nav-menu">
-          <a href="#" class="nav-item active">Dashboard</a>
+          <a href="index.html" class="nav-item">Dashboard</a>
           <div class="dropdown">
             <a href="#" class="nav-item">File</a>
             <div class="dropdown-content">
-              <a href="#" class="dropdown-item">
+              <a href="index.html" class="dropdown-item">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/>
                 </svg>
@@ -59,24 +80,24 @@
           <div class="dropdown">
             <a href="#" class="nav-item">View</a>
             <div class="dropdown-content">
-              <a href="#" class="dropdown-item active">
+              <a href="index.html" class="dropdown-item">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/>
                 </svg>
-                Signal Matrix
+                Multi Plot
               </a>
               <a href="compare.html" class="dropdown-item">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
                 </svg>
-                Correlation Lab
+                Mega Plot
               </a>
               <div class="dropdown-divider"></div>
-              <a href="#" class="dropdown-item" id="hintsBtn">
+              <a href="about.html" class="dropdown-item active">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
                 </svg>
-                Hints
+                About
               </a>
             </div>
           </div>
@@ -114,7 +135,7 @@
                 </svg>
                 Documentation
               </a>
-              <a href="about.html" class="dropdown-item">
+              <a href="about.html" class="dropdown-item active">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
                 </svg>
@@ -132,63 +153,117 @@
           </svg>
           <span id="themeText">Dark</span>
         </div>
-        <button id="changelogBtn" class="btn ghost mini">Change Log</button>
       </div>
     </div>
   </div>
-
-
 
   <div class="wrap">
-    <div class="card uploader">
-      <div class="pickers">
-        <label class="filebtn">
-          <input id="csvFile" type="file" accept=".csv,.txt,.log,text/csv,text/plain" />
-          <span>Choose Log File (.txt/.csv)</span>
-        </label>
-        <button id="genBtn" class="btn primary" disabled>Generate Plots</button>
-        <button id="clearBtn" class="btn ghost">Clear</button>
+    <div class="card">
+      <!-- ASCII Art Header -->
+      <div class="ascii-header">
+        <div class="ascii-art" id="asciiMatrix"></div>
       </div>
-      <div id="dropzone" class="drop">Drag & drop files here</div>
-      <div id="fileInfo" class="fileinfo"></div>
 
-      <div id="fileChips" class="filechips"></div>
-      <div id="toast" class="toast hidden"></div>
+      <h1 class="page-title">LOG VIEWER <span class="badge">BETA</span></h1>
+      <p class="page-subtitle">Client-side CSV parsing and plotting for ECU tuning logs.</p>
+
+      <section class="about-section">
+        <h2 style="margin:0 0 6px">What is it?</h2>
+        <p style="margin:0;color:var(--muted)">
+          A <strong>client-side</strong> CSV/TXT log viewer for EcuTek style exports. Real-time graphs for RPM, boost, AFR, throttle, ignition, etc.
+          All parsing & rendering happens in your browser. <strong>No uploads.</strong>
+        </p>
+      </section>
+
+      <section class="about-section">
+        <h2 style="margin:0 0 6px">Key features</h2>
+        <ul class="feature-list" style="color:var(--muted)">
+          <li><strong>Multi Plot:</strong> multiple Y-axes vs Time</li>
+          <li><strong>Mega Plot:</strong> compare/offset/scale with point tracking</li>
+          <li><strong>100% Local:</strong> zero server processing</li>
+          <li><strong>Responsive:</strong> desktop & mobile</li>
+          <li><strong>Dark UI:</strong> matches your theme</li>
+          <li><strong>Session cache:</strong> switch pages without re-upload</li>
+        </ul>
+      </section>
+
+      <section class="about-section">
+        <h2 style="margin:0 0 6px">Supported formats</h2>
+        <p style="margin:0;color:var(--muted)">
+          EcuTek CSV/TXT with a header row and time-series columns (e.g., <em>Time</em>, <em>RPM</em>, <em>Boost</em>, <em>AFR</em>, <em>Throttle</em>, <em>Ignition</em>).
+        </p>
+      </section>
+
+      <section class="about-section">
+        <h2 style="margin:0 0 6px">Tech stack</h2>
+        <p style="margin:0;color:var(--muted)">
+          Vanilla JS + HTML5 + CSS3. <strong>Plotly.js</strong> for charts, <strong>PapaParse</strong> for CSV. Optimized for large logs—no backend.
+        </p>
+      </section>
+
+      <section class="about-section">
+        <h2 style="margin:0 0 6px">Privacy</h2>
+        <p style="margin:0;color:var(--muted)">
+          Logs are processed locally. <strong>No network requests</strong> for file handling; your data stays on your device.
+        </p>
+      </section>
+
+      <section class="about-section">
+        <h2 style="margin:0 0 6px">Release</h2>
+        <dl class="kv" style="color:var(--muted)">
+          <dt>Current Version</dt><dd>v1.3.0</dd>
+          <dt>Last Updated</dt><dd>January 2025</dd>
+          <dt>Browser Support</dt><dd>Chrome 80+, Firefox 75+, Safari 13+, Edge 80+</dd>
+          <dt>License</dt><dd>MIT</dd>
+        </dl>
+      </section>
     </div>
-
-
-
-    <div class="section-heading" style="margin-top:22px;">Time Graphs</div>
-    <div class="plots" id="plots"></div>
   </div>
 
-  <div class="footer">Made by AK Everlasting Dev · preAlpha 1.3.10</div>
-  <button id="toTop" class="totop" title="Back to top">↑ Top</button>
-  <div id="changelogModal" class="modal hidden">
-    <div class="modal-content">
-      <button class="modal-close" id="changelogClose" aria-label="Close change log">×</button>
-      <h3>Change Log</h3>
-      <ul>
-        <li><strong>Signal Matrix snap:</strong> click any plot to read exact values.</li>
-        <li><strong>Power scaling:</strong> per-trace exponents with modifier shortcuts.</li>
-        <li><strong>Correlation Lab:</strong> dual-log overlays, smoothing, highlighting.</li>
-        <li><strong>Time window filter:</strong> isolate events without re-uploading.</li>
-      </ul>
-      <p>For the full story see <code>CHANGELOG.md</code>.</p>
-    </div>
-  </div>
-  <div id="hintsModal" class="modal hidden">
-    <div class="modal-content">
-      <button class="modal-close" id="hintsClose" aria-label="Close hints">×</button>
-      <h3>Hints</h3>
-      <ul>
-        <li>Signal Matrix shows every column; toggle plots off to declutter.</li>
-        <li>Use keyboard modifiers (Shift/Alt) for finer scaling steps on desktop.</li>
-        <li>Correlation Lab adds dual-log overlay, smoothing, and highlights.</li>
-        <li>New Comparison Plot view (coming soon) will combine multiple logs.</li>
-      </ul>
-    </div>
-  </div>
-  <script type="module" src="app.js?v=1.3.0"></script>
+  <div class="footer">Client-side parsing. Your file never leaves the device. · v1.3.0</div>
+  
+  <script>
+    // ASCII Dot-Matrix Animation
+    const el = document.getElementById('asciiMatrix');
+    
+    const ROWS = 8, COLS = 8;
+    const SCALE = [' ', '.', ':', '*', 'o', 'O', '#', '@'];
+    const CELL_W = 2;
+    const SPEED = 2.2;
+    const FREQ  = 1.2;
+    const GLOW  = 0.85;
+    
+    function render(t) {
+      let out = '';
+      const cx = (COLS - 1) / 2, cy = (ROWS - 1) / 2;
+    
+      for (let y = 0; y < ROWS; y++) {
+        let line = '';
+        for (let x = 0; x < COLS; x++) {
+          const dx = x - cx, dy = y - cy;
+          const dist = Math.hypot(dx, dy);
+          const phase = dist * FREQ - t * SPEED;
+          let b = (Math.sin(phase) * 0.5 + 0.5) ** 1.35;
+          b = Math.min(1, Math.max(0, b * GLOW));
+          const idx = Math.min(SCALE.length - 1, Math.floor(b * (SCALE.length - 1)));
+          const ch = SCALE[idx];
+          line += ch + ' '.repeat(CELL_W - 1);
+        }
+        out += line + '\n';
+      }
+      return out;
+    }
+    
+    let start;
+    function tick(now){
+      if (!start) start = now;
+      const t = (now - start) / 1000;
+      if (el) el.textContent = render(t);
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  </script>
+  <script src="about.js?v=1.3.0"></script>
 </body>
 </html>
+

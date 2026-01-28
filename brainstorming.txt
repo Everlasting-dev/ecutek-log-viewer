@@ -1,13 +1,15 @@
 ECUTEK LOG VIEWER - BRAINSTORMING IDEAS
 ==========================================
 
-CURRENT VERSION: v1.0.0
+CURRENT VERSION: v1.3.1
 LAST UPDATED: [Current Date]
 
 🎯 CORE IMPROVEMENTS
 ===================
 
 📊 DATA VISUALIZATION
+- [ ] **Optimize plot generation** - Make plot generating quick and smoother, reduce lag
+- [ ] **Mini plot responsiveness** - Minimize delay between click and blob generation with value display
 - [ ] Add zoom/pan controls for detailed analysis
 - [ ] Implement data smoothing/filtering options
 - [ ] Add statistical overlays (min/max/avg lines)
@@ -18,6 +20,7 @@ LAST UPDATED: [Current Date]
 - [ ] Create animated playback of time-series data
 
 🔧 ANALYSIS TOOLS
+- [ ] **Auto-scaling algorithm** - Automatically detect value ranges and scale parameters appropriately (e.g., RPM to 0.06 scale, boost/AFR to full scale)
 - [ ] Peak detection and highlighting
 - [ ] Threshold alerts and notifications
 - [ ] Custom calculation fields (formula builder)
@@ -28,6 +31,8 @@ LAST UPDATED: [Current Date]
 - [ ] Fuel efficiency calculations
 
 📱 USER INTERFACE
+- [ ] **Implement proper sidebar** - ChatGPT mobile app style sidebar for navigation and controls
+- [ ] **User feedback system** - Input area for issues, ideas, and feature requests
 - [ ] Dark/Light theme toggle
 - [ ] Customizable color schemes
 - [ ] Keyboard shortcuts for power users
@@ -38,7 +43,7 @@ LAST UPDATED: [Current Date]
 - [ ] Collapsible sections for better organization
 
 📁 FILE MANAGEMENT
-- [ ] Multiple file upload and comparison
+- [ ] **Multiple file upload and comparison** - Side-by-side analysis with difference highlighting
 - [ ] File tagging and categorization
 - [ ] Search and filter uploaded files
 - [ ] Cloud storage integration (Google Drive, Dropbox)
@@ -65,6 +70,19 @@ LAST UPDATED: [Current Date]
 - [ ] Driver coaching suggestions
 - [ ] Performance benchmarking
 - [ ] Competition mode for comparing runs
+
+🚗 **GTR R35 SUPER APP CONCEPT**
+- [ ] **Comprehensive GTR R35 platform** - All-in-one app for GTR R35 owners
+- [ ] **DTC (Diagnostic Trouble Code) system** - Complete fault code database and troubleshooting
+- [ ] **System descriptions and analysis** - Detailed technical documentation for all systems
+- [ ] **Engine building guide** - Step-by-step engine assembly, specs, and modifications
+- [ ] **Gearbox building guide** - Transmission specifications, rebuild procedures, upgrade options
+- [ ] **Performance upgrades** - Exhaust, intake, turbo, fuel system, suspension modifications
+- [ ] **Technical documentation library** - User manuals, service manuals, wiring diagrams
+- [ ] **Installation guides** - Step-by-step procedures for common modifications
+- [ ] **Overhaul procedures** - Complete rebuild guides with torque specs and procedures
+- [ ] **Tuning strategies** - ECU tuning, fuel mapping, ignition timing optimization
+- [ ] **Integration with log viewer** - Seamless connection between technical docs and data analysis
 
 🔒 SECURITY & PRIVACY
 - [ ] Local data encryption
@@ -117,18 +135,18 @@ LAST UPDATED: [Current Date]
 PRIORITY RANKING
 ================
 HIGH PRIORITY (v1.1.0):
-1. Data export functionality
-2. Zoom/pan controls
-3. Multiple file comparison
-4. Custom color schemes
-5. Keyboard shortcuts
+1. **Optimize plot generation** - Make plot generating quick and smoother, reduce lag
+2. **Mini plot responsiveness** - Minimize delay between click and blob generation
+3. **Auto-scaling for mixed value ranges** - Fix RPM vs boost/AFR scaling issues
+4. **Multiple file upload and comparison** - Side-by-side analysis
+5. **Implement proper sidebar** - ChatGPT mobile app style navigation
 
 MEDIUM PRIORITY (v1.2.0):
-1. Statistical overlays
-2. Peak detection
-3. Custom calculations
-4. Dark/light theme
-5. Fullscreen mode
+1. **GTR R35 Super App foundation** - Start with core technical documentation
+2. **User feedback system** - Input area for issues, ideas, and feature requests
+3. Statistical overlays
+4. Peak detection
+5. Custom calculations
 
 LOW PRIORITY (v2.0.0):
 1. Machine learning features
@@ -145,7 +163,41 @@ FEATURE VOTING
 
 NEW IDEAS:
 ----------
-[Add your suggestions here]
+[ ] **Auto-scaling for mixed value ranges** - Automatically scale huge values (like RPM) and small values (like boost, AFR) to be visible in the same plot without manual scaling. Target: RPM to 0.06 or similar scale factor so all plot lines are visible with proper gradients.
+
+[ ] **Multiple file upload and comparison** - Allow users to upload multiple CSV/log files simultaneously and compare them side-by-side for analysis. Include file management, side-by-side plotting, and difference highlighting.
+
+[ ] **Plot performance optimization** - Find ways to make plot generation quick and smoother, reduce lag and improve responsiveness.
+
+[ ] **Mini plot click responsiveness** - Minimize delay between click in mini plots and blob generation with value display on the map.
+
+[ ] **ChatGPT-style sidebar** - Implement proper mobile sidebar similar to ChatGPT mobile app for better navigation and controls.
+
+[ ] **User feedback system** - Add input area for users to report issues, suggest ideas, and request features to be implemented.
+
+[ ] **GTR R35 Super App** - Comprehensive platform focusing exclusively on GTR R35: DTCs, system descriptions, engine/gearbox building guides, upgrades, technical documents, installation procedures, overhaul steps, tuning strategies, and integration with log viewer.
+[ ] **Owner-only telemetry dashboard** - Secure, auth-gated dashboard showing session counts, unique IP/device stats (desktop vs mobile), error rates, top parameters viewed, and moderation flags pulled from server logs.
+[ ] **GitHub-linked report queue** - Internal report form for the owner to log issues/enhancements directly into GitHub Issues via API (with screenshot/CSV attachments and labels).
+
+MOBILE WEB APP UPDATES & BUG FIXES:
+====================================
+[ ] **Research similar graph view software** - Study how other graph visualization tools handle performance, UX, and mobile optimization to improve the app.
+
+[ ] **Landscape navigation sidebar** - Implement sidebar navigation for mobile landscape mode, especially in mega plot view where users get trapped in the graph area. Allows full page navigation even when plot is optimized for full-screen viewing.
+
+[ ] **Power-based scaling system** - Replace linear scale with power-based scaling: scale value 1 = x^0 (linear), scale 2 = x^1, scale 0 = x^-1, etc. This allows proper visualization when mixing parameters with vastly different ranges (e.g., RPM 1000-8000 vs AFR 0-30) without manually setting extreme scale values like 0.02.
+
+[ ] **Fluctuation/spike visualization** - For parameters like wheel speed and clutch slip where sudden changes are critical, implement better visualization for minute fluctuations even with large data samples. Prioritize showing important change points and spikes.
+
+[ ] **Optimize mini plot sampling** - Reduce lag in mini time plots by optimizing data sampling. Implement spike detection/prioritization algorithm so critical spikes are always visible even when sample size is reduced.
+
+[ ] **Mega plot templates** - Implement template selection system:
+    - General: Engine RPM, AFR Bank 1 & 2, Vehicle Speed, 4WL Split
+    - Fuel: AFR1 & 2, STFT 1 & 2, Injector Lag Time, etc.
+    - Wheel Spin: Wheel Speed FR, FL, RR, RL, Engine RPM, etc.
+    Quick-switch between pre-configured parameter groups for common analysis scenarios.
+
+[ ] **Mobile side pull menu** - Implement side pull/drawer menu for mobile view to improve navigation and access to controls without cluttering the main interface.
 
 NOTES:
 ------
@@ -154,6 +206,11 @@ NOTES:
 - Focus on user experience
 - Consider EcuTek-specific workflows
 - Plan for scalability
+- **GTR R35 focus** - Develop comprehensive platform for GTR R35 owners and enthusiasts
+- **Performance optimization** - Prioritize smooth, responsive plot generation and mini plot interactions
+- **User feedback integration** - Build feedback loops to continuously improve based on user needs
+
+
 
 
 

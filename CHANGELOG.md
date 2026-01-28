@@ -2,6 +2,134 @@
 
 ## Version History
 
+### Beta 1.5 – Performance & UX Overhaul
+**Date:** January 27, 2026  
+**Status:** ✅ Released
+
+#### 🚀 Performance Foundation
+- **Web Workers** – CSV parsing moved to background thread with progress reporting, preventing UI blocking
+- **IndexedDB Migration** – Replaced sessionStorage with IndexedDB for larger capacity and persistent storage
+- **Skeleton Screens** – Replaced full-screen loaders with skeleton placeholders for better perceived performance
+- **Progress Indicators** – Real-time progress bars for CSV parsing operations
+- **Debounce/Throttle** – Applied to slider updates and input handlers for smoother interactions
+
+#### 📊 Plot Optimization
+- **scattergl Support** – Automatic use of WebGL rendering for datasets >10,000 points
+- **Data Downsampling** – LTTB (Largest-Triangle-Three-Buckets) algorithm for efficient rendering of large datasets
+- **Lazy Rendering** – Intersection Observer API for rendering plots only when entering viewport
+- **Performance Tuning** – Optimized rendering pipeline for faster initial load and smoother interactions
+
+#### ⌨️ Core UX Improvements
+- **Keyboard Shortcuts** – Ctrl/Cmd+O (open), Ctrl/Cmd+S (save), Esc (close modals), Arrow keys (navigate plots)
+- **Enhanced File Handling** – Improved drag-and-drop with visual feedback, clickable dropzone, recent files menu with thumbnails
+- **Export Options** – PNG/SVG export for individual plots, ZIP export for all plots, PDF report generation
+- **Mobile Improvements** – Touch gestures (swipe navigation, long-press context menu), bottom sheet modals, adaptive UI
+
+#### 🎯 Advanced Features
+- **Annotations System** – Mark events at specific timestamps (knock, shift points, boost spikes, etc.) with notes and color coding
+- **Templates & Presets** – Save plot configurations for quick reuse, includes default presets for common analysis scenarios
+- **Shareable Links** – Generate shareable URLs for cloud-uploaded logs with view configuration
+- **Quick Search** – Type to jump to plots by parameter name prefix (e.g., type "wh" to find "Wheel Speed")
+
+#### 🐛 Fixes
+- Fixed Templates & Presets and Annotations menu items not responding to clicks
+- Improved dropdown menu handling with ID-based event handlers
+- Enhanced error handling and user feedback throughout
+
+#### 🔧 Technical
+- Modular architecture with separate modules for utilities, storage, downsampling, shortcuts, export, mobile, annotations, templates, and shareable links
+- Cache-bust query params bumped to 1.5.0 across HTML/JS/CSS
+- Improved code organization and maintainability
+
+### preAlpha 1.4 – Cloud archive + session logging
+**Date:** December 2025  
+**Status:** ✅ Released
+
+#### ✨ Features
+- **Archive modal upload** – Upload current log + remark to Supabase; entry lives under Tools ▸ Log Metadata & Archive.
+- **Remark-first metadata** – Supabase rows store your remark first, then path/name/size/page/timestamp.
+- **Session logging** – Client inserts IP, user agent, remark, file name, size, and page into Supabase (write-only anon).
+- **Classic loader only** – Retro loader removed; unified ASCII loader.
+- **Compare sliders restored** – Start/end sliders retained; toggle/reset row removed.
+- **Cloud Save Note as filename** – Uploaded files are renamed to the content of the Cloud Save Note box for easy identification.
+- **Auto-close archive modal** – Modal automatically closes after successful upload.
+- **Help dropdown links** – Added Documentation link to GitHub repo and EcuTek Knowledge Base link to help dropdown.
+- **Experimental label** – Comparison Log labeled as "(experimental)" to indicate it's not fully stable.
+
+#### 🐛 Fixes
+- Guards against cloud upload when no file is loaded; clearer errors when Supabase config is missing.
+- Fixed compare page loading screen stuck issue – loading screen now starts hidden and has multiple safety checks.
+- Removed blocking prompt() call that prevented CSV file uploads from working.
+- Added null checks for file input elements to prevent errors when elements aren't found.
+- Fixed index page Tools ▸ Log Metadata & Archive dropdown to properly open the modal.
+- Fixed compare page Top button positioning to match index page behavior.
+
+#### 🔧 Technical
+- Cache-bust query params bumped to 1.4.0 across HTML/JS/CSS.
+- Session log insert uses client IP fetch fallback and anon insert only.
+- Loading screen initialization improved with error handling and safety timeouts.
+- File upload handlers now include proper null checks and error handling.
+
+### preAlpha 1.3.11 – GR6 Shift Lab & Log Archiver
+**Date:** November 2025  
+**Status:** 🚧 Pre-release
+
+#### ✨ Features
+- **Metadata Grid** – duration, sampling rate, RPM span, detected speed channel, GR6 shift deltas, and protection notes.
+- **Archive Current Log** – one-click download of a timestamped CSV (drop into `logs/` and commit via `logvault/*` branch).
+- **Line thickness sliders** – per-trace stroke control (primary + reference) to keep busy charts legible.
+- **Shift Strategy Lab** – tuner-friendly gearing sandbox inspired by [blocklayer.com](https://www.blocklayer.com/rpm-gear) with drop-RPM notes and clutch/slip reminders.
+- **Performance Benchmarks overhaul** – automatic speed-source detection, 0‑60 / 60‑130 / 100‑200 slices, peak G, and health overlays (boost, AFR, knock, torque cuts).
+- **Wheel-slip & torque intervention detection** – metadata and performance cards now flag traction/torque limiting events automatically.
+- **Correlation Lab trimmed** – only the essentials remain on-page; metadata, shift lab, and diagnostics moved under Tools with dedicated modals/tabs.
+
+#### 🐛 Fixes
+- Locked the X-axis to the Time Window sliders to eliminate random zooming while keeping Y auto-range active.
+- Event highlight dropdown stays in sync with whatever Y axes are currently enabled.
+- Cursor data box now uses semi-transparency so underlying traces remain visible.
+- Fixed the splash/loading overlay hang and the global line-width initialization so Correlation Lab renders immediately after load.
+
+#### 🔧 Technical
+- Added `logs/` (tracked with `.gitkeep`) plus README workflow for branch-based log archival.
+- `rescaleYToWindow` now respects the filtered time window and never toggles Plotly autorange.
+- Performance modal no longer needs a signal dropdown; it derives the cleanest speed channel automatically.
+
+### preAlpha 1.3.10 – Dual Log Enhancements & Auto Scale
+**Date:** November 2025  
+**Status:** 🚧 Pre-release
+
+#### ✨ Features
+- **Dual-log overlay upgrades** – smoothing windows plus threshold-based event highlights
+- **Auto Scale** – normalizes each enabled trace before fine power-scaling adjustments
+- **Change Log & Hints modals** – in-app documentation so users don’t need to leave the UI
+
+#### 🐛 Fixes
+- Fixed time-slider behavior so both start and end bounds stay in sync without unexpected zooming
+- Highlight dropdown now lists only the traces currently enabled in the axis configuration
+
+#### 🔧 Technical
+- Shortened splash screen to 1.5s and limited it to startup/reload events
+- Added groundwork for upcoming Comparison view and mobile slide-in controls
+
+### v1.3.1 – Performance improvements and mobile UX enhancements
+**Date:** October 2025  
+**Status:** 🚀 Alpha Release
+
+#### ✨ Features
+- **Faster Startup**: Reduced loading screen time from 3.5s to 1.5s for improved user experience
+- **iOS Navigation Fix**: Enhanced mobile navigation with safe-area-inset support for iOS devices
+- **Portrait Mode Optimization**: Better navigation bar positioning to avoid status bar conflicts
+
+#### 🐛 Fixes
+- Fixed taskbar positioning conflicts with iOS status bar in portrait mode
+- Improved mobile navigation accessibility and touch targets
+- Enhanced ASCII animation timing to match faster loading screen
+
+#### 🔧 Technical
+- Added CSS safe-area-inset support for modern iOS devices
+- Optimized loading screen timing across all main files (app.js, compare.js, about.js)
+- Improved mobile-first responsive design
+
 ### v1.3.0 – Mobile optimizations and cursor improvements
 **Date:** September 2025  
 **Status:** ✅ Released

@@ -1,54 +1,130 @@
-import { parseCSV, findTimeIndex } from "./parser.js";
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm";
+import { findTimeIndex } from "./parser.js";
+import { debounce, throttle, formatBytes, supportsWebWorkers } from "./modules/utils.js";
+import { storeLog, getRecentLog, storeParsed, getParsed, addToRecent, migrateFromSessionStorage, getRecentFiles, getLog } from "./modules/storage.js";
+import { downsampleLTTB } from "./modules/downsample.js";
+import { registerShortcut, initShortcuts, getModifierKey } from "./modules/shortcuts.js";
+import { exportPlotPNG, exportPlotSVG, exportAllPlots, exportPDFReport } from "./modules/export.js";
+import { initMobile } from "./modules/mobile.js";
+import { initAnnotations, addAnnotation, getAllAnnotations, exportAnnotations, removeAnnotation as removeAnn, updateAnnotationMarkers } from "./modules/annotations.js";
+import { initTemplates, getAllTemplates, createTemplate, applyTemplate, deleteTemplate, exportTemplates, createPresets, getTemplate } from "./modules/templates.js";
+import { createShareableLinkFromCurrentView, copyShareableLink } from "./modules/shareable.js";
 
-// ASCII Dot-Matrix Loading Animation
-function createAsciiAnimation() {
-  const asciiContainer = document.querySelector('.ascii-loading .matrix');
-  if (!asciiContainer) return;
-  
-  const ROWS = 8, COLS = 8;
-  const SCALE = [' ', '.', ':', '*', 'o', 'O', '#', '@'];
-  const CELL_W = 2;
-  const SPEED = 2.2;
-  const FREQ = 1.2;
-  const GLOW = 0.85;
-  
-  function render(t) {
-    let out = '';
-    const cx = (COLS - 1) / 2, cy = (ROWS - 1) / 2;
-    
-    for (let y = 0; y < ROWS; y++) {
-      let line = '';
-      for (let x = 0; x < COLS; x++) {
-        const dx = x - cx, dy = y - cy;
-        const dist = Math.hypot(dx, dy);
-        const phase = dist * FREQ - t * SPEED;
-        let b = (Math.sin(phase) * 0.5 + 0.5) ** 1.35;
-        b = Math.min(1, Math.max(0, b * GLOW));
-        const idx = Math.min(SCALE.length - 1, Math.floor(b * (SCALE.length - 1)));
-        const ch = SCALE[idx];
-        line += ch + ' '.repeat(CELL_W - 1);
-      }
-      out += line + '\n';
+// Classic loader (startup + runtime)
+const sleep = (ms)=> new Promise(r=>setTimeout(r, ms));
+const classicLoaderState = { stop:false, req:null };
+function renderClassicMatrix(t){
+  const el = document.getElementById("classicMatrix");
+  if (!el) return;
+  const ROWS=8, COLS=8, SCALE=[' ','.',':','*','o','O','#','@'], CELL_W=2, SPEED=2.2, FREQ=1.2, GLOW=0.85;
+  let out="";
+  const cx=(COLS-1)/2, cy=(ROWS-1)/2;
+  for(let y=0;y<ROWS;y++){
+    let line="";
+    for(let x=0;x<COLS;x++){
+      const dx=x-cx, dy=y-cy;
+      const dist=Math.hypot(dx,dy);
+      const phase=dist*FREQ - t*SPEED;
+      let b=(Math.sin(phase)*0.5+0.5)**1.35;
+      b=Math.min(1, Math.max(0,b*GLOW));
+      const idx=Math.min(SCALE.length-1, Math.floor(b*(SCALE.length-1)));
+      const ch=SCALE[idx];
+      line += ch + ' '.repeat(CELL_W-1);
     }
-    return out;
+    out += line + '\n';
   }
-  
-  let start = null;
-  function tick(now) {
-    if (!start) start = now;
-    const t = (now - start) / 1000;
-    
-    if (asciiContainer) {
-      asciiContainer.textContent = render(t);
+  el.textContent = out;
+}
+function tickClassic(startTs){
+  if (classicLoaderState.stop) return;
+  const ts = performance.now();
+  const t = (ts - startTs)/1000;
+  renderClassicMatrix(t);
+  classicLoaderState.req = requestAnimationFrame(()=>tickClassic(startTs));
+}
+function startClassicLoader(){
+  const classic = document.getElementById("classicLoader");
+  if (classic) classic.classList.remove("hidden");
+  classicLoaderState.stop = false;
+  if (classicLoaderState.req) cancelAnimationFrame(classicLoaderState.req);
+  const now = performance.now();
+  classicLoaderState.req = requestAnimationFrame(()=>tickClassic(now));
+}
+function stopClassicLoader(){
+  classicLoaderState.stop = true;
+  if (classicLoaderState.req) cancelAnimationFrame(classicLoaderState.req);
+  classicLoaderState.req = null;
+}
+
+// Supabase client (upload-only; no reads)
+const SUPABASE_URL = window.SUPABASE_URL || "";
+const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || "";
+const supabase = (SUPABASE_URL && SUPABASE_ANON_KEY)
+  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth:{ autoRefreshToken:false, persistSession:false } })
+  : null;
+let cachedIp = null;
+async function getClientIp(){
+  if (cachedIp) return cachedIp;
+  try{
+    const res = await fetch("https://api.ipify.org?format=json");
+    if (res.ok){
+      const data = await res.json();
+      cachedIp = data?.ip || "";
     }
-    
-    // Continue animation for 3.5 seconds
-    if (t < 3.5) {
-      requestAnimationFrame(tick);
-    }
+  }catch(_e){
+    cachedIp = "";
   }
-  
-  requestAnimationFrame(tick);
+  return cachedIp || "";
+}
+
+async function logSession({ remark="", fileName="", size=0, page="index" }){
+  if (!supabase) return;
+  const ip = await getClientIp();
+  const ua = navigator.userAgent || "";
+  await supabase.from("session_logs").insert({
+    remark,
+    file_name: fileName,
+    size: size || 0,
+    page,
+    user_agent: ua,
+    ip: ip || null,
+    logged_at: new Date().toISOString()
+  });
+}
+
+function makeUploadPath(name){
+  const safeName = (name || "log.txt").replace(/[^a-zA-Z0-9._-]/g,"_");
+  const uuid = (crypto.randomUUID?.() || Math.random().toString(16).slice(2));
+  return `logs/${Date.now()}-${uuid}-${safeName}`;
+}
+
+async function uploadLogToSupabase(text, name, size, remark){
+  if (!supabase) return;
+  const safeName = (remark || name || "log").replace(/[^a-zA-Z0-9._-]/g, "_");
+  const fileName = safeName.endsWith(".csv") ? safeName : safeName + ".csv";
+  const path = `logs/${Date.now()}-${crypto.randomUUID?.() || Math.random().toString(16).slice(2)}-${fileName}`;
+  const blob = new Blob([text], { type:"text/plain" });
+  const { error: storageError } = await supabase.storage.from("logs").upload(path, blob, { upsert:false });
+  if (storageError) {
+    console.warn("Supabase storage upload failed", storageError);
+    toast("Cloud upload failed (storage).", "error");
+    return;
+  }
+  const { error: metaError } = await supabase.from("log_uploads").insert({
+    remark: remark || "",
+    path,
+    name: fileName,
+    size: size || text?.length || 0,
+    source: "index",
+    uploaded_at: new Date().toISOString()
+  });
+  if (metaError) {
+    console.warn("Supabase metadata insert failed", metaError);
+    toast("Cloud upload saved file; metadata failed.", "error");
+    return;
+  }
+  logSession({ remark, fileName: fileName, size, page:"index" }).catch(()=>{});
+  toast("Uploaded to cloud.", "ok");
 }
 
 // ============================================================================
@@ -120,64 +196,403 @@ function updateThemeUI(theme) {
 // DROPDOWN INTERACTIONS
 // ============================================================================
 
+async function updateRecentFilesMenu(){
+  try {
+    const recentFiles = await getRecentFiles(10);
+    const recentFilesMenu = document.getElementById('recentFilesMenu');
+    const recentFilesCount = document.getElementById('recentFilesCount');
+    
+    if (recentFilesCount){
+      if (recentFiles.length > 0){
+        recentFilesCount.textContent = recentFiles.length;
+        recentFilesCount.style.display = 'inline-block';
+      } else {
+        recentFilesCount.style.display = 'none';
+      }
+    }
+    
+    // Create dropdown content for recent files
+    if (recentFilesMenu && recentFiles.length > 0){
+      const dropdown = recentFilesMenu.closest('.dropdown');
+      if (dropdown){
+        let recentFilesContent = dropdown.querySelector('.recent-files-content');
+        if (!recentFilesContent){
+          recentFilesContent = document.createElement('div');
+          recentFilesContent.className = 'recent-files-dropdown';
+          const dropdownContent = dropdown.querySelector('.dropdown-content');
+          if (dropdownContent){
+            dropdownContent.appendChild(recentFilesContent);
+          }
+        }
+        
+        recentFilesContent.innerHTML = recentFiles.map((file, idx) => `
+          <div class="recent-file-item" data-log-id="${file.logId}">
+            <div class="recent-file-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/>
+              </svg>
+            </div>
+            <div class="recent-file-info">
+              <div class="recent-file-name">${file.name}</div>
+              <div class="recent-file-meta">${formatBytes(file.size)} · ${new Date(file.timestamp).toLocaleDateString()}</div>
+            </div>
+          </div>
+        `).join('');
+        
+        // Add click handlers
+        recentFilesContent.querySelectorAll('.recent-file-item').forEach(item => {
+          item.addEventListener('click', async () => {
+            const logId = parseInt(item.dataset.logId);
+            try {
+              const log = await getLog(logId);
+              if (log){
+                await cacheSet(log.text, log.name, log.size);
+                stageParsed(log.text, log.name, log.size);
+                toast(`Loaded ${log.name}`, "ok");
+              }
+            } catch (error) {
+              console.error("Failed to load recent file:", error);
+              toast("Failed to load file", "error");
+            }
+          });
+        });
+      }
+    }
+  } catch (error) {
+    console.warn("Failed to update recent files menu:", error);
+  }
+}
+
 function initDropdowns() {
   // Handle dropdown menu interactions
   const dropdownItems = document.querySelectorAll(".dropdown-item");
   
   dropdownItems.forEach(item => {
     item.addEventListener("click", (e) => {
-      e.preventDefault();
+      const href = item.getAttribute("href");
       const text = item.textContent.trim();
+      const id = item.id;
+      
+      // Handle recent files menu
+      if (id === 'recentFilesMenu'){
+        e.preventDefault();
+        updateRecentFilesMenu();
+        return;
+      }
+      
+      // Handle templates menu
+      if (id === 'templatesMenu'){
+        e.preventDefault();
+        openTemplatesPanel();
+        return;
+      }
+      
+      // Handle annotations menu
+      if (id === 'annotationsMenu'){
+        e.preventDefault();
+        openAnnotationsPanel();
+        return;
+      }
+      
+      // Handle metadata menu
+      if (id === 'metadataMenu'){
+        e.preventDefault();
+        openMetadataModal();
+        return;
+      }
+      
+      // Handle external links (target="_blank") - allow default or open programmatically
+      if (item.hasAttribute("target") && item.getAttribute("target") === "_blank") {
+        // Check if it's a handled external link
+        if (href && href.includes("github.com/Everlasting-dev/ecutek-log-viewer")) {
+          e.preventDefault();
+          window.open("https://github.com/Everlasting-dev/ecutek-log-viewer", "_blank");
+          return;
+        }
+        if (href && href.includes("ecutek.atlassian.net")) {
+          e.preventDefault();
+          window.open("https://ecutek.atlassian.net/wiki/spaces/SUPPORT/pages/327698/EcuTek+Knowledge+Base", "_blank");
+          return;
+        }
+        // For other external links, allow default behavior
+        return;
+      }
+      
+      e.preventDefault();
       
       // Handle different menu actions
       switch(text) {
         case "Open CSV File":
           document.getElementById("csvFile").click();
           break;
-        case "Export Data":
-          toast("Export functionality coming soon!", "ok");
+        case "Export":
+          // Handle export submenu toggle
+          const exportSubmenu = item.nextElementSibling;
+          if (exportSubmenu && exportSubmenu.classList.contains('export-submenu')){
+            e.stopPropagation();
+            exportSubmenu.style.display = exportSubmenu.style.display === 'none' ? 'block' : 'none';
+          }
           break;
-        case "Multi Plot":
+        case "Signal Matrix":
           // Already on multi plot
           break;
-        case "Mega Plot":
+        case "Correlation Lab":
           window.location.href = "compare.html";
           break;
-        case "Compare Mode":
-          window.location.href = "compare.html";
+        case "GR6 Gear Scope":
+          window.location.href = "gear.html";
           break;
-        case "Data Analysis":
-          toast("Data analysis tools coming soon!", "ok");
+        case "Simulation Lab":
+          window.location.href = "simulation.html";
           break;
-        case "Statistics":
-          toast("Statistics panel coming soon!", "ok");
+        case "Data Analysis Suite":
+          window.location.href = "analysis.html";
           break;
-        case "Performance Metrics":
-          toast("Performance metrics coming soon!", "ok");
+        case "Shift Strategy Lab":
+          openShiftLabModal();
+          break;
+        case "Annotations":
+          openAnnotationsPanel();
+          break;
+        case "Templates & Presets":
+          openTemplatesPanel();
+          break;
+        case "Log Metadata & Archive":
+          openMetadataModal();
           break;
         case "Documentation":
-          toast("Documentation coming soon!", "ok");
+          window.open("https://github.com/Everlasting-dev/ecutek-log-viewer", "_blank");
+          break;
+        case "EcuTek Knowledge Base":
+          window.open("https://ecutek.atlassian.net/wiki/spaces/SUPPORT/pages/327698/EcuTek+Knowledge+Base", "_blank");
+          break;
+        case "Change Log":
+          openChangelog();
           break;
         case "About":
           window.location.href = "about.html";
           break;
         default:
-          console.log("Menu item clicked:", text);
+          console.log("Menu item clicked:", text, "href:", href);
       }
     });
   });
   
-  // Handle navigation menu active states
-  const navItems = document.querySelectorAll(".nav-item");
-  navItems.forEach(item => {
-    item.addEventListener("click", (e) => {
-      if (!item.parentElement.classList.contains("dropdown")) {
-        e.preventDefault();
-        navItems.forEach(nav => nav.classList.remove("active"));
-        item.classList.add("active");
+  // Update recent files menu on initialization
+  updateRecentFilesMenu();
+  
+  // Setup export handlers
+  setupExportHandlers();
+}
+
+// Export handlers
+function setupExportHandlers(){
+  const exportPNG = document.getElementById('exportPNG');
+  const exportSVG = document.getElementById('exportSVG');
+  const exportAllPNG = document.getElementById('exportAllPNG');
+  const exportPDF = document.getElementById('exportPDF');
+  
+  if (exportPNG){
+    exportPNG.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const activePlot = getActivePlot();
+      if (activePlot){
+        try {
+          const title = activePlot.closest('.plot-card')?.querySelector('.plot-title span')?.textContent || 'plot';
+          await exportPlotPNG(activePlot, title);
+          toast('Plot exported as PNG', 'ok');
+        } catch (error) {
+          toast('Export failed: ' + error.message, 'error');
+        }
+      } else {
+        toast('No plot selected', 'error');
       }
     });
+  }
+  
+  if (exportSVG){
+    exportSVG.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const activePlot = getActivePlot();
+      if (activePlot){
+        try {
+          const title = activePlot.closest('.plot-card')?.querySelector('.plot-title span')?.textContent || 'plot';
+          await exportPlotSVG(activePlot, title);
+          toast('Plot exported as SVG', 'ok');
+        } catch (error) {
+          toast('Export failed: ' + error.message, 'error');
+        }
+      } else {
+        toast('No plot selected', 'error');
+      }
+    });
+  }
+  
+  if (exportAllPNG){
+    exportAllPNG.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const plots = Array.from(document.querySelectorAll('.plot-card .plot')).filter(div => div._rendered !== false);
+      if (plots.length > 0){
+        try {
+          showLoading();
+          await exportAllPlots(plots, 'ecutek-plots');
+          hideLoading();
+          toast(`Exported ${plots.length} plots as ZIP`, 'ok');
+        } catch (error) {
+          hideLoading();
+          toast('Export failed: ' + error.message, 'error');
+        }
+      } else {
+        toast('No plots to export', 'error');
+      }
+    });
+  }
+  
+  if (exportPDF){
+    exportPDF.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const plots = Array.from(document.querySelectorAll('.plot-card .plot')).filter(div => div._rendered !== false);
+      if (plots.length > 0){
+        try {
+          showLoading();
+          const metadata = {
+            name: S.name || 'untitled',
+            size: formatBytes(S.size),
+            duration: S.cols[S.timeIdx]?.length ? `${(S.cols[S.timeIdx][S.cols[S.timeIdx].length - 1] - S.cols[S.timeIdx][0]).toFixed(2)}s` : '—',
+            samples: S.cols[S.timeIdx]?.length || 0
+          };
+          await exportPDFReport({ plots, metadata, filename: S.name || 'ecutek-report' });
+          hideLoading();
+          toast('PDF report generated', 'ok');
+        } catch (error) {
+          hideLoading();
+          toast('PDF export failed: ' + error.message, 'error');
+        }
+      } else {
+        toast('No plots to export', 'error');
+      }
+    });
+  }
+}
+
+function getActivePlot(){
+  // Get the plot that's currently in view or was last clicked
+  const plotCards = Array.from(document.querySelectorAll('.plot-card'));
+  for (const card of plotCards){
+    const rect = card.getBoundingClientRect();
+    if (rect.top >= 0 && rect.top < window.innerHeight){
+      const plot = card.querySelector('.plot');
+      if (plot && plot._rendered !== false){
+        return plot;
+      }
+    }
+  }
+  // Fallback to first rendered plot
+  const firstPlot = document.querySelector('.plot-card .plot');
+  return firstPlot && firstPlot._rendered !== false ? firstPlot : null;
+}
+
+// Annotations panel
+function openAnnotationsPanel(){
+  const panel = document.getElementById('annotationsPanel');
+  if (!panel){
+    createAnnotationsPanel();
+    return;
+  }
+  panel.classList.remove('hidden');
+  updateAnnotationsList();
+}
+
+function closeAnnotationsPanel(){
+  const panel = document.getElementById('annotationsPanel');
+  if (panel){
+    panel.classList.add('hidden');
+  }
+}
+
+function createAnnotationsPanel(){
+  const panel = document.createElement('div');
+  panel.id = 'annotationsPanel';
+  panel.className = 'modal';
+  panel.innerHTML = `
+    <div class="modal-content wide">
+      <button class="modal-close" id="annotationsPanelClose">×</button>
+      <h3>Annotations</h3>
+      <div id="annotationsList" class="annotations-list"></div>
+      <div class="form-actions">
+        <button id="exportAnnotationsBtn" class="btn ghost">Export</button>
+        <button id="annotationsPanelCloseBtn" class="btn ghost">Close</button>
+      </div>
+      <p class="muted" style="margin-top: 12px; font-size: 12px;">
+        Tip: Ctrl/Cmd + Click on a plot to add an annotation at that timestamp.
+      </p>
+    </div>
+  `;
+  
+  document.body.appendChild(panel);
+  
+  document.getElementById('annotationsPanelClose').onclick = closeAnnotationsPanel;
+  document.getElementById('annotationsPanelCloseBtn').onclick = closeAnnotationsPanel;
+  document.getElementById('exportAnnotationsBtn').onclick = () => {
+    const json = exportAnnotations();
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `annotations-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('Annotations exported', 'ok');
+  };
+  
+  panel.addEventListener('click', (e) => {
+    if (e.target === panel) closeAnnotationsPanel();
   });
+  
+  updateAnnotationsList();
+}
+
+function updateAnnotationsList(){
+  const list = document.getElementById('annotationsList');
+  if (!list) return;
+  
+  const allAnnotations = getAllAnnotations();
+  
+  if (allAnnotations.length === 0){
+    list.innerHTML = '<p class="muted">No annotations yet. Ctrl/Cmd + Click on a plot to add one.</p>';
+    return;
+  }
+  
+  list.innerHTML = allAnnotations.map(ann => `
+    <div class="annotation-item">
+      <div class="annotation-header">
+        <span class="annotation-type" style="color: ${ann.color}">${ann.type}</span>
+        <span class="annotation-time">${ann.timestamp.toFixed(3)}s</span>
+        <button class="annotation-delete" data-id="${ann.id}" title="Delete">×</button>
+      </div>
+      ${ann.parameter ? `<div class="annotation-param">${ann.parameter}</div>` : ''}
+      ${ann.note ? `<div class="annotation-note">${ann.note}</div>` : ''}
+    </div>
+  `).join('');
+  
+  list.querySelectorAll('.annotation-delete').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = parseInt(btn.dataset.id);
+      removeAnnotation(id);
+      updateAnnotationsList();
+    });
+  });
+}
+
+// Wrapper to update UI after removal
+function removeAnnotation(id){
+  removeAnn(id);
+  updateAnnotationsList();
+  updateAnnotationMarkers();
 }
 
 // Start ASCII animation when page loads
@@ -189,6 +604,7 @@ function showStartupLoading() {
   const loadingScreen = document.getElementById("loadingScreen");
   if (loadingScreen) {
     loadingScreen.classList.remove("hidden");
+    startClassicLoader();
   }
 }
 
@@ -196,26 +612,223 @@ function hideStartupLoading() {
   const loadingScreen = document.getElementById("loadingScreen");
   if (loadingScreen) {
     loadingScreen.classList.add("hidden");
+    stopClassicLoader();
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  // Show startup loading screen
-  showStartupLoading();
-  
-  // Hide loading screen after 3-4 seconds
-  setTimeout(() => {
+function handleStartupSplash(){
+  const navEntry = performance.getEntriesByType && performance.getEntriesByType("navigation")[0];
+  const shouldShow = !sessionStorage.getItem("splashShown") || (navEntry && navEntry.type === "reload");
+  if (shouldShow){
+    showStartupLoading();
+    sessionStorage.setItem("splashShown","1");
+    setTimeout(()=> hideStartupLoading(), 1500);
+  } else {
     hideStartupLoading();
-  }, 3500);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  handleStartupSplash();
+  
+  // Initialize IndexedDB and migrate from sessionStorage
+  try {
+    await migrateFromSessionStorage();
+  } catch (error) {
+    console.warn("IndexedDB migration failed:", error);
+  }
+  
+  // Initialize parser worker
+  parserWorker = initParserWorker();
+  
+  // Initialize keyboard shortcuts
+  initShortcuts();
+  
+  // Initialize quick search
+  initQuickSearch();
+  
+  // Initialize annotations system
+  initAnnotations();
+  
+  // Initialize templates system
+  await initTemplates();
+  await createPresets(); // Create default presets if they don't exist
+  
+  // Initialize mobile features
+  initMobile();
+  
+  // Register keyboard shortcuts
+  registerShortcut('o', {
+    handler: () => {
+      els.file?.click();
+    },
+    ctrl: true,
+    description: 'Open file',
+    preventDefault: true
+  });
+  
+  registerShortcut('s', {
+    handler: () => {
+      if (S.ready && archiveLogBtn && !archiveLogBtn.disabled){
+        openMetadataModal();
+        archiveNoteInput?.focus();
+      }
+    },
+    ctrl: true,
+    description: 'Save/Archive current log',
+    preventDefault: true
+  });
+  
+  registerShortcut('ArrowLeft', {
+    handler: () => {
+      navigatePlots(-1);
+    },
+    description: 'Navigate to previous plot',
+    preventDefault: true
+  });
+  
+  registerShortcut('ArrowRight', {
+    handler: () => {
+      navigatePlots(1);
+    },
+    description: 'Navigate to next plot',
+    preventDefault: true
+  });
   
   // Initialize theme system
   initTheme();
   
   // Initialize dropdown interactions
   initDropdowns();
+
+  if (changelogMenu) changelogMenu.addEventListener("click", (e)=>{ e.preventDefault(); openChangelog(); });
+  if (changelogClose) changelogClose.addEventListener("click", closeChangelog);
+  if (changelogModal){
+    changelogModal.addEventListener("click", (e) => {
+      if (e.target === changelogModal) closeChangelog();
+    });
+  }
+  if (hintsBtn) hintsBtn.addEventListener("click", openHints);
+  if (hintsClose) hintsClose.addEventListener("click", closeHints);
+  if (hintsModal){
+    hintsModal.addEventListener("click", (e) => {
+      if (e.target === hintsModal) closeHints();
+    });
+  }
+  if (metadataClose) metadataClose.addEventListener("click", closeMetadataModal);
+  if (metadataModal){
+    metadataModal.addEventListener("click", (e) => {
+      if (e.target === metadataModal) closeMetadataModal();
+    });
+  }
+  if (archiveLogBtn) archiveLogBtn.addEventListener("click", archiveCurrentLog);
+  if (shiftLabLink) shiftLabLink.addEventListener("click", (e)=>{ e.preventDefault(); openShiftLabModal(); });
+  if (shiftLabClose) shiftLabClose.addEventListener("click", closeShiftLabModal);
+  if (shiftLabModal){
+    shiftLabModal.addEventListener("click", (e)=>{ if (e.target === shiftLabModal) closeShiftLabModal(); });
+  }
+  if (shiftAnalyzeBtn) shiftAnalyzeBtn.addEventListener("click", runShiftLab);
+  if (shiftResetBtn) shiftResetBtn.addEventListener("click", resetShiftLabDefaults);
   
-  // Start ASCII animation
-  createAsciiAnimation();
+  // Shareable link handlers
+  const generateShareBtn = document.getElementById("generateShareBtn");
+  const copyShareBtn = document.getElementById("copyShareBtn");
+  const shareableLinkInput = document.getElementById("shareableLinkInput");
+  
+  if (generateShareBtn){
+    generateShareBtn.addEventListener("click", async () => {
+      if (!S.ready || !S.uploadedFileId){
+        toast("Please upload log to cloud first", "error");
+        return;
+      }
+      
+      try {
+        showLoading();
+        const selectedParams = Array.from(document.querySelectorAll('.plot-card')).map(card => {
+          const title = card.querySelector('.plot-title span');
+          return title ? title.textContent.trim() : null;
+        }).filter(Boolean);
+        
+        const timeRange = timeWindow.range ? { start: timeWindow.range[0], end: timeWindow.range[1] } : null;
+        
+        const shareUrl = await createShareableLinkFromCurrentView(S, selectedParams, timeRange);
+        
+        if (shareableLinkInput){
+          shareableLinkInput.value = shareUrl;
+        }
+        if (copyShareBtn){
+          copyShareBtn.disabled = false;
+        }
+        
+        toast("Shareable link generated!", "ok");
+      } catch (error) {
+        toast("Failed to generate link: " + error.message, "error");
+      } finally {
+        hideLoading();
+      }
+    });
+  }
+  
+  if (copyShareBtn && shareableLinkInput){
+    copyShareBtn.addEventListener("click", async () => {
+      const url = shareableLinkInput.value;
+      if (!url){
+        toast("No link to copy", "error");
+        return;
+      }
+      
+      const success = await copyShareableLink(url);
+      if (success){
+        toast("Link copied to clipboard!", "ok");
+      } else {
+        toast("Failed to copy link", "error");
+      }
+    });
+  }
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && changelogModal && !changelogModal.classList.contains("hidden")) {
+      closeChangelog();
+    } else if (e.key === "Escape" && hintsModal && !hintsModal.classList.contains("hidden")) {
+      closeHints();
+    } else if (e.key === "Escape" && metadataModal && !metadataModal.classList.contains("hidden")) {
+      closeMetadataModal();
+    } else if (e.key === "Escape" && els.loadingScreen && !els.loadingScreen.classList.contains("hidden")) {
+      hideLoading();
+      toast("Loading cancelled.", "error");
+    }
+  });
+  
+  // Add click handler to hide loading screen if stuck
+  if (els.loadingScreen) {
+    els.loadingScreen.addEventListener("click", () => {
+      hideLoading();
+      toast("Loading cancelled.", "error");
+    });
+  }
+  
+  // Try to load from IndexedDB first, then fallback to sessionStorage
+  try {
+    const recentLog = await getRecentLog();
+    if (recentLog){
+      await cacheSet(recentLog.text, recentLog.name, recentLog.size);
+      stageParsed(recentLog.text, recentLog.name, recentLog.size);
+    } else {
+      const text = sessionStorage.getItem("csvText");
+      if (text){ 
+        await cacheSet(text, sessionStorage.getItem("csvName")||"cached.csv", Number(sessionStorage.getItem("csvSize")||0));
+        stageParsed(text, sessionStorage.getItem("csvName")||"cached.csv", Number(sessionStorage.getItem("csvSize")||0)); 
+      }
+    }
+  } catch (error) {
+    console.warn("Failed to load from IndexedDB:", error);
+    const text = sessionStorage.getItem("csvText");
+    if (text){ stageParsed(text, sessionStorage.getItem("csvName")||"cached.csv", Number(sessionStorage.getItem("csvSize")||0)); }
+  }
+
+  // Back to top button
+  const toTopBtn = document.getElementById("toTop");
+  if (toTopBtn) toTopBtn.onclick = () => window.scrollTo({ top: 0, behavior: "smooth" });
+  updatePlotFooters();
 });
 
 const els = {
@@ -229,11 +842,44 @@ const els = {
   toast: document.getElementById("toast"),
   plots: document.getElementById("plots"),
   loadingScreen: document.getElementById("loadingScreen"),
+  timeWindowToggle: document.getElementById("timeWindowToggle"),
+  syncSnapToggle: document.getElementById("syncSnapToggle"),
+  resetWindow: document.getElementById("resetWindow"),
 };
 
+const changelogBtn = document.getElementById("changelogBtn");
+const changelogMenu = document.getElementById("changelogMenu");
+const changelogModal = document.getElementById("changelogModal");
+const changelogClose = document.getElementById("changelogClose");
+const shiftLabModal = document.getElementById("shiftLabModal");
+const shiftLabClose = document.getElementById("shiftLabClose");
+const shiftLabLink = document.getElementById("shiftLabLink");
+const shiftRedline = document.getElementById("shiftRedline");
+const shiftFinal = document.getElementById("shiftFinal");
+const shiftTire = document.getElementById("shiftTire");
+const shiftRatios = document.getElementById("shiftRatios");
+const shiftClutchFill = document.getElementById("shiftClutchFill");
+const shiftSlip = document.getElementById("shiftSlip");
+const shiftAnalyzeBtn = document.getElementById("shiftAnalyzeBtn");
+const shiftResetBtn = document.getElementById("shiftResetBtn");
+const shiftPlot = document.getElementById("shiftPlot");
+const shiftNotes = document.getElementById("shiftNotes");
+const hintsBtn = document.getElementById("hintsBtn");
+const hintsModal = document.getElementById("hintsModal");
+const hintsClose = document.getElementById("hintsClose");
+const metadataModal = document.getElementById("metadataModal");
+const metadataClose = document.getElementById("metadataClose");
+const archiveLogBtn = document.getElementById("archiveLogBtn");
+const archiveNoteInput = document.getElementById("archiveNoteInput");
+const metaSummary = document.getElementById("metaSummary");
 
 
-const S = { headers: [], cols: [], timeIdx: -1, name:"", size:0, ready:false };
+
+const S = { headers: [], cols: [], timeIdx: -1, name:"", size:0, ready:false, uploadedFileId: null };
+const plotRegistry = [];
+const timeWindow = { enabled:false, range:null };
+const snapSync = { enabled:false, lastTime:null };
+if (els.syncSnapToggle) snapSync.enabled = !!els.syncSnapToggle.checked;
 
 const toast = (m,t="error")=>{
   els.toast.textContent=m; els.toast.classList.remove("hidden");
@@ -241,16 +887,216 @@ const toast = (m,t="error")=>{
   els.toast.style.borderColor = t==="error" ? "#742020" : "#1a6a36";
   clearTimeout(toast._t); toast._t=setTimeout(()=>els.toast.style.display="none",3500);
 };
-const fmt = n=>{ if(!Number.isFinite(n))return""; const u=["B","KB","MB","GB"];let i=0;while(n>=1024&&i<u.length-1){n/=1024;i++;}return`${n.toFixed(1)} ${u[i]}`;};
+const fmt = formatBytes; // Use utility function
 
-const cacheSet=(txt,name,size)=>{ sessionStorage.setItem("csvText",txt); sessionStorage.setItem("csvName",name||""); sessionStorage.setItem("csvSize",String(size||0)); };
-const cacheClr=()=>{ ["csvText","csvName","csvSize"].forEach(k=>sessionStorage.removeItem(k)); };
+// Cache functions - now use IndexedDB
+let currentLogId = null;
+async function cacheSet(txt, name, size){
+  try {
+    const logId = await storeLog(txt, name || "", size || txt.length);
+    currentLogId = logId;
+    await addToRecent(name || "untitled.csv", size || txt.length, logId);
+    // Keep sessionStorage for backward compatibility during migration
+    sessionStorage.setItem("csvText", txt);
+    sessionStorage.setItem("csvName", name || "");
+    sessionStorage.setItem("csvSize", String(size || 0));
+  } catch (error) {
+    console.warn("IndexedDB storage failed, falling back to sessionStorage:", error);
+    sessionStorage.setItem("csvText", txt);
+    sessionStorage.setItem("csvName", name || "");
+    sessionStorage.setItem("csvSize", String(size || 0));
+  }
+}
+async function cacheClr(){
+  currentLogId = null;
+  ["csvText", "csvName", "csvSize"].forEach(k => sessionStorage.removeItem(k));
+}
+
+function openChangelog(){
+  if (changelogModal) changelogModal.classList.remove("hidden");
+}
+
+function closeChangelog(){
+  if (changelogModal) changelogModal.classList.add("hidden");
+}
+
+function openHints(){
+  if (hintsModal) hintsModal.classList.remove("hidden");
+}
+
+function closeHints(){
+  if (hintsModal) hintsModal.classList.add("hidden");
+}
+
+function updateMetaSummary(){
+  if (!metaSummary) return;
+  if (!S.ready || !S.headers.length || !S.cols.length || S.timeIdx < 0){
+    metaSummary.innerHTML = "<span>Upload a log to see VIN, ECU SW numbers, dongle IDs, sampling stats, GR6 shifts, and torque interventions.</span>";
+    if (archiveLogBtn) archiveLogBtn.disabled = true;
+    return;
+  }
+  const timeSeries = S.cols[S.timeIdx] || [];
+  const finiteTime = timeSeries.filter(Number.isFinite);
+  const samples = finiteTime.length;
+  const duration = samples >= 2 ? finiteTime[finiteTime.length-1] - finiteTime[0] : 0;
+  const sampleRate = duration > 0 ? samples / duration : 0;
+  const durationStr = duration > 0 ? `${duration.toFixed(2)} s` : "—";
+  const rateStr = sampleRate > 0 ? `${sampleRate.toFixed(1)} Hz` : "—";
+  metaSummary.innerHTML = `
+    <div class="meta-pair"><span>File</span><strong>${S.name || "—"}</strong></div>
+    <div class="meta-pair"><span>Size</span><strong>${S.size ? formatBytes(S.size) : "—"}</strong></div>
+    <div class="meta-pair"><span>Samples</span><strong>${samples}</strong></div>
+    <div class="meta-pair"><span>Duration</span><strong>${durationStr}</strong></div>
+    <div class="meta-pair"><span>Sample Rate</span><strong>${rateStr}</strong></div>
+  `;
+  if (archiveLogBtn) archiveLogBtn.disabled = false;
+}
+
+function openMetadataModal(){
+  const modal = document.getElementById("metadataModal");
+  if (modal) {
+    updateMetaSummary();
+    updateShareSection();
+    modal.classList.remove("hidden");
+  }
+}
+
+function updateShareSection(){
+  const shareSection = document.getElementById("shareSection");
+  const generateBtn = document.getElementById("generateShareBtn");
+  const copyBtn = document.getElementById("copyShareBtn");
+  const linkInput = document.getElementById("shareableLinkInput");
+  
+  if (!shareSection || !generateBtn || !copyBtn || !linkInput) return;
+  
+  if (S.ready && S.uploadedFileId){
+    shareSection.style.display = "block";
+    generateBtn.disabled = false;
+    linkInput.value = "";
+  } else if (S.ready){
+    shareSection.style.display = "block";
+    generateBtn.disabled = false;
+    linkInput.placeholder = "Upload log to cloud first, then generate link";
+  } else {
+    shareSection.style.display = "none";
+  }
+}
+
+function closeMetadataModal(){
+  const modal = document.getElementById("metadataModal");
+  if (modal) modal.classList.add("hidden");
+}
+
+function openShiftLabModal(){
+  if (shiftLabModal) {
+    shiftLabModal.classList.remove("hidden");
+    runShiftLab();
+  }
+}
+
+function closeShiftLabModal(){
+  if (shiftLabModal) shiftLabModal.classList.add("hidden");
+}
+
+function parseShiftRatiosInput(){
+  if (!shiftRatios) return [];
+  return shiftRatios.value
+    .split(/[\s,]+/)
+    .map(r => parseFloat(r))
+    .filter(v => Number.isFinite(v) && v > 0.1);
+}
+
+function runShiftLab(){
+  if (!shiftPlot) return;
+  const ratios = parseShiftRatiosInput();
+  const redline = Number(shiftRedline?.value) || 7500;
+  const finalDrive = Number(shiftFinal?.value) || 3.7;
+  const tireDiameter = Number(shiftTire?.value) || 26.5;
+  if (!ratios.length){
+    Plotly.purge(shiftPlot);
+    if (shiftNotes) shiftNotes.textContent = "Enter at least one gear ratio to generate shift guidance.";
+    return;
+  }
+  const rpmAxis = [];
+  for (let rpm = 2000; rpm <= redline; rpm += 250) rpmAxis.push(rpm);
+  const tireCirc = Math.PI * tireDiameter;
+  const mphConstant = 1056;
+  const traces = ratios.map((ratio, idx) => ({
+    type:"scatter",
+    mode:"lines",
+    name:`G${idx+1}`,
+    x: rpmAxis,
+    y: rpmAxis.map(rpm => (rpm * tireCirc) / (ratio * finalDrive * mphConstant))
+  }));
+  Plotly.newPlot(shiftPlot, traces, {
+    paper_bgcolor:"transparent",
+    plot_bgcolor:"transparent",
+    margin:{l:45,r:10,t:10,b:40},
+    xaxis:{title:"Engine RPM"},
+    yaxis:{title:"Vehicle Speed (mph)", rangemode:"tozero"}
+  }, {displaylogo:false, responsive:true, staticPlot:true});
+
+  const dropNotes = [];
+  for (let i=0;i<ratios.length-1;i++){
+    const dropRpm = redline * (ratios[i+1]/ratios[i]);
+    dropNotes.push(`G${i+1}→G${i+2}: shift @ ${redline.toFixed(0)} rpm → lands near ${dropRpm.toFixed(0)} rpm.`);
+  }
+  const clutchFill = Number(shiftClutchFill?.value) || 90;
+  const slipThreshold = Number(shiftSlip?.value) || 6;
+  const userNotes = [
+    `Clutch fill reminder: ${clutchFill} ms; keep torque cuts shorter than this.`,
+    `Wheel slip target ≤ ${slipThreshold}% for launch + shifts.`
+  ];
+  const combined = [...dropNotes, ...userNotes];
+  if (shiftNotes) shiftNotes.innerHTML = `<ul>${combined.map(note=>`<li>${note}</li>`).join("")}</ul>`;
+}
+
+function resetShiftLabDefaults(){
+  if (shiftRatios) shiftRatios.value = "3.36, 2.10, 1.49, 1.20, 1.00, 0.79";
+  if (shiftRedline) shiftRedline.value = "7500";
+  if (shiftFinal) shiftFinal.value = "3.70";
+  if (shiftTire) shiftTire.value = "26.5";
+  if (shiftClutchFill) shiftClutchFill.value = "90";
+  if (shiftSlip) shiftSlip.value = "6";
+  runShiftLab();
+}
+
+async function archiveCurrentLog(){
+  if (!S.ready || !S.headers.length || !S.cols.length) {
+    toast("No log loaded.", "error");
+    return;
+  }
+  const note = archiveNoteInput ? archiveNoteInput.value.trim() : "";
+  if (!note) {
+    toast("Please enter a Cloud Save Note.", "error");
+    return;
+  }
+  const csvText = sessionStorage.getItem("csvText");
+  if (!csvText) {
+    toast("No CSV data available.", "error");
+    return;
+  }
+  const fileName = note.replace(/[^a-zA-Z0-9._-]/g, "_") + ".csv";
+  showLoading();
+  try {
+    await uploadLogToSupabase(csvText, fileName, S.size, note);
+    // Store uploaded file ID for shareable links
+    S.uploadedFileId = fileName;
+    closeMetadataModal();
+    if (archiveNoteInput) archiveNoteInput.value = "";
+  } catch (err) {
+    toast("Upload failed: " + (err.message || "Unknown error"), "error");
+  } finally {
+    hideLoading();
+  }
+}
 
 // Loading screen functions
 let loadingTimeout = null;
 
 function showLoading() {
   els.loadingScreen.classList.remove("hidden");
+  startClassicLoader();
   
   // Safety timeout - hide loading after 10 seconds
   if (loadingTimeout) clearTimeout(loadingTimeout);
@@ -266,44 +1112,506 @@ function hideLoading() {
     loadingTimeout = null;
   }
   els.loadingScreen.classList.add("hidden");
+  stopClassicLoader();
 }
 
 
 
-function stageParsed(text, name, size){
-  showLoading();
-  
-  setTimeout(() => {
-    try {
-      const { headers, cols, timeIdx } = parseCSV(text);
-      S.headers=headers; S.cols=cols; S.timeIdx = Number.isFinite(timeIdx) ? timeIdx : findTimeIndex(headers);
-      if (S.timeIdx === -1) throw new Error("No 'Time' column found.");
-      S.name=name||""; S.size=size||0; S.ready=true;
+// Web Worker for CSV parsing
+let parserWorker = null;
+let parseRequestId = 0;
 
-      hideLoading();
+function initParserWorker(){
+  if (!supportsWebWorkers()) return null;
+  try {
+    return new Worker(new URL('./workers/parser-worker.js', import.meta.url));
+  } catch (error) {
+    console.warn("Failed to create parser worker:", error);
+    return null;
+  }
+}
+
+function updateParseProgress(progress){
+  // Update progress indicator if it exists
+  const progressBar = document.getElementById('parseProgress');
+  const progressContainer = document.getElementById('parseProgressContainer');
+  if (progressBar){
+    progressBar.style.width = `${progress}%`;
+    progressBar.textContent = `${progress}%`;
+  }
+  if (progressContainer){
+    if (progress > 0 && progress < 100){
+      progressContainer.classList.remove('hidden');
+    } else {
+      progressContainer.classList.add('hidden');
+    }
+  }
+}
+
+async function stageParsed(text, name, size){
+  showLoading();
+  updateParseProgress(0);
+  
+  try {
+    // Try Web Worker first, fallback to synchronous parsing
+    const worker = parserWorker || initParserWorker();
+    parseRequestId++;
+    const requestId = parseRequestId;
+    
+    if (worker){
+      // Use Web Worker for non-blocking parsing
+      const result = await new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error("Parse timeout"));
+        }, 60000); // 60 second timeout
+        
+        worker.onmessage = (e) => {
+          const { type, progress, result, error, id } = e.data;
+          if (id !== requestId) return; // Ignore messages from other requests
+          
+          if (type === 'progress'){
+            updateParseProgress(progress);
+          } else if (type === 'done'){
+            clearTimeout(timeout);
+            resolve(result);
+          } else if (type === 'error'){
+            clearTimeout(timeout);
+            reject(new Error(error));
+          }
+        };
+        
+        worker.onerror = (error) => {
+          clearTimeout(timeout);
+          reject(error);
+        };
+        
+        worker.postMessage({ text, id: requestId });
+      });
       
-      els.fileInfo.classList.remove("hidden");
-      els.fileInfo.textContent = `Selected: ${S.name} · ${fmt(S.size)}`;
-      els.genBtn.disabled = false;
-      
-      // file chip
-      if (els.fileChips){
-        els.fileChips.innerHTML = "";
-        const chip = document.createElement("div");
-        chip.className = "chip";
-        chip.innerHTML = `<span>${S.name} · ${fmt(S.size)}</span><button class="close" title="Remove">×</button>`;
-        chip.querySelector(".close").addEventListener("click", ()=> resetAll(true));
-        els.fileChips.appendChild(chip);
+      const { headers, cols, timeIdx } = result;
+      S.headers = headers;
+      S.cols = cols;
+      S.timeIdx = Number.isFinite(timeIdx) ? timeIdx : findTimeIndex(headers);
+    } else {
+      // Fallback to synchronous parsing (import parseCSV dynamically)
+      const { parseCSV } = await import('./parser.js');
+      const result = parseCSV(text);
+      S.headers = result.headers;
+      S.cols = result.cols;
+      S.timeIdx = Number.isFinite(result.timeIdx) ? result.timeIdx : findTimeIndex(result.headers);
+    }
+    
+    if (S.timeIdx === -1) throw new Error("No 'Time' column found.");
+    S.name = name || "";
+    S.size = size || 0;
+    S.ready = true;
+    
+    // Store parsed data in IndexedDB
+    if (currentLogId){
+      try {
+        await storeParsed(currentLogId, { headers: S.headers, cols: S.cols, timeIdx: S.timeIdx });
+      } catch (error) {
+        console.warn("Failed to store parsed data:", error);
       }
-      
+    }
+    
+    hideLoading();
+    updateParseProgress(100);
+    
+    els.fileInfo.classList.remove("hidden");
+    els.fileInfo.textContent = `Selected: ${S.name} · ${formatBytes(S.size)}`;
+    els.genBtn.disabled = false;
+    
+    // file chip
+    if (els.fileChips){
+      els.fileChips.innerHTML = "";
+      const chip = document.createElement("div");
+      chip.className = "chip";
+      chip.innerHTML = `<span>${S.name} · ${formatBytes(S.size)}</span><button class="close" title="Remove">×</button>`;
+      chip.querySelector(".close").addEventListener("click", () => resetAll(true));
+      els.fileChips.appendChild(chip);
+    }
+    
       toast("Upload success. Click Generate.", "ok");
       
-    } catch (err) {
-      hideLoading();
-      resetAll(true);
-      toast(err.message || "Parse error");
+      // Update recent files menu
+      updateRecentFilesMenu();
+      
+  } catch (err) {
+    hideLoading();
+    updateParseProgress(0);
+    resetAll(true);
+    toast(err.message || "Parse error");
+  }
+}
+
+function nearestIndex(arr,val){
+  if(!Array.isArray(arr)||!arr.length) return null;
+  let lo=0, hi=arr.length-1;
+  while(hi-lo>1){
+    const mid=(lo+hi)>>1;
+    if(arr[mid] < val) lo=mid; else hi=mid;
+  }
+  return Math.abs(arr[lo]-val) <= Math.abs(arr[hi]-val) ? lo : hi;
+}
+
+// Plot navigation for keyboard shortcuts
+let currentPlotIndex = -1;
+
+function navigatePlots(direction){
+  const plotCards = Array.from(document.querySelectorAll('.plot-card'));
+  if (plotCards.length === 0) return;
+  
+  if (currentPlotIndex < 0){
+    currentPlotIndex = 0;
+  } else {
+    currentPlotIndex += direction;
+    if (currentPlotIndex < 0) currentPlotIndex = plotCards.length - 1;
+    if (currentPlotIndex >= plotCards.length) currentPlotIndex = 0;
+  }
+  
+  const targetCard = plotCards[currentPlotIndex];
+  if (targetCard){
+    targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // Highlight briefly
+    targetCard.style.outline = '2px solid var(--accent)';
+    setTimeout(() => {
+      targetCard.style.outline = '';
+    }, 1000);
+  }
+}
+
+// Quick search jump-to feature
+let quickSearchState = {
+  query: '',
+  timeout: null,
+  lastKeyTime: 0
+};
+
+function initQuickSearch(){
+  document.addEventListener('keydown', (e) => {
+    // Don't capture if typing in input/textarea
+    const target = e.target;
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable){
+      // Allow Escape to reset search even when in input
+      if (e.key === 'Escape'){
+        resetQuickSearch();
+      }
+      return;
     }
-  }, 700);
+    
+    // Ignore modifier keys and special keys
+    if (e.ctrlKey || e.altKey || e.metaKey || 
+        ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', 'Tab'].includes(e.key)){
+      return;
+    }
+    
+    // Handle Escape to reset search
+    if (e.key === 'Escape'){
+      resetQuickSearch();
+      return;
+    }
+    
+    // Only capture printable characters
+    if (e.key.length === 1 && !e.shiftKey || (e.shiftKey && /[A-Z]/.test(e.key))){
+      handleQuickSearchInput(e.key.toLowerCase());
+    }
+  });
+}
+
+function handleQuickSearchInput(char){
+  const now = Date.now();
+  
+  // Reset if too much time passed (2 seconds)
+  if (now - quickSearchState.lastKeyTime > 2000){
+    quickSearchState.query = '';
+  }
+  
+  quickSearchState.query += char.toLowerCase();
+  quickSearchState.lastKeyTime = now;
+  
+  // Clear previous timeout
+  if (quickSearchState.timeout){
+    clearTimeout(quickSearchState.timeout);
+  }
+  
+  // Find matching plot
+  const match = findPlotByPrefix(quickSearchState.query);
+  if (match){
+    scrollToPlot(match);
+    highlightPlot(match);
+  }
+  
+  // Update search indicator
+  updateSearchIndicator(quickSearchState.query, match !== null);
+  
+  // Reset after 2 seconds of inactivity
+  quickSearchState.timeout = setTimeout(() => {
+    resetQuickSearch();
+  }, 2000);
+}
+
+function findPlotByPrefix(prefix){
+  const plotCards = Array.from(document.querySelectorAll('.plot-card'));
+  const lowerPrefix = prefix.toLowerCase();
+  
+  for (const card of plotCards){
+    const titleElement = card.querySelector('.plot-title span');
+    if (titleElement){
+      const title = titleElement.textContent.toLowerCase();
+      if (title.startsWith(lowerPrefix)){
+        return card;
+      }
+    }
+  }
+  return null;
+}
+
+function scrollToPlot(plotCard){
+  plotCard.scrollIntoView({ 
+    behavior: 'smooth', 
+    block: 'center' 
+  });
+}
+
+function highlightPlot(plotCard){
+  // Remove previous highlight
+  document.querySelectorAll('.plot-card').forEach(card => {
+    card.classList.remove('quick-search-match');
+  });
+  
+  // Add highlight to matched plot
+  plotCard.classList.add('quick-search-match');
+  
+  // Remove highlight after 1.5 seconds
+  setTimeout(() => {
+    plotCard.classList.remove('quick-search-match');
+  }, 1500);
+}
+
+function resetQuickSearch(){
+  quickSearchState.query = '';
+  quickSearchState.lastKeyTime = 0;
+  if (quickSearchState.timeout){
+    clearTimeout(quickSearchState.timeout);
+    quickSearchState.timeout = null;
+  }
+  hideSearchIndicator();
+  
+  // Remove all highlights
+  document.querySelectorAll('.plot-card').forEach(card => {
+    card.classList.remove('quick-search-match');
+  });
+}
+
+function updateSearchIndicator(query, hasMatch){
+  let indicator = document.getElementById('quickSearchIndicator');
+  if (!indicator){
+    indicator = document.createElement('div');
+    indicator.id = 'quickSearchIndicator';
+    indicator.className = 'quick-search-indicator';
+    document.body.appendChild(indicator);
+  }
+  
+  indicator.textContent = `Search: ${query}`;
+  indicator.classList.remove('hidden');
+  
+  if (hasMatch){
+    indicator.classList.add('has-match');
+  } else {
+    indicator.classList.remove('has-match');
+  }
+}
+
+function hideSearchIndicator(){
+  const indicator = document.getElementById('quickSearchIndicator');
+  if (indicator){
+    indicator.classList.add('hidden');
+  }
+}
+
+function getTimeBounds(){
+  const t = S.cols[S.timeIdx] || [];
+  if (!t.length) return [0,0];
+  return [t[0], t[t.length-1]];
+}
+
+function applyWindowRange(range){
+  timeWindow.range = range;
+  plotRegistry.forEach(({div})=> applyWindowRangeToPlot(div));
+}
+
+function applyWindowRangeToPlot(div){
+  if (!div) return;
+  if (timeWindow.range && Number.isFinite(timeWindow.range[0]) && Number.isFinite(timeWindow.range[1])){
+    Plotly.relayout(div, {"xaxis.range":[timeWindow.range[0], timeWindow.range[1]]});
+  } else {
+    Plotly.relayout(div, {"xaxis.autorange": true});
+  }
+}
+
+function setSelectionMode(enabled){
+  timeWindow.enabled = !!enabled;
+  plotRegistry.forEach(({div})=>{
+    Plotly.relayout(div, { shapes: [] });  // clear snap line when switching modes
+    Plotly.relayout(div, { selections: [] }); // clear any selection box
+    setPlotDragMode(div);
+  });
+  updatePlotFooters();
+}
+
+function updatePlotFooters(){
+  plotRegistry.forEach(({footerHint})=>{
+    if (!footerHint) return;
+    if (timeWindow.enabled){
+      footerHint.textContent = "Drag to set shared Time window";
+    } else {
+      footerHint.textContent = snapSync.enabled ? "Click to inspect (synced)" : "Click to inspect";
+    }
+  });
+}
+
+function setPlotDragMode(div){
+  const dragmode = timeWindow.enabled ? "select" : false;
+  Plotly.relayout(div, { dragmode, selectdirection:"h" });
+}
+
+function formatSnapTime(xv){
+  return `${xv.toFixed(2)}s`;
+}
+
+function formatSnapValue(label, yv){
+  return `${label}: ${yv.toFixed(2)}`;
+}
+
+function applySnapLine(div, xv){
+  Plotly.relayout(div, {
+    shapes: [{
+      type:"line", xref:"x", yref:"paper",
+      x0:xv, x1:xv, y0:0, y1:1,
+      line:{color:"#43B3FF", width:1, dash:"dot"}
+    }]
+  });
+}
+
+function updatePlotSnapAt(plot, targetTime){
+  if (!plot || !Array.isArray(plot.xSeries) || !Array.isArray(plot.ySeries)) return;
+  const idx = nearestIndex(plot.xSeries, targetTime);
+  if (idx == null) return;
+  const xv = plot.xSeries[idx];
+  const yv = plot.ySeries[idx];
+  if (!Number.isFinite(xv) || !Number.isFinite(yv)) return;
+  applySnapLine(plot.div, xv);
+  if (plot.timeEl){
+    plot.timeEl.textContent = formatSnapTime(xv);
+  }
+  if (plot.valueEl){
+    plot.valueEl.textContent = formatSnapValue(plot.label, yv);
+  }
+}
+
+function wirePlotSelection(div){
+  div.removeAllListeners?.('plotly_selected');
+  div.on('plotly_selected', (ev)=>{
+    if (!timeWindow.enabled) return;
+    const rx = ev?.range?.x;
+    if (!Array.isArray(rx) || rx.length < 2) return;
+    let t0 = Math.min(rx[0], rx[1]);
+    let t1 = Math.max(rx[0], rx[1]);
+    const [minT,maxT] = getTimeBounds();
+    t0 = Math.max(t0,minT); t1 = Math.min(t1,maxT);
+    if (t1 - t0 <= 0) return;
+    applyWindowRange([t0,t1]);
+  });
+}
+
+function wirePlotSnap(div, xSeries, ySeries, timeEl, valueEl, label){
+  if (!Array.isArray(xSeries) || !Array.isArray(ySeries)) return;
+  const update = (clientX)=>{
+    const fl = div._fullLayout; if (!fl || !fl.xaxis || !fl.margin) return;
+    const bb = div.getBoundingClientRect();
+    const xpx = clientX - bb.left - fl.margin.l;
+    const xVal = fl.xaxis.p2d(xpx);
+    if (!Number.isFinite(xVal)) return;
+    const idx = nearestIndex(xSeries, xVal);
+    if (idx == null) return;
+    const xv = xSeries[idx];
+    if (snapSync.enabled){
+      snapSync.lastTime = xv;
+      plotRegistry.forEach(plot => updatePlotSnapAt(plot, xv));
+      return;
+    }
+    updatePlotSnapAt({ div, xSeries, ySeries, timeEl, valueEl, label }, xv);
+  };
+  let dragging=false;
+  div.addEventListener("pointerdown", (e)=>{
+    if (timeWindow.enabled) return;       // selection mode disables snap
+    dragging=true;
+    update(e.clientX);
+    div.setPointerCapture?.(e.pointerId);
+  });
+  div.addEventListener("pointermove", (e)=>{
+    if (timeWindow.enabled) return;
+    if (dragging) update(e.clientX);
+  });
+  ["pointerup","pointercancel","pointerleave"].forEach(evt=>{
+    div.addEventListener(evt, ()=>{ dragging=false; });
+  });
+}
+
+function createSkeletonPlots(count = 6){
+  els.plots.innerHTML = "";
+  for (let i = 0; i < count; i++){
+    const skeleton = document.createElement("div");
+    skeleton.className = "skeleton-plot";
+    skeleton.innerHTML = `
+      <div class="skeleton-plot-header"></div>
+      <div class="skeleton-plot-frame"></div>
+      <div class="skeleton-plot-footer"></div>
+    `;
+    els.plots.appendChild(skeleton);
+  }
+}
+
+// Intersection Observer for lazy rendering
+let plotObserver = null;
+
+function initPlotObserver(){
+  if (!('IntersectionObserver' in window)) return null;
+  
+  return new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting){
+        const plotCard = entry.target;
+        const plotDiv = plotCard.querySelector('.plot');
+        const plotData = plotCard._plotData;
+        
+        if (plotData && !plotDiv._rendered){
+          plotDiv._rendered = true;
+          renderSinglePlot(plotDiv, plotData);
+          plotObserver?.unobserve(plotCard);
+        }
+      }
+    });
+  }, {
+    rootMargin: '200px' // Start loading 200px before entering viewport
+  });
+}
+
+function renderSinglePlot(div, { trace, layout, config, originalX, originalY, header, footer, footerHint, footerTime, footerValue }){
+  Plotly.newPlot(div, [trace], layout, config)
+    .then(() => {
+      applyTheme(document.documentElement.getAttribute('data-theme') === 'light', [div]);
+      wirePlotSnap(div, originalX, originalY, footerTime, footerValue, header);
+      wirePlotSelection(div);
+      setPlotDragMode(div);
+      const entry = { div, xSeries: originalX, ySeries: originalY, footer, footerHint, timeEl: footerTime, valueEl: footerValue, label: header };
+      plotRegistry.push(entry);
+      if (snapSync.enabled && Number.isFinite(snapSync.lastTime)){
+        updatePlotSnapAt(entry, snapSync.lastTime);
+      }
+      applyWindowRangeToPlot(div);
+    });
 }
 
 function renderPlots(){
@@ -311,8 +1619,18 @@ function renderPlots(){
   
   showLoading();
   
+  // Show skeleton screens immediately
+  const estimatedPlotCount = Math.min(S.headers.length - 1, 10);
+  createSkeletonPlots(estimatedPlotCount);
+  
+  // Initialize observer if not already done
+  if (!plotObserver){
+    plotObserver = initPlotObserver();
+  }
+  
   setTimeout(() => {
     els.plots.innerHTML = "";
+    plotRegistry.length = 0;
     const x = S.cols[S.timeIdx];
 
     const cs = getComputedStyle(document.documentElement);
@@ -327,21 +1645,96 @@ function renderPlots(){
       if (valid < 5) continue;
 
       const card=document.createElement("div"); card.className="card plot-card";
-      const title=document.createElement("div"); title.className="plot-title"; title.textContent=S.headers[i];
+      card.setAttribute("data-lazy", "true"); // Mark for lazy loading
+      const title=document.createElement("div"); title.className="plot-title";
+      const titleText=document.createElement("span"); titleText.textContent=S.headers[i];
+      title.appendChild(titleText);
       const frame=document.createElement("div"); frame.className="plot-frame";
       const div=document.createElement("div"); div.className="plot";
-      frame.appendChild(div); card.appendChild(title); card.appendChild(frame); els.plots.appendChild(card);
+      const footer=document.createElement("div"); footer.className="plot-footer";
+      const footerRow=document.createElement("div"); footerRow.className="plot-footer-row";
+      const footerTime=document.createElement("span"); footerTime.className="plot-footer-time"; footerTime.textContent="—s";
+      const footerValue=document.createElement("span"); footerValue.className="plot-footer-value"; footerValue.textContent="—";
+      footerRow.appendChild(footerTime); footerRow.appendChild(footerValue);
+      const footerHint=document.createElement("div"); footerHint.className="plot-footer-hint"; footerHint.textContent="Click to inspect";
+      footer.appendChild(footerRow); footer.appendChild(footerHint);
+      frame.appendChild(div); card.appendChild(title); card.appendChild(frame); card.appendChild(footer); els.plots.appendChild(card);
 
-      Plotly.newPlot(div, [{x, y:S.cols[i], mode:"lines", name:S.headers[i], line:{width:1}}],
-        { template, paper_bgcolor:paper, plot_bgcolor:plot, font:{color:text},
-          margin:{l:50,r:10,t:10,b:40}, xaxis:{title:S.headers[S.timeIdx]},
-          yaxis:{title:S.headers[i], automargin:true}, showlegend:false },
-        { displaylogo:false, responsive:true, scrollZoom:false, staticPlot:true, doubleClick:false })
-        .then(()=> applyTheme(document.documentElement.getAttribute('data-theme')==='light', [div]));
+      // Prepare data with downsampling and scattergl optimization
+      let plotX = x;
+      let plotY = S.cols[i];
+      const dataLength = plotX.length;
+      const useScatterGL = dataLength > 10000; // Use scattergl for >10k points
+      
+      // Downsample if needed (for better performance)
+      if (dataLength > 5000 && !useScatterGL){
+        const viewportWidth = window.innerWidth || 1920;
+        const optimalSize = Math.min(viewportWidth / 2, 2000);
+        const downsampled = downsampleLTTB(plotX, plotY, optimalSize);
+        plotX = downsampled.x;
+        plotY = downsampled.y;
+      }
+      
+      const trace = {
+        x: plotX,
+        y: plotY,
+        mode: "lines",
+        type: useScatterGL ? "scattergl" : "scatter",
+        name: S.headers[i],
+        line: { width: 1 }
+      };
+
+      const layout = {
+        template,
+        paper_bgcolor: paper,
+        plot_bgcolor: plot,
+        font: { color: text },
+        margin: { l: 50, r: 10, t: 10, b: 40 },
+        xaxis: { title: S.headers[S.timeIdx] },
+        yaxis: { title: S.headers[i], automargin: true },
+        showlegend: false,
+        hovermode: false,
+        dragmode: timeWindow.enabled ? "select" : false,
+        selectdirection: "h"
+      };
+
+      const config = {
+        displaylogo: false,
+        responsive: true,
+        scrollZoom: false,
+        staticPlot: false,
+        doubleClick: false,
+        displayModeBar: false
+      };
+
+      // Store plot data for lazy rendering
+      card._plotData = {
+        trace,
+        layout,
+        config,
+        originalX: x,
+        originalY: S.cols[i],
+        header: S.headers[i],
+        footer,
+        footerHint,
+        footerTime,
+        footerValue
+      };
+
+      // Render immediately if observer not available, otherwise observe
+      if (!plotObserver){
+        renderSinglePlot(div, { ...card._plotData });
+      } else {
+        plotObserver.observe(card);
+      }
     }
     
     hideLoading();
     toast("Plots generated successfully!", "ok");
+    updatePlotFooters();
+    
+    // If observer is available, plots will render as they enter viewport
+    // Otherwise, they're already rendered above
   }, 300);
 }
 
@@ -383,47 +1776,78 @@ if (els.viewSwitcher) {
   });
 }
 
+// Enhanced drag and drop with visual feedback
+let dragCounter = 0;
+
 ["dragenter","dragover"].forEach(ev=>{
-  els.dropzone.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); els.dropzone.classList.add("dragover"); });
+  els.dropzone.addEventListener(ev, e=>{ 
+    e.preventDefault(); 
+    e.stopPropagation(); 
+    dragCounter++;
+    els.dropzone.classList.add("dragover");
+  });
 });
-["dragleave","drop"].forEach(ev=>{
-  els.dropzone.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); els.dropzone.classList.remove("dragover"); });
+
+["dragleave"].forEach(ev=>{
+  els.dropzone.addEventListener(ev, e=>{ 
+    e.preventDefault(); 
+    e.stopPropagation();
+    dragCounter--;
+    if (dragCounter === 0){
+      els.dropzone.classList.remove("dragover");
+    }
+  });
 });
+
 els.dropzone.addEventListener("drop", e=>{
+  e.preventDefault(); 
+  e.stopPropagation();
+  dragCounter = 0;
+  els.dropzone.classList.remove("dragover");
+  
   const f=e.dataTransfer.files?.[0];
-  if (!f || !/\.(csv|txt|log)$/i.test(f.name)) return toast("Drop a .csv/.txt/.log file.");
+  if (!f || !/\.(csv|txt|log)$/i.test(f.name)) {
+    toast("Drop a .csv/.txt/.log file.", "error");
+    return;
+  }
+  
+  showLoading();
   const r=new FileReader();
   r.onerror=()=>{
     hideLoading();
-    toast("Failed to read file.");
+    toast("Failed to read file.", "error");
   };
-  r.onload=ev=>{ 
+  r.onload=async ev=>{ 
     const text=String(ev.target.result||""); 
-    cacheSet(text,f.name,f.size);
+    await cacheSet(text,f.name,f.size);
     stageParsed(text,f.name,f.size);
   };
   r.readAsText(f);
 });
 
-document.addEventListener("DOMContentLoaded", ()=>{
-  // Add click handler to hide loading screen if stuck
-  els.loadingScreen.addEventListener("click", () => {
-    hideLoading();
-    toast("Loading cancelled.", "error");
-  });
-  
-  // Add keyboard escape handler
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && !els.loadingScreen.classList.contains("hidden")) {
-      hideLoading();
-      toast("Loading cancelled.", "error");
-    }
-  });
-  
-  const text=sessionStorage.getItem("csvText");
-  if (text){ stageParsed(text, sessionStorage.getItem("csvName")||"cached.csv", Number(sessionStorage.getItem("csvSize")||0)); }
-
-  // Back to top button
-  const toTopBtn = document.getElementById("toTop");
-  if (toTopBtn) toTopBtn.onclick = () => window.scrollTo({ top: 0, behavior: "smooth" });
+// Make dropzone clickable
+els.dropzone.addEventListener("click", () => {
+  els.file?.click();
 });
+
+if (els.timeWindowToggle){
+  els.timeWindowToggle.addEventListener("change", debounce((e)=>{
+    setSelectionMode(e.target.checked);
+  }, 150));
+}
+
+if (els.syncSnapToggle){
+  els.syncSnapToggle.addEventListener("change", debounce((e)=>{
+    snapSync.enabled = !!e.target.checked;
+    if (!snapSync.enabled) snapSync.lastTime = null;
+    updatePlotFooters();
+  }, 150));
+}
+
+if (els.resetWindow){
+  els.resetWindow.addEventListener("click", debounce(()=>{
+    applyWindowRange(null);
+    plotRegistry.forEach(({div})=> Plotly.relayout(div, { shapes: [] }));
+  }, 150));
+}
+
