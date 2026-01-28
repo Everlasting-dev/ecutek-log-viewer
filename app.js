@@ -830,6 +830,7 @@ const els = {
   plots: document.getElementById("plots"),
   loadingScreen: document.getElementById("loadingScreen"),
   timeWindowToggle: document.getElementById("timeWindowToggle"),
+  syncSnapToggle: document.getElementById("syncSnapToggle"),
   resetWindow: document.getElementById("resetWindow"),
 };
 
@@ -850,6 +851,7 @@ const metaSummary = document.getElementById("metaSummary");
 const S = { headers: [], cols: [], timeIdx: -1, name:"", size:0, ready:false, uploadedFileId: null };
 const plotRegistry = [];
 const timeWindow = { enabled:false, range:null };
+const snapSync = { enabled:false, lastTime:null };
 
 const toast = (m,t="error")=>{
   els.toast.textContent=m; els.toast.classList.remove("hidden");
@@ -1359,13 +1361,44 @@ function setSelectionMode(enabled){
 function updatePlotFooters(){
   plotRegistry.forEach(({footer})=>{
     if (!footer) return;
-    footer.textContent = timeWindow.enabled ? "Drag to set shared Time window" : "Click to inspect";
+    if (timeWindow.enabled){
+      footer.textContent = "Drag to set shared Time window";
+    } else {
+      footer.textContent = snapSync.enabled ? "Click to inspect (synced)" : "Click to inspect";
+    }
   });
 }
 
 function setPlotDragMode(div){
   const dragmode = timeWindow.enabled ? "select" : false;
   Plotly.relayout(div, { dragmode, selectdirection:"h" });
+}
+
+function formatSnapReadout(label, yv, xv){
+  return `${label}: ${yv.toFixed(2)} @ ${xv.toFixed(2)}s`;
+}
+
+function applySnapLine(div, xv){
+  Plotly.relayout(div, {
+    shapes: [{
+      type:"line", xref:"x", yref:"paper",
+      x0:xv, x1:xv, y0:0, y1:1,
+      line:{color:"#43B3FF", width:1, dash:"dot"}
+    }]
+  });
+}
+
+function updatePlotSnapAt(plot, targetTime){
+  if (!plot || !Array.isArray(plot.xSeries) || !Array.isArray(plot.ySeries)) return;
+  const idx = nearestIndex(plot.xSeries, targetTime);
+  if (idx == null) return;
+  const xv = plot.xSeries[idx];
+  const yv = plot.ySeries[idx];
+  if (!Number.isFinite(xv) || !Number.isFinite(yv)) return;
+  applySnapLine(plot.div, xv);
+  if (plot.readout){
+    plot.readout.textContent = formatSnapReadout(plot.label, yv, xv);
+  }
 }
 
 function wirePlotSelection(div){
@@ -1385,14 +1418,6 @@ function wirePlotSelection(div){
 
 function wirePlotSnap(div, xSeries, ySeries, readout, label){
   if (!Array.isArray(xSeries) || !Array.isArray(ySeries)) return;
-  const formatReadout = (idx)=>{
-    if (idx == null) return;
-    const xv = xSeries[idx];
-    const yv = ySeries[idx];
-    if (Number.isFinite(xv) && Number.isFinite(yv)){
-      readout.textContent = `${label}: ${yv.toFixed(2)} @ ${xv.toFixed(2)}s`;
-    }
-  };
   const update = (clientX)=>{
     const fl = div._fullLayout; if (!fl || !fl.xaxis || !fl.margin) return;
     const bb = div.getBoundingClientRect();
@@ -1402,14 +1427,12 @@ function wirePlotSnap(div, xSeries, ySeries, readout, label){
     const idx = nearestIndex(xSeries, xVal);
     if (idx == null) return;
     const xv = xSeries[idx];
-    Plotly.relayout(div, {
-      shapes: [{
-        type:"line", xref:"x", yref:"paper",
-        x0:xv, x1:xv, y0:0, y1:1,
-        line:{color:"#43B3FF", width:1, dash:"dot"}
-      }]
-    });
-    formatReadout(idx);
+    if (snapSync.enabled){
+      snapSync.lastTime = xv;
+      plotRegistry.forEach(plot => updatePlotSnapAt(plot, xv));
+      return;
+    }
+    updatePlotSnapAt({ div, xSeries, ySeries, readout, label }, xv);
   };
   let dragging=false;
   div.addEventListener("pointerdown", (e)=>{
@@ -1466,14 +1489,18 @@ function initPlotObserver(){
   });
 }
 
-function renderSinglePlot(div, { trace, layout, config, originalX, originalY, header, footer }){
+function renderSinglePlot(div, { trace, layout, config, originalX, originalY, header, footer, readout }){
   Plotly.newPlot(div, [trace], layout, config)
     .then(() => {
       applyTheme(document.documentElement.getAttribute('data-theme') === 'light', [div]);
-      wirePlotSnap(div, originalX, originalY, footer, header);
+      wirePlotSnap(div, originalX, originalY, readout, header);
       wirePlotSelection(div);
       setPlotDragMode(div);
-      plotRegistry.push({ div, xSeries: originalX, footer, readout: null });
+      const entry = { div, xSeries: originalX, ySeries: originalY, footer, readout, label: header };
+      plotRegistry.push(entry);
+      if (snapSync.enabled && Number.isFinite(snapSync.lastTime)){
+        updatePlotSnapAt(entry, snapSync.lastTime);
+      }
       applyWindowRangeToPlot(div);
     });
 }
@@ -1574,13 +1601,13 @@ function renderPlots(){
         originalX: x,
         originalY: S.cols[i],
         header: S.headers[i],
-        footer
+        footer,
+        readout: footer
       };
 
       // Render immediately if observer not available, otherwise observe
       if (!plotObserver){
-        renderSinglePlot(div, card._plotData);
-        plotRegistry.push({ div, xSeries: x, footer, readout: titleReadout });
+        renderSinglePlot(div, { ...card._plotData, readout: titleReadout });
       } else {
         plotObserver.observe(card);
       }
@@ -1690,6 +1717,14 @@ els.dropzone.addEventListener("click", () => {
 if (els.timeWindowToggle){
   els.timeWindowToggle.addEventListener("change", debounce((e)=>{
     setSelectionMode(e.target.checked);
+  }, 150));
+}
+
+if (els.syncSnapToggle){
+  els.syncSnapToggle.addEventListener("change", debounce((e)=>{
+    snapSync.enabled = !!e.target.checked;
+    if (!snapSync.enabled) snapSync.lastTime = null;
+    updatePlotFooters();
   }, 150));
 }
 
