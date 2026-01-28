@@ -2,41 +2,22 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <title>EcuTek Log Viewer (TXT/CSV)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>EcuTek Log Viewer (Simulation)</title>
   <link rel="stylesheet" href="style.css?v=1.5.0" />
   <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-  <script>
-    window.SUPABASE_URL = "https://qliilnxaqerekgqoqqxr.supabase.co";
-    window.SUPABASE_ANON_KEY = "sb_publishable__OIhCNmF5NJuUHfNl63uwg_ocsuHmNh";
-  </script>
 </head>
-<body>
-  <!-- Loading Screen -->
-  <div id="loadingScreen" class="loading-screen">
-    <div class="classic-loader" id="classicLoader">
-      <div class="ascii-loading">
-        <div class="matrix" id="classicMatrix"></div>
-        <div class="loading-text">ECU-TEK LOG VIEWER</div>
-        <div class="hint">loading…</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Taskbar -->
+<body class="simulation-page">
   <div class="taskbar">
     <div class="taskbar-content">
       <div class="taskbar-left">
         <div class="brand">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
+            <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z" />
           </svg>
           EcuTek Log Viewer
         </div>
-        
         <nav class="nav-menu">
           <a href="#" class="nav-item active">Dashboard</a>
           <div class="dropdown">
@@ -67,11 +48,10 @@
               </a>
             </div>
           </div>
-          
           <div class="dropdown">
             <a href="#" class="nav-item">View</a>
             <div class="dropdown-content">
-              <a href="#" class="dropdown-item active">
+              <a href="index.html" class="dropdown-item active">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/>
                 </svg>
@@ -104,7 +84,6 @@
               </a>
             </div>
           </div>
-          
           <div class="dropdown">
             <a href="#" class="nav-item">Tools <small class="tag-exp">Experimental</small></a>
             <div class="dropdown-content">
@@ -126,12 +105,12 @@
                 </svg>
                 Templates & Presets
               </a>
-            <a href="#" class="dropdown-item" id="metadataMenu">
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/>
-              </svg>
-              Log Metadata & Archive
-            </a>
+              <a href="#" class="dropdown-item" id="metadataMenu">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/>
+                </svg>
+                Log Metadata & Archive
+              </a>
               <a href="#" class="dropdown-item" id="shiftLabLink">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
@@ -140,7 +119,6 @@
               </a>
             </div>
           </div>
-          
           <div class="dropdown">
             <a href="#" class="nav-item">Help</a>
             <div class="dropdown-content">
@@ -172,7 +150,6 @@
           </div>
         </nav>
       </div>
-      
       <div class="taskbar-right">
         <div class="theme-toggle" id="themeToggle">
           <svg class="theme-icon" id="themeIcon" viewBox="0 0 24 24" fill="currentColor">
@@ -184,76 +161,122 @@
     </div>
   </div>
 
-
-
   <div class="wrap">
     <div class="card uploader">
       <div class="pickers">
         <label class="filebtn">
-          <input id="csvFile" type="file" accept=".csv,.txt,.log,text/csv,text/plain" />
-          <span>Choose Log File (.txt/.csv)</span>
+          <input id="simFile" type="file" accept=".csv,.txt,.log,text/csv,text/plain" />
+          <span>Load Log (CSV/TXT)</span>
         </label>
-        <button id="genBtn" class="btn primary" disabled>Generate Plots</button>
-        <button id="clearBtn" class="btn ghost">Clear</button>
+        <button id="simReload" class="btn ghost">Use Cached Log</button>
       </div>
-      <div id="dropzone" class="drop">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity: 0.5; margin-bottom: 8px;">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-          <polyline points="17 8 12 3 7 8"></polyline>
-          <line x1="12" y1="3" x2="12" y2="15"></line>
-        </svg>
-        <span>Drag & drop files here</span>
-        <small style="margin-top: 8px; opacity: 0.7;">or click to browse</small>
-      </div>
-      <div id="fileInfo" class="fileinfo"></div>
-      
-      <!-- Progress indicator for CSV parsing -->
-      <div id="parseProgressContainer" class="progress-container hidden">
-        <div class="progress-bar">
-          <div id="parseProgress" class="progress-fill" style="width: 0%">0%</div>
-        </div>
-        <div class="progress-text">Parsing CSV file...</div>
-      </div>
-
-      <div id="fileChips" class="filechips"></div>
-      <div id="toast" class="toast hidden"></div>
+      <div id="simFileInfo" class="fileinfo muted">Reads from the shared session cache. Upload here if you want to override.</div>
+      <div id="simToast" class="toast hidden"></div>
     </div>
 
     <div class="card page-hero">
       <div class="page-hero-icon">
         <svg viewBox="0 0 24 24" fill="currentColor">
-          <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/>
+          <path d="M3 13h2v-2H3v2zm4 4h14v-2H7v2zm0-8h14V7H7v2zM5 3h14v2H5z"/>
         </svg>
       </div>
       <div class="page-hero-text">
-        <div class="page-hero-title">Signal Matrix</div>
-        <div class="page-hero-subtitle">Click any plot to inspect values; Window mode sets a shared time range.</div>
+        <div class="page-hero-title">Simulation Lab</div>
+        <div class="page-hero-subtitle">Play through the log and watch parameters update in sync.</div>
       </div>
     </div>
 
+    <div class="card sim-controls-card">
+      <div class="card-heading">
+        <span>Simulation Controls</span>
+      </div>
+      <div class="sim-controls">
+        <button id="simPlayToggleMain" class="btn primary mini">Play</button>
+        <button id="simOpenPlayer" class="btn ghost mini">Open Player</button>
+        <div class="sim-time-display" id="simTimeDisplay">0.00s</div>
+      </div>
+      <div class="sim-hint">Play opens the SimuLab player with live plots and readout.</div>
+    </div>
 
+    <div class="card sim-params-card">
+      <div class="card-heading">
+        <span>Parameters · Graph A</span>
+        <div class="heading-actions">
+          <button id="simSelectAllA" class="btn ghost mini">All</button>
+          <button id="simSelectNoneA" class="btn ghost mini">None</button>
+        </div>
+      </div>
+      <input id="simFilterA" class="sim-filter" type="text" placeholder="Filter parameters..." />
+      <div id="simParamListA" class="sim-param-list"></div>
+    </div>
 
-    <div class="section-heading" style="margin-top:22px;">Time Graphs</div>
-    <div class="plots" id="plots">
-      <!-- Skeleton screens will be inserted here when loading -->
+    <div class="card sim-params-card" id="simParamsBCard">
+      <div class="card-heading">
+        <span>Parameters · Graph B</span>
+        <div class="heading-actions">
+          <label class="toggle">
+            <input type="checkbox" id="simGraphBToggle" />
+            <span>Enable</span>
+          </label>
+          <button id="simSelectAllB" class="btn ghost mini">All</button>
+          <button id="simSelectNoneB" class="btn ghost mini">None</button>
+        </div>
+      </div>
+      <input id="simFilterB" class="sim-filter" type="text" placeholder="Filter parameters..." />
+      <div id="simParamListB" class="sim-param-list"></div>
     </div>
   </div>
 
-  <div class="footer">Made by AK Everlasting Dev · Beta 1.5</div>
-  <div class="floating-actions">
-    <label class="switch floating-switch" title="Sync click selection across plots">
-      <input type="checkbox" id="syncSnapToggle" checked />
-      <span class="slider"></span>
-      <span class="label">Sync</span>
-    </label>
-    <label class="switch floating-switch" title="Toggle time window selection">
-      <input type="checkbox" id="timeWindowToggle" />
-      <span class="slider"></span>
-      <span class="label">Window</span>
-    </label>
-    <button id="resetWindow" class="totop action-btn" title="Reset time window">↺ Reset</button>
-    <button id="toTop" class="totop action-btn" title="Back to top">↑ Top</button>
+  <div id="simPlayerModal" class="modal hidden">
+    <div class="modal-content wide sim-player-modal">
+      <button class="modal-close" id="simPlayerClose" aria-label="Close SimuLab player">×</button>
+      <h3>SimuLab Player</h3>
+      <div class="sim-controls">
+        <button id="simPlayToggle" class="btn primary mini">Play</button>
+        <label class="sim-time-label">Time</label>
+        <input id="simTimeInput" type="number" step="0.01" min="0" value="0" />
+        <div class="sim-time-display" id="simTimeDisplayModal">0.00s</div>
+        <select id="simSpeed">
+          <option value="0.5">0.5x</option>
+          <option value="1" selected>1x</option>
+          <option value="2">2x</option>
+          <option value="4">4x</option>
+        </select>
+      </div>
+      <input id="simTimeSlider" class="sim-time-slider" type="range" min="0" max="1" step="0.01" value="0" />
+      <div class="sim-player-body">
+        <div class="sim-player-left">
+          <div class="plots sim-plots">
+            <div class="plot-card">
+              <div class="plot-title">Simulation Plot · Graph A</div>
+              <div class="plot-frame">
+                <div id="simPlotA" class="plot big"></div>
+              </div>
+            </div>
+            <div class="plot-card" id="simPlotBCard">
+              <div class="plot-title">Simulation Plot · Graph B</div>
+              <div class="plot-frame">
+                <div id="simPlotB" class="plot big"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="sim-player-right">
+          <div class="sim-readout-grid">
+            <div class="sim-readout-card">
+              <div class="card-heading"><span>Readout · Graph A</span></div>
+              <div id="simReadoutA" class="sim-readout muted">Load a log and select channels.</div>
+            </div>
+            <div class="sim-readout-card" id="simReadoutBCard">
+              <div class="card-heading"><span>Readout · Graph B</span></div>
+              <div id="simReadoutB" class="sim-readout muted">Enable Graph B and select channels.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
+
   <div id="shiftLabModal" class="modal hidden">
     <div class="modal-content wide">
       <button class="modal-close" id="shiftLabClose" aria-label="Close shift lab">×</button>
@@ -309,44 +332,9 @@
       </div>
     </div>
   </div>
-  <div id="hintsModal" class="modal hidden">
-    <div class="modal-content">
-      <button class="modal-close" id="hintsClose" aria-label="Close hints">×</button>
-      <h3>Hints</h3>
-      <ul>
-        <li>Signal Matrix shows every column; toggle plots off to declutter.</li>
-        <li>Use keyboard modifiers (Shift/Alt) for finer scaling steps on desktop.</li>
-        <li>Correlation Lab adds dual-log overlay, smoothing, and highlights.</li>
-        <li>New Comparison Plot view (coming soon) will combine multiple logs.</li>
-      </ul>
-    </div>
-  </div>
-  <div id="metadataModal" class="modal hidden">
-    <div class="modal-content wide">
-      <button class="modal-close" id="metadataClose" aria-label="Close metadata">×</button>
-      <h3>Log Metadata & Archive</h3>
-      <div id="metaSummary" class="meta-grid muted">
-        <span>Upload a log to see VIN, ECU SW numbers, dongle IDs, sampling stats, GR6 shifts, and torque interventions.</span>
-      </div>
-      <section class="modal-section">
-        <h4>Cloud Save Note</h4>
-        <div class="form-grid">
-          <textarea id="archiveNoteInput" rows="2" placeholder="e.g. 2025-11-24 · 4th gear pull · new injectors"></textarea>
-          <button id="archiveLogBtn" class="btn primary mini" disabled>Archive Current Log</button>
-        </div>
-        <p class="muted">Uploads to cloud storage with your note as the filename. Your note helps identify the log file.</p>
-      </section>
-      <section class="modal-section" id="shareSection" style="display: none;">
-        <h4>Shareable Link</h4>
-        <div class="form-grid">
-          <input type="text" id="shareableLinkInput" readonly placeholder="Upload a log first to generate shareable link" />
-          <button id="generateShareBtn" class="btn primary mini" disabled>Generate Link</button>
-          <button id="copyShareBtn" class="btn ghost mini" disabled>Copy</button>
-        </div>
-        <p class="muted">Generate a shareable link to view this log with its current configuration.</p>
-      </section>
-    </div>
-  </div>
-  <script type="module" src="app.js?v=1.5.0"></script>
+
+  <div class="footer">Client-side parsing. Your file never leaves the device. · Simulation Lab</div>
+  <button id="toTop" class="totop" title="Back to top">↑ Top</button>
+  <script type="module" src="simulation.js?v=1.5.0"></script>
 </body>
 </html>

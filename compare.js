@@ -273,7 +273,7 @@ const scaleHelpBtn = $("scaleHelpBtn");
 const scaleHelpModal = $("scaleHelpModal");
 const scaleHelpClose = $("scaleHelpClose");
 const autoScaleBtn = $("autoScaleBtn");
-const changelogBtn = $("changelogBtn");
+const changelogMenu = $("changelogMenu");
 const changelogModal = $("changelogModal");
 const changelogClose = $("changelogClose");
 const hintsBtn = $("hintsBtn");
@@ -330,9 +330,9 @@ const resetYRangeBtn = $("resetYRangeBtn");
 const metadataModal = $("metadataModal");
 const metadataClose = $("metadataClose");
 const metadataLink = $("metadataLink");
-const metadataMenuCompare = $("metadataMenuCompare");
-const templatesMenuCompare = $("templatesMenuCompare");
-const annotationsMenuCompare = $("annotationsMenuCompare");
+const metadataMenu = $("metadataMenu");
+const templatesMenu = $("templatesMenu");
+const annotationsMenu = $("annotationsMenu");
 const metaSummary = $("metaSummary");
 const archiveLogBtn = $("archiveLogBtn");
 const archiveNoteInput = $("archiveNoteInput");
@@ -2430,8 +2430,8 @@ function wireInitialEventListeners(){
   if (archiveLogBtn) {
     archiveLogBtn.addEventListener("click", archiveCurrentLog);
   }
-  if (metadataMenuCompare){
-    metadataMenuCompare.addEventListener("click", (e)=>{
+  if (metadataMenu){
+    metadataMenu.addEventListener("click", (e)=>{
       e.preventDefault();
       openMetadataModal();
     });
@@ -2459,8 +2459,8 @@ function wireInitialEventListeners(){
   if (metadataModal) {
     metadataModal.addEventListener("click", (e)=>{ if (e.target === metadataModal) closeMetadataModal(); });
   }
-  if (metadataMenuCompare){
-    metadataMenuCompare.addEventListener("click", (e)=>{
+  if (metadataMenu){
+    metadataMenu.addEventListener("click", (e)=>{
       e.preventDefault();
       openMetadataModal();
     });
@@ -2517,8 +2517,8 @@ function wireInitialEventListeners(){
   if (performanceLink) {
     performanceLink.addEventListener("click", (e)=>{ e.preventDefault(); openPerformanceModal(); });
   }
-  if (changelogBtn) {
-    changelogBtn.addEventListener("click", openChangelog);
+  if (changelogMenu) {
+    changelogMenu.addEventListener("click", (e)=>{ e.preventDefault(); openChangelog(); });
   }
   if (changelogClose) {
     changelogClose.addEventListener("click", closeChangelog);
@@ -2622,15 +2622,15 @@ function initDropdowns() {
       const id = item.id;
       
       // Handle by ID first (more reliable)
-      if (id === 'templatesMenuCompare'){
+      if (id === 'templatesMenu'){
         openTemplatesPanel();
         return;
       }
-      if (id === 'annotationsMenuCompare'){
+      if (id === 'annotationsMenu'){
         openAnnotationsPanel();
         return;
       }
-      if (id === 'metadataMenuCompare'){
+      if (id === 'metadataMenu'){
         openMetadataModal();
         return;
       }
@@ -2652,6 +2652,12 @@ function initDropdowns() {
         case "GR6 Gear Scope":
           window.location.href = "gear.html";
           break;
+        case "Simulation Lab":
+          window.location.href = "simulation.html";
+          break;
+        case "Shift Strategy Lab":
+          openShiftLabModal();
+          break;
         case "Annotations":
           openAnnotationsPanel();
           break;
@@ -2666,6 +2672,9 @@ function initDropdowns() {
           break;
         case "Data Analysis Suite":
           window.location.href = "analysis.html";
+          break;
+        case "Change Log":
+          openChangelog();
           break;
         case "Documentation":
           window.open("https://github.com/Everlasting-dev/ecutek-log-viewer", "_blank");

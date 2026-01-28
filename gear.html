@@ -14,7 +14,7 @@
       <div class="taskbar-left">
         <div class="brand">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z" />
+            <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
           </svg>
           EcuTek Log Viewer
         </div>
@@ -23,24 +23,28 @@
           <div class="dropdown">
             <a href="#" class="nav-item">File</a>
             <div class="dropdown-content">
-              <a href="#" class="dropdown-item">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/>
-                </svg>
-                Open CSV File
-              </a>
-              <a href="#" class="dropdown-item">
+              <div class="dropdown-item" id="exportMenu">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
                 </svg>
-                Export Data
-              </a>
+                Export
+                <svg style="margin-left: auto; width: 12px; height: 12px;" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M7 10l5 5 5-5H7z"/>
+                </svg>
+              </div>
+              <div class="dropdown-content export-submenu" style="display: none; position: absolute; left: 100%; top: 0; margin-left: 4px;">
+                <a href="#" class="dropdown-item" id="exportPNG">Export Current Plot (PNG)</a>
+                <a href="#" class="dropdown-item" id="exportSVG">Export Current Plot (SVG)</a>
+                <a href="#" class="dropdown-item" id="exportAllPNG">Export All Plots (ZIP)</a>
+                <a href="#" class="dropdown-item" id="exportPDF">Export Report (PDF)</a>
+              </div>
               <div class="dropdown-divider"></div>
-              <a href="#" class="dropdown-item">
+              <a href="#" class="dropdown-item" id="recentFilesMenu">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
                 </svg>
                 Recent Files
+                <span id="recentFilesCount" class="badge" style="margin-left: auto; display: none;">0</span>
               </a>
             </div>
           </div>
@@ -48,7 +52,7 @@
           <div class="dropdown">
             <a href="#" class="nav-item">View</a>
             <div class="dropdown-content">
-              <a href="index.html" class="dropdown-item">
+              <a href="#" class="dropdown-item active">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/>
                 </svg>
@@ -60,11 +64,24 @@
                 </svg>
                 Correlation Lab
               </a>
-              <a href="gear.html" class="dropdown-item active">
+              <a href="gear.html" class="dropdown-item">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M7 10l5 5 5-5H7z"/>
                 </svg>
                 GR6 Gear Scope
+              </a>
+              <a href="simulation.html" class="dropdown-item">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M3 13h2v-2H3v2zm4 4h14v-2H7v2zm0-8h14V7H7v2zM5 3h14v2H5z"/>
+                </svg>
+                Simulation Lab
+              </a>
+              <div class="dropdown-divider"></div>
+              <a href="#" class="dropdown-item" id="hintsBtn">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                </svg>
+                Hints
               </a>
             </div>
           </div>
@@ -78,7 +95,25 @@
                 </svg>
                 Data Analysis Suite
               </a>
-              <a href="compare.html#shift-lab" class="dropdown-item">
+              <a href="#" class="dropdown-item" id="annotationsMenu">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                </svg>
+                Annotations
+              </a>
+              <a href="#" class="dropdown-item" id="templatesMenu">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+                </svg>
+                Templates & Presets
+              </a>
+              <a href="#" class="dropdown-item" id="metadataMenu">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/>
+                </svg>
+                Log Metadata & Archive
+              </a>
+              <a href="#" class="dropdown-item" id="shiftLabLink">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
                 </svg>
@@ -90,11 +125,23 @@
           <div class="dropdown">
             <a href="#" class="nav-item">Help</a>
             <div class="dropdown-content">
-              <a href="#" class="dropdown-item">
+              <a href="https://github.com/Everlasting-dev/ecutek-log-viewer" target="_blank" class="dropdown-item">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/>
                 </svg>
                 Documentation
+              </a>
+              <a href="https://ecutek.atlassian.net/wiki/spaces/SUPPORT/pages/327698/EcuTek+Knowledge+Base" target="_blank" class="dropdown-item">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/>
+                </svg>
+                EcuTek Knowledge Base
+              </a>
+              <a href="#" class="dropdown-item" id="changelogMenu">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M7 7h10v2H7V7zm0 4h10v2H7v-2zm0 4h10v2H7v-2z"/>
+                </svg>
+                Change Log
               </a>
               <a href="about.html" class="dropdown-item">
                 <svg viewBox="0 0 24 24" fill="currentColor">
@@ -129,17 +176,102 @@
       <div id="gearFileInfo" class="fileinfo muted">Uses the same cache as the other views. Upload here if you want to override.</div>
     </div>
 
+    <div class="card page-hero">
+      <div class="page-hero-icon">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M7 10l5 5 5-5H7z"/>
+        </svg>
+      </div>
+      <div class="page-hero-text">
+        <div class="page-hero-title">GR6 Gear Scope</div>
+        <div class="page-hero-subtitle">Shift points, torque intervention, and slip behavior in one place.</div>
+      </div>
+    </div>
+
+    <div class="card gear-intro">
+      <div class="card-heading">
+        <span>GR6 Gear Scope · Overview</span>
+      </div>
+      <p class="muted">
+        The GR6 is the GT‑R dual‑clutch transmission. This view surfaces shift points, torque intervention,
+        and slip behavior to help tune shift strategy and drivetrain consistency.
+      </p>
+      <div class="meta-grid">
+        <div class="meta-pair"><span>Clutch Packs</span><strong>Dual wet‑clutch</strong></div>
+        <div class="meta-pair"><span>Shift Focus</span><strong>RPM drop + torque reduction</strong></div>
+        <div class="meta-pair"><span>Signals Used</span><strong>RPM, Gear, Slip, Torque</strong></div>
+      </div>
+    </div>
+
     <div class="card gear-card">
       <div class="card-heading">
         <span>GR6 Gear Scope</span>
         <div class="mode-toggle" id="gearModeToggle">
           <button data-mode="rpm-speed" class="active">RPM vs Speed</button>
           <button data-mode="timeline">Timeline</button>
+          <button data-mode="shift-points">Shift Points</button>
+          <button data-mode="torque-slip">Torque/Slip</button>
         </div>
       </div>
       <p class="muted">View logged shift points and compare them with ideal GR6 drop targets. RPM traces follow the Engine Speed column while gear data is inferred from Gear Actual / Gear Desired.</p>
       <div id="gearPlot" class="plot big"></div>
       <div id="gearStatus" class="analysis-result muted">Load a log with Engine Speed, Vehicle Speed, and Gear channels to populate this view.</div>
+    </div>
+  </div>
+
+  <div id="shiftLabModal" class="modal hidden">
+    <div class="modal-content wide">
+      <button class="modal-close" id="shiftLabClose" aria-label="Close shift lab">×</button>
+      <h3>Shift Strategy Lab · GR6 Focus</h3>
+      <p class="muted">Blend gearbox ratios, final drive, and tire diameter to visualize shift points and re-clutch RPM. Inspired by <a href="https://www.blocklayer.com/rpm-gear" target="_blank" rel="noopener">blocklayer.com</a>.</p>
+      <div class="shift-grid">
+        <div class="shift-config">
+          <label>Redline (RPM)</label>
+          <input type="number" id="shiftRedline" value="7500" min="3000" max="9000" step="50" />
+          <label>Final Drive</label>
+          <input type="number" id="shiftFinal" value="3.70" step="0.01" />
+          <label>Tire Diameter (in)</label>
+          <input type="number" id="shiftTire" value="26.5" step="0.1" />
+          <label>GR6 Gear Ratios</label>
+          <textarea id="shiftRatios" rows="4" spellcheck="false">3.36, 2.10, 1.49, 1.20, 1.00, 0.79</textarea>
+          <label>Clutch Fill Time (ms)</label>
+          <input type="number" id="shiftClutchFill" value="90" step="5" />
+          <label>Wheel Slip Threshold (%)</label>
+          <input type="number" id="shiftSlip" value="6" step="0.5" />
+          <div class="shift-buttons">
+            <button id="shiftAnalyzeBtn" class="btn primary mini">Generate Shift Notes</button>
+            <button id="shiftResetBtn" class="btn ghost mini">Reset Defaults</button>
+          </div>
+        </div>
+        <div class="shift-results">
+          <div id="shiftPlot" class="shift-plot"></div>
+          <div id="shiftNotes" class="shift-notes muted">Provide realistic ratios to see suggested shift RPM and drop RPM guidance.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="changelogModal" class="modal hidden">
+    <div class="modal-content wide">
+      <button class="modal-close" id="changelogClose" aria-label="Close change log">×</button>
+      <h3>Change Log</h3>
+      <div class="changelog-entry">
+        <h4>v1.6.0</h4>
+        <ul>
+          <li><strong>Simulation Lab:</strong> player popup, Graph A/B, playback controls, and cursor sync.</li>
+          <li><strong>Signal Matrix:</strong> synced snap default, footer readout layout, and improved action stack.</li>
+          <li><strong>Recent Files:</strong> click-to-load from the File menu.</li>
+          <li><strong>View Navigation:</strong> Simulation Lab added across the app.</li>
+        </ul>
+      </div>
+      <div class="changelog-entry">
+        <h4>v1.5.0</h4>
+        <ul>
+          <li><strong>Performance Overhaul:</strong> Web Workers, IndexedDB, lazy plot rendering.</li>
+          <li><strong>Annotations + Templates:</strong> save and reuse plot layouts.</li>
+          <li><strong>Export:</strong> PNG/SVG/ZIP/PDF reporting.</li>
+        </ul>
+      </div>
     </div>
   </div>
 

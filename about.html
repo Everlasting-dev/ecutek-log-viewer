@@ -51,28 +51,32 @@
         </div>
         
         <nav class="nav-menu">
-          <a href="index.html" class="nav-item">Dashboard</a>
+          <a href="#" class="nav-item active">Dashboard</a>
           <div class="dropdown">
             <a href="#" class="nav-item">File</a>
             <div class="dropdown-content">
-              <a href="index.html" class="dropdown-item">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/>
-                </svg>
-                Open CSV File
-              </a>
-              <a href="#" class="dropdown-item">
+              <div class="dropdown-item" id="exportMenu">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
                 </svg>
-                Export Data
-              </a>
+                Export
+                <svg style="margin-left: auto; width: 12px; height: 12px;" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M7 10l5 5 5-5H7z"/>
+                </svg>
+              </div>
+              <div class="dropdown-content export-submenu" style="display: none; position: absolute; left: 100%; top: 0; margin-left: 4px;">
+                <a href="#" class="dropdown-item" id="exportPNG">Export Current Plot (PNG)</a>
+                <a href="#" class="dropdown-item" id="exportSVG">Export Current Plot (SVG)</a>
+                <a href="#" class="dropdown-item" id="exportAllPNG">Export All Plots (ZIP)</a>
+                <a href="#" class="dropdown-item" id="exportPDF">Export Report (PDF)</a>
+              </div>
               <div class="dropdown-divider"></div>
-              <a href="#" class="dropdown-item">
+              <a href="#" class="dropdown-item" id="recentFilesMenu">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
                 </svg>
                 Recent Files
+                <span id="recentFilesCount" class="badge" style="margin-left: auto; display: none;">0</span>
               </a>
             </div>
           </div>
@@ -80,7 +84,7 @@
           <div class="dropdown">
             <a href="#" class="nav-item">View</a>
             <div class="dropdown-content">
-              <a href="index.html" class="dropdown-item">
+              <a href="#" class="dropdown-item active">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/>
                 </svg>
@@ -92,12 +96,24 @@
                 </svg>
                 Correlation Lab
               </a>
+              <a href="gear.html" class="dropdown-item">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M7 10l5 5 5-5H7z"/>
+                </svg>
+                GR6 Gear Scope
+              </a>
+              <a href="simulation.html" class="dropdown-item">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M3 13h2v-2H3v2zm4 4h14v-2H7v2zm0-8h14V7H7v2zM5 3h14v2H5z"/>
+                </svg>
+                Simulation Lab
+              </a>
               <div class="dropdown-divider"></div>
-              <a href="about.html" class="dropdown-item active">
+              <a href="#" class="dropdown-item" id="hintsBtn">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
                 </svg>
-                About
+                Hints
               </a>
             </div>
           </div>
@@ -111,7 +127,25 @@
                 </svg>
                 Data Analysis Suite
               </a>
-              <a href="compare.html#shift-lab" class="dropdown-item">
+              <a href="#" class="dropdown-item" id="annotationsMenu">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                </svg>
+                Annotations
+              </a>
+              <a href="#" class="dropdown-item" id="templatesMenu">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+                </svg>
+                Templates & Presets
+              </a>
+              <a href="#" class="dropdown-item" id="metadataMenu">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/>
+                </svg>
+                Log Metadata & Archive
+              </a>
+              <a href="#" class="dropdown-item" id="shiftLabLink">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
                 </svg>
@@ -123,13 +157,25 @@
           <div class="dropdown">
             <a href="#" class="nav-item">Help</a>
             <div class="dropdown-content">
-              <a href="#" class="dropdown-item">
+              <a href="https://github.com/Everlasting-dev/ecutek-log-viewer" target="_blank" class="dropdown-item">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/>
                 </svg>
                 Documentation
               </a>
-              <a href="about.html" class="dropdown-item active">
+              <a href="https://ecutek.atlassian.net/wiki/spaces/SUPPORT/pages/327698/EcuTek+Knowledge+Base" target="_blank" class="dropdown-item">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/>
+                </svg>
+                EcuTek Knowledge Base
+              </a>
+              <a href="#" class="dropdown-item" id="changelogMenu">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M7 7h10v2H7V7zm0 4h10v2H7v-2zm0 4h10v2H7v-2z"/>
+                </svg>
+                Change Log
+              </a>
+              <a href="about.html" class="dropdown-item">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
                 </svg>
@@ -172,17 +218,13 @@
       <section class="about-section">
         <h2 style="margin:0 0 6px">Key features</h2>
         <ul class="feature-list" style="color:var(--muted)">
-          <li><strong>Signal Matrix:</strong> multi-axis signal grid for rapid sensor auditing</li>
-          <li><strong>Correlation Lab:</strong> dual-log overlays with smoothing, highlighting, and event markers</li>
-          <li><strong>100% Local:</strong> zero server processing</li>
-          <li><strong>Responsive:</strong> desktop & mobile</li>
-          <li><strong>Dark UI:</strong> matches your theme</li>
-          <li><strong>Session cache:</strong> switch pages without re-upload</li>
-          <li><strong>Adaptive smoothing:</strong> configurable moving-average windows tame noisy sensors</li>
-          <li><strong>Event highlights:</strong> threshold-based markers for knock, boost spikes, or any metric</li>
-          <li><strong>Dual-log overlay:</strong> load a comparison file and view both traces with dashed references</li>
-          <li><strong>Auto Scale:</strong> normalize RPM/boost ranges with one tap before fine tweaks</li>
-          <li><strong>Change log & hints:</strong> in-app documentation for every release</li>
+          <li><strong>Signal Matrix:</strong> multi-axis grid with synced snap readouts</li>
+          <li><strong>Simulation Lab:</strong> playback controls with live readouts and cursor tracking</li>
+          <li><strong>GR6 Gear Scope:</strong> shift points, torque intervention, and slip timelines</li>
+          <li><strong>Correlation Lab:</strong> overlays, smoothing, highlighting, and scaling tools</li>
+          <li><strong>100% Local:</strong> no uploads, no server processing</li>
+          <li><strong>Session cache:</strong> switch views without re-uploading</li>
+          <li><strong>Exports:</strong> PNG/SVG/ZIP/PDF reporting</li>
         </ul>
       </section>
 
@@ -208,24 +250,29 @@
       </section>
 
       <section class="about-section">
-        <h2 style="margin:0 0 6px">What’s new in Beta 1.5</h2>
+        <h2 style="margin:0 0 6px">What’s new in v1.6.0</h2>
         <ul class="feature-list" style="color:var(--muted)">
-          <li><strong>Performance Overhaul:</strong> Web Workers for CSV parsing, IndexedDB storage, skeleton screens, and lazy rendering</li>
-          <li><strong>Plot Optimization:</strong> scattergl for large datasets, LTTB downsampling, and viewport-based lazy loading</li>
-          <li><strong>Keyboard Shortcuts:</strong> Ctrl+O to open, Ctrl+S to save, arrow keys to navigate plots</li>
-          <li><strong>Export Options:</strong> PNG/SVG export, ZIP archives, and PDF report generation</li>
-          <li><strong>Annotations System:</strong> Mark events at timestamps with notes and color coding</li>
-          <li><strong>Templates & Presets:</strong> Save plot configurations for quick reuse</li>
-          <li><strong>Quick Search:</strong> Type parameter names to jump to plots instantly</li>
-          <li><strong>Mobile Enhancements:</strong> Touch gestures, bottom sheet modals, and adaptive UI</li>
+          <li><strong>Simulation Lab:</strong> player popup, Graph A/B, playback controls, and cursor sync</li>
+          <li><strong>Signal Matrix:</strong> synced snap default and footer readout layout</li>
+          <li><strong>Navigation:</strong> Simulation Lab and Change Log available across pages</li>
+          <li><strong>Recent Files:</strong> click-to-load from the File menu</li>
+        </ul>
+      </section>
+      <section class="about-section">
+        <h2 style="margin:0 0 6px">v1.5.0 highlights</h2>
+        <ul class="feature-list" style="color:var(--muted)">
+          <li><strong>Performance Overhaul:</strong> Web Workers, IndexedDB, skeleton screens, and lazy rendering</li>
+          <li><strong>Plot Optimization:</strong> scattergl and LTTB downsampling</li>
+          <li><strong>Exports:</strong> PNG/SVG/ZIP/PDF reporting</li>
+          <li><strong>Annotations + Templates:</strong> saved plot layouts and notes</li>
         </ul>
       </section>
 
       <section class="about-section">
         <h2 style="margin:0 0 6px">Release</h2>
         <dl class="kv" style="color:var(--muted)">
-          <dt>Current Version</dt><dd>Beta 1.5</dd>
-          <dt>Last Updated</dt><dd>January 27, 2026</dd>
+          <dt>Current Version</dt><dd>v1.6.0</dd>
+          <dt>Last Updated</dt><dd>January 28, 2026</dd>
           <dt>Browser Support</dt><dd>Chrome 80+, Firefox 75+, Safari 13+, Edge 80+</dd>
           <dt>License</dt><dd>MIT</dd>
         </dl>

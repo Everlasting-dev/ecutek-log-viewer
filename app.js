@@ -1,7 +1,7 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm";
 import { findTimeIndex } from "./parser.js";
 import { debounce, throttle, formatBytes, supportsWebWorkers } from "./modules/utils.js";
-import { storeLog, getRecentLog, storeParsed, getParsed, addToRecent, migrateFromSessionStorage, getRecentFiles } from "./modules/storage.js";
+import { storeLog, getRecentLog, storeParsed, getParsed, addToRecent, migrateFromSessionStorage, getRecentFiles, getLog } from "./modules/storage.js";
 import { downsampleLTTB } from "./modules/downsample.js";
 import { registerShortcut, initShortcuts, getModifierKey } from "./modules/shortcuts.js";
 import { exportPlotPNG, exportPlotSVG, exportAllPlots, exportPDFReport } from "./modules/export.js";
@@ -342,11 +342,14 @@ function initDropdowns() {
         case "GR6 Gear Scope":
           window.location.href = "gear.html";
           break;
+        case "Simulation Lab":
+          window.location.href = "simulation.html";
+          break;
         case "Data Analysis Suite":
           window.location.href = "analysis.html";
           break;
         case "Shift Strategy Lab":
-          window.location.href = "compare.html#shift-lab";
+          openShiftLabModal();
           break;
         case "Annotations":
           openAnnotationsPanel();
@@ -362,6 +365,9 @@ function initDropdowns() {
           break;
         case "EcuTek Knowledge Base":
           window.open("https://ecutek.atlassian.net/wiki/spaces/SUPPORT/pages/327698/EcuTek+Knowledge+Base", "_blank");
+          break;
+        case "Change Log":
+          openChangelog();
           break;
         case "About":
           window.location.href = "about.html";
@@ -695,7 +701,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Initialize dropdown interactions
   initDropdowns();
 
-  if (changelogBtn) changelogBtn.addEventListener("click", openChangelog);
+  if (changelogMenu) changelogMenu.addEventListener("click", (e)=>{ e.preventDefault(); openChangelog(); });
   if (changelogClose) changelogClose.addEventListener("click", closeChangelog);
   if (changelogModal){
     changelogModal.addEventListener("click", (e) => {
@@ -716,6 +722,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
   if (archiveLogBtn) archiveLogBtn.addEventListener("click", archiveCurrentLog);
+  if (shiftLabLink) shiftLabLink.addEventListener("click", (e)=>{ e.preventDefault(); openShiftLabModal(); });
+  if (shiftLabClose) shiftLabClose.addEventListener("click", closeShiftLabModal);
+  if (shiftLabModal){
+    shiftLabModal.addEventListener("click", (e)=>{ if (e.target === shiftLabModal) closeShiftLabModal(); });
+  }
+  if (shiftAnalyzeBtn) shiftAnalyzeBtn.addEventListener("click", runShiftLab);
+  if (shiftResetBtn) shiftResetBtn.addEventListener("click", resetShiftLabDefaults);
   
   // Shareable link handlers
   const generateShareBtn = document.getElementById("generateShareBtn");
@@ -835,8 +848,22 @@ const els = {
 };
 
 const changelogBtn = document.getElementById("changelogBtn");
+const changelogMenu = document.getElementById("changelogMenu");
 const changelogModal = document.getElementById("changelogModal");
 const changelogClose = document.getElementById("changelogClose");
+const shiftLabModal = document.getElementById("shiftLabModal");
+const shiftLabClose = document.getElementById("shiftLabClose");
+const shiftLabLink = document.getElementById("shiftLabLink");
+const shiftRedline = document.getElementById("shiftRedline");
+const shiftFinal = document.getElementById("shiftFinal");
+const shiftTire = document.getElementById("shiftTire");
+const shiftRatios = document.getElementById("shiftRatios");
+const shiftClutchFill = document.getElementById("shiftClutchFill");
+const shiftSlip = document.getElementById("shiftSlip");
+const shiftAnalyzeBtn = document.getElementById("shiftAnalyzeBtn");
+const shiftResetBtn = document.getElementById("shiftResetBtn");
+const shiftPlot = document.getElementById("shiftPlot");
+const shiftNotes = document.getElementById("shiftNotes");
 const hintsBtn = document.getElementById("hintsBtn");
 const hintsModal = document.getElementById("hintsModal");
 const hintsClose = document.getElementById("hintsClose");
@@ -852,6 +879,7 @@ const S = { headers: [], cols: [], timeIdx: -1, name:"", size:0, ready:false, up
 const plotRegistry = [];
 const timeWindow = { enabled:false, range:null };
 const snapSync = { enabled:false, lastTime:null };
+if (els.syncSnapToggle) snapSync.enabled = !!els.syncSnapToggle.checked;
 
 const toast = (m,t="error")=>{
   els.toast.textContent=m; els.toast.classList.remove("hidden");
@@ -957,6 +985,80 @@ function updateShareSection(){
 function closeMetadataModal(){
   const modal = document.getElementById("metadataModal");
   if (modal) modal.classList.add("hidden");
+}
+
+function openShiftLabModal(){
+  if (shiftLabModal) {
+    shiftLabModal.classList.remove("hidden");
+    runShiftLab();
+  }
+}
+
+function closeShiftLabModal(){
+  if (shiftLabModal) shiftLabModal.classList.add("hidden");
+}
+
+function parseShiftRatiosInput(){
+  if (!shiftRatios) return [];
+  return shiftRatios.value
+    .split(/[\s,]+/)
+    .map(r => parseFloat(r))
+    .filter(v => Number.isFinite(v) && v > 0.1);
+}
+
+function runShiftLab(){
+  if (!shiftPlot) return;
+  const ratios = parseShiftRatiosInput();
+  const redline = Number(shiftRedline?.value) || 7500;
+  const finalDrive = Number(shiftFinal?.value) || 3.7;
+  const tireDiameter = Number(shiftTire?.value) || 26.5;
+  if (!ratios.length){
+    Plotly.purge(shiftPlot);
+    if (shiftNotes) shiftNotes.textContent = "Enter at least one gear ratio to generate shift guidance.";
+    return;
+  }
+  const rpmAxis = [];
+  for (let rpm = 2000; rpm <= redline; rpm += 250) rpmAxis.push(rpm);
+  const tireCirc = Math.PI * tireDiameter;
+  const mphConstant = 1056;
+  const traces = ratios.map((ratio, idx) => ({
+    type:"scatter",
+    mode:"lines",
+    name:`G${idx+1}`,
+    x: rpmAxis,
+    y: rpmAxis.map(rpm => (rpm * tireCirc) / (ratio * finalDrive * mphConstant))
+  }));
+  Plotly.newPlot(shiftPlot, traces, {
+    paper_bgcolor:"transparent",
+    plot_bgcolor:"transparent",
+    margin:{l:45,r:10,t:10,b:40},
+    xaxis:{title:"Engine RPM"},
+    yaxis:{title:"Vehicle Speed (mph)", rangemode:"tozero"}
+  }, {displaylogo:false, responsive:true, staticPlot:true});
+
+  const dropNotes = [];
+  for (let i=0;i<ratios.length-1;i++){
+    const dropRpm = redline * (ratios[i+1]/ratios[i]);
+    dropNotes.push(`G${i+1}→G${i+2}: shift @ ${redline.toFixed(0)} rpm → lands near ${dropRpm.toFixed(0)} rpm.`);
+  }
+  const clutchFill = Number(shiftClutchFill?.value) || 90;
+  const slipThreshold = Number(shiftSlip?.value) || 6;
+  const userNotes = [
+    `Clutch fill reminder: ${clutchFill} ms; keep torque cuts shorter than this.`,
+    `Wheel slip target ≤ ${slipThreshold}% for launch + shifts.`
+  ];
+  const combined = [...dropNotes, ...userNotes];
+  if (shiftNotes) shiftNotes.innerHTML = `<ul>${combined.map(note=>`<li>${note}</li>`).join("")}</ul>`;
+}
+
+function resetShiftLabDefaults(){
+  if (shiftRatios) shiftRatios.value = "3.36, 2.10, 1.49, 1.20, 1.00, 0.79";
+  if (shiftRedline) shiftRedline.value = "7500";
+  if (shiftFinal) shiftFinal.value = "3.70";
+  if (shiftTire) shiftTire.value = "26.5";
+  if (shiftClutchFill) shiftClutchFill.value = "90";
+  if (shiftSlip) shiftSlip.value = "6";
+  runShiftLab();
 }
 
 async function archiveCurrentLog(){
@@ -1359,12 +1461,12 @@ function setSelectionMode(enabled){
 }
 
 function updatePlotFooters(){
-  plotRegistry.forEach(({footer})=>{
-    if (!footer) return;
+  plotRegistry.forEach(({footerHint})=>{
+    if (!footerHint) return;
     if (timeWindow.enabled){
-      footer.textContent = "Drag to set shared Time window";
+      footerHint.textContent = "Drag to set shared Time window";
     } else {
-      footer.textContent = snapSync.enabled ? "Click to inspect (synced)" : "Click to inspect";
+      footerHint.textContent = snapSync.enabled ? "Click to inspect (synced)" : "Click to inspect";
     }
   });
 }
@@ -1374,8 +1476,12 @@ function setPlotDragMode(div){
   Plotly.relayout(div, { dragmode, selectdirection:"h" });
 }
 
-function formatSnapReadout(label, yv, xv){
-  return `${label}: ${yv.toFixed(2)} @ ${xv.toFixed(2)}s`;
+function formatSnapTime(xv){
+  return `${xv.toFixed(2)}s`;
+}
+
+function formatSnapValue(label, yv){
+  return `${label}: ${yv.toFixed(2)}`;
 }
 
 function applySnapLine(div, xv){
@@ -1396,8 +1502,11 @@ function updatePlotSnapAt(plot, targetTime){
   const yv = plot.ySeries[idx];
   if (!Number.isFinite(xv) || !Number.isFinite(yv)) return;
   applySnapLine(plot.div, xv);
-  if (plot.readout){
-    plot.readout.textContent = formatSnapReadout(plot.label, yv, xv);
+  if (plot.timeEl){
+    plot.timeEl.textContent = formatSnapTime(xv);
+  }
+  if (plot.valueEl){
+    plot.valueEl.textContent = formatSnapValue(plot.label, yv);
   }
 }
 
@@ -1416,7 +1525,7 @@ function wirePlotSelection(div){
   });
 }
 
-function wirePlotSnap(div, xSeries, ySeries, readout, label){
+function wirePlotSnap(div, xSeries, ySeries, timeEl, valueEl, label){
   if (!Array.isArray(xSeries) || !Array.isArray(ySeries)) return;
   const update = (clientX)=>{
     const fl = div._fullLayout; if (!fl || !fl.xaxis || !fl.margin) return;
@@ -1432,7 +1541,7 @@ function wirePlotSnap(div, xSeries, ySeries, readout, label){
       plotRegistry.forEach(plot => updatePlotSnapAt(plot, xv));
       return;
     }
-    updatePlotSnapAt({ div, xSeries, ySeries, readout, label }, xv);
+    updatePlotSnapAt({ div, xSeries, ySeries, timeEl, valueEl, label }, xv);
   };
   let dragging=false;
   div.addEventListener("pointerdown", (e)=>{
@@ -1489,14 +1598,14 @@ function initPlotObserver(){
   });
 }
 
-function renderSinglePlot(div, { trace, layout, config, originalX, originalY, header, footer, readout }){
+function renderSinglePlot(div, { trace, layout, config, originalX, originalY, header, footer, footerHint, footerTime, footerValue }){
   Plotly.newPlot(div, [trace], layout, config)
     .then(() => {
       applyTheme(document.documentElement.getAttribute('data-theme') === 'light', [div]);
-      wirePlotSnap(div, originalX, originalY, readout, header);
+      wirePlotSnap(div, originalX, originalY, footerTime, footerValue, header);
       wirePlotSelection(div);
       setPlotDragMode(div);
-      const entry = { div, xSeries: originalX, ySeries: originalY, footer, readout, label: header };
+      const entry = { div, xSeries: originalX, ySeries: originalY, footer, footerHint, timeEl: footerTime, valueEl: footerValue, label: header };
       plotRegistry.push(entry);
       if (snapSync.enabled && Number.isFinite(snapSync.lastTime)){
         updatePlotSnapAt(entry, snapSync.lastTime);
@@ -1539,11 +1648,16 @@ function renderPlots(){
       card.setAttribute("data-lazy", "true"); // Mark for lazy loading
       const title=document.createElement("div"); title.className="plot-title";
       const titleText=document.createElement("span"); titleText.textContent=S.headers[i];
-      const titleReadout=document.createElement("span"); titleReadout.className="plot-readout"; titleReadout.textContent="—";
-      title.appendChild(titleText); title.appendChild(titleReadout);
+      title.appendChild(titleText);
       const frame=document.createElement("div"); frame.className="plot-frame";
       const div=document.createElement("div"); div.className="plot";
-      const footer=document.createElement("div"); footer.className="plot-footer"; footer.textContent="Click to inspect";
+      const footer=document.createElement("div"); footer.className="plot-footer";
+      const footerRow=document.createElement("div"); footerRow.className="plot-footer-row";
+      const footerTime=document.createElement("span"); footerTime.className="plot-footer-time"; footerTime.textContent="—s";
+      const footerValue=document.createElement("span"); footerValue.className="plot-footer-value"; footerValue.textContent="—";
+      footerRow.appendChild(footerTime); footerRow.appendChild(footerValue);
+      const footerHint=document.createElement("div"); footerHint.className="plot-footer-hint"; footerHint.textContent="Click to inspect";
+      footer.appendChild(footerRow); footer.appendChild(footerHint);
       frame.appendChild(div); card.appendChild(title); card.appendChild(frame); card.appendChild(footer); els.plots.appendChild(card);
 
       // Prepare data with downsampling and scattergl optimization
@@ -1602,12 +1716,14 @@ function renderPlots(){
         originalY: S.cols[i],
         header: S.headers[i],
         footer,
-        readout: footer
+        footerHint,
+        footerTime,
+        footerValue
       };
 
       // Render immediately if observer not available, otherwise observe
       if (!plotObserver){
-        renderSinglePlot(div, { ...card._plotData, readout: titleReadout });
+        renderSinglePlot(div, { ...card._plotData });
       } else {
         plotObserver.observe(card);
       }

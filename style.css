@@ -133,6 +133,42 @@ body{ margin:0; background:var(--bg); color:var(--fg);
 .wrap{max-width:1200px; margin:18px auto; padding:0 14px; display:grid; gap:14px}
 .card{ background:var(--card-bg); border:1px solid var(--line); border-radius:14px; padding:14px; box-shadow: var(--shadow); 
   transition: background-color 0.3s ease, border-color 0.3s ease; }
+.page-hero{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:16px;
+}
+.page-hero-icon{
+  width:42px;
+  height:42px;
+  border-radius:12px;
+  background:var(--panel);
+  border:1px solid var(--line);
+  display:grid;
+  place-items:center;
+  color:var(--accent);
+}
+.page-hero-icon svg{
+  width:22px;
+  height:22px;
+}
+.page-hero-title{
+  font-size:18px;
+  font-weight:700;
+  color:var(--fg);
+}
+.page-hero-subtitle{
+  color:var(--muted);
+  font-size:13px;
+}
+.changelog-entry{
+  margin-top:12px;
+}
+.changelog-entry h4{
+  margin:0 0 6px 0;
+  color:var(--accent);
+}
 
 /* uploader */
 .uploader .pickers{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
@@ -302,8 +338,23 @@ body{ margin:0; background:var(--bg); color:var(--fg);
   border-top:1px solid var(--line);
   background:var(--panel);
   font-size:12px;
-  color:var(--accent);
   font-family:monospace;
+}
+.plot-footer-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+.plot-footer-time,
+.plot-footer-value{
+  color:var(--accent);
+}
+.plot-footer-hint{
+  margin-top:4px;
+  font-size:11px;
+  color:var(--muted);
+  font-family:inherit;
 }
 
 /* Compare page overrides: full-width + taller chart */
@@ -518,12 +569,26 @@ body{ margin:0; background:var(--bg); color:var(--fg);
   position:fixed; right:16px; bottom:18px; z-index:50;
   display:flex; gap:8px;
   flex-direction:column;
-  align-items:flex-end;
+  align-items:stretch;
 }
 .totop{
   padding:10px 12px; border-radius:10px; border:1px solid var(--line);
   background:var(--panel); color:var(--fg); font-weight:700; cursor:pointer;
   box-shadow: var(--shadow);
+}
+.floating-actions .floating-switch,
+.floating-actions .action-btn,
+.floating-actions .totop{
+  width:120px;
+  height:36px;
+  padding:0 10px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+}
+.floating-actions .floating-switch{
+  justify-content:space-between;
 }
 .floating-actions .totop{ position:static; }
 .totop:hover{ background:var(--hover-bg) }
@@ -1205,6 +1270,127 @@ body{ margin:0; background:var(--bg); color:var(--fg);
 .analysis-result.scrollable{
   max-height:220px;
   overflow:auto;
+}
+
+/* Simulation lab */
+.sim-controls{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+.sim-time-label{
+  font-weight:600;
+  color:var(--fg);
+}
+.sim-time-display{
+  font-family:monospace;
+  color:var(--accent);
+}
+.sim-time-slider{
+  width:100%;
+  margin-top:10px;
+}
+.sim-hint{
+  margin-top:8px;
+  color:var(--muted);
+  font-size:12px;
+}
+.sim-filter{
+  width:100%;
+  padding:8px 10px;
+  border-radius:8px;
+  border:1px solid var(--line);
+  background:var(--input-bg);
+  color:var(--fg);
+  margin:8px 0;
+}
+.sim-param-list{
+  max-height:260px;
+  overflow:auto;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.sim-param-item{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:13px;
+  color:var(--fg);
+}
+.sim-readout-grid{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  margin-top:12px;
+}
+.sim-player-modal .sim-controls{
+  margin-bottom:8px;
+}
+.sim-player-body{
+  display:flex;
+  gap:16px;
+  align-items:flex-start;
+  margin-top:10px;
+}
+.sim-player-left{
+  width:760px;
+  flex:0 0 760px;
+}
+.modal-content.sim-player-modal{
+  max-width:1200px;
+  width:95%;
+}
+.sim-player-right{
+  flex:1;
+  max-height:70vh;
+  overflow:auto;
+  padding-right:6px;
+}
+.sim-plots .plot-card{
+  min-height:220px;
+}
+.sim-plots .plot.big{
+  height:260px;
+}
+.sim-plots .plot-card + .plot-card{
+  margin-top:12px;
+}
+.sim-disabled{
+  opacity:0.55;
+}
+.sim-disabled .sim-param-list,
+.sim-disabled .sim-filter{
+  pointer-events:none;
+}
+
+@media (max-width: 980px){
+  .sim-player-body{
+    flex-direction:column;
+  }
+  .sim-player-left{
+    width:100%;
+    flex:1 1 auto;
+  }
+  .sim-player-right{
+    max-height:40vh;
+  }
+}
+.sim-readout{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.sim-readout-item{
+  display:flex;
+  justify-content:space-between;
+  padding:4px 0;
+  border-bottom:1px solid var(--line);
+}
+.sim-readout-item strong{
+  color:var(--accent);
+  font-family:monospace;
 }
 
 .checklist-grid{

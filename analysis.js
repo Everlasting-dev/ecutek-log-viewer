@@ -23,6 +23,22 @@ const perfBtn = el("analysisPerfRefresh");
 const perfSummary = el("analysisPerfSummary");
 const diagSummary = el("analysisDiagSummary");
 const toast = el("analysisToast");
+const changelogMenu = el("changelogMenu");
+const changelogModal = el("changelogModal");
+const changelogClose = el("changelogClose");
+const shiftLabModal = el("shiftLabModal");
+const shiftLabClose = el("shiftLabClose");
+const shiftLabLink = el("shiftLabLink");
+const shiftRedline = el("shiftRedline");
+const shiftFinal = el("shiftFinal");
+const shiftTire = el("shiftTire");
+const shiftRatios = el("shiftRatios");
+const shiftClutchFill = el("shiftClutchFill");
+const shiftSlip = el("shiftSlip");
+const shiftAnalyzeBtn = el("shiftAnalyzeBtn");
+const shiftResetBtn = el("shiftResetBtn");
+const shiftPlot = el("shiftPlot");
+const shiftNotes = el("shiftNotes");
 
 let headers = [];
 let cols = [];
@@ -62,6 +78,30 @@ function init(){
   }
   if (perfBtn){
     perfBtn.addEventListener("click", renderPerformance);
+  }
+  if (changelogMenu){
+    changelogMenu.addEventListener("click", (e)=>{ e.preventDefault(); openChangelog(); });
+  }
+  if (changelogClose){
+    changelogClose.addEventListener("click", closeChangelog);
+  }
+  if (changelogModal){
+    changelogModal.addEventListener("click", (e)=>{ if (e.target === changelogModal) closeChangelog(); });
+  }
+  if (shiftLabLink){
+    shiftLabLink.addEventListener("click", (e)=>{ e.preventDefault(); openShiftLabModal(); });
+  }
+  if (shiftLabClose){
+    shiftLabClose.addEventListener("click", closeShiftLabModal);
+  }
+  if (shiftLabModal){
+    shiftLabModal.addEventListener("click", (e)=>{ if (e.target === shiftLabModal) closeShiftLabModal(); });
+  }
+  if (shiftAnalyzeBtn){
+    shiftAnalyzeBtn.addEventListener("click", runShiftLab);
+  }
+  if (shiftResetBtn){
+    shiftResetBtn.addEventListener("click", resetShiftLabDefaults);
   }
 
   const cached = sessionStorage.getItem("csvText");
@@ -551,6 +591,88 @@ function updateThemeUI(theme, icon, label){
     icon.innerHTML = '<path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1z"/>';
     label.textContent = "Light";
   }
+}
+
+function openChangelog(){
+  if (changelogModal) changelogModal.classList.remove("hidden");
+}
+
+function closeChangelog(){
+  if (changelogModal) changelogModal.classList.add("hidden");
+}
+
+function openShiftLabModal(){
+  if (shiftLabModal) {
+    shiftLabModal.classList.remove("hidden");
+    runShiftLab();
+  }
+}
+
+function closeShiftLabModal(){
+  if (shiftLabModal) shiftLabModal.classList.add("hidden");
+}
+
+function parseShiftRatiosInput(){
+  if (!shiftRatios) return [];
+  return shiftRatios.value
+    .split(/[\s,]+/)
+    .map(r => parseFloat(r))
+    .filter(v => Number.isFinite(v) && v > 0.1);
+}
+
+function runShiftLab(){
+  if (!shiftPlot) return;
+  const ratios = parseShiftRatiosInput();
+  const redline = Number(shiftRedline?.value) || 7500;
+  const finalDrive = Number(shiftFinal?.value) || 3.7;
+  const tireDiameter = Number(shiftTire?.value) || 26.5;
+  if (!ratios.length){
+    Plotly.purge(shiftPlot);
+    if (shiftNotes) shiftNotes.textContent = "Enter at least one gear ratio to generate shift guidance.";
+    return;
+  }
+  const rpmAxis = [];
+  for (let rpm = 2000; rpm <= redline; rpm += 250) rpmAxis.push(rpm);
+  const tireCirc = Math.PI * tireDiameter;
+  const mphConstant = 1056;
+  const traces = ratios.map((ratio, idx) => ({
+    type:"scatter",
+    mode:"lines",
+    name:`G${idx+1}`,
+    x: rpmAxis,
+    y: rpmAxis.map(rpm => (rpm * tireCirc) / (ratio * finalDrive * mphConstant))
+  }));
+  Plotly.newPlot(shiftPlot, traces, {
+    paper_bgcolor:"transparent",
+    plot_bgcolor:"transparent",
+    margin:{l:45,r:10,t:10,b:40},
+    xaxis:{title:"Engine RPM"},
+    yaxis:{title:"Vehicle Speed (mph)", rangemode:"tozero"}
+  }, {displaylogo:false, responsive:true, staticPlot:true});
+
+  const dropNotes = [];
+  for (let i=0;i<ratios.length-1;i++){
+    const dropRpm = redline * (ratios[i+1]/ratios[i]);
+    dropNotes.push(`G${i+1}→G${i+2}: shift @ ${redline.toFixed(0)} rpm → lands near ${dropRpm.toFixed(0)} rpm.`);
+  }
+  const clutchFill = Number(shiftClutchFill?.value) || 90;
+  const slipThreshold = Number(shiftSlip?.value) || 6;
+  const userNotes = [
+    `Clutch fill reminder: ${clutchFill} ms; keep torque cuts shorter than this.`,
+    `Wheel slip target ≤ ${slipThreshold}% for launch + shifts.`
+  ];
+  const combined = [...dropNotes, ...userNotes];
+  if (shiftNotes) shiftNotes.innerHTML = `<ul>${combined.map(note=>`<li>${note}</li>`).join("")}</ul>`;
+}
+
+function resetShiftLabDefaults(){
+  if (shiftRatios) shiftRatios.value = "3.36, 2.10, 1.49, 1.20, 1.00, 0.79";
+  if (shiftRedline) shiftRedline.value = "7500";
+  if (shiftFinal) shiftFinal.value = "3.70";
+  if (shiftTire) shiftTire.value = "26.5";
+  if (shiftClutchFill) shiftClutchFill.value = "90";
+  if (shiftSlip) shiftSlip.value = "6";
+  runShiftLab();
 }
 
 function showToast(message, isError){
