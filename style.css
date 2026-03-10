@@ -372,8 +372,8 @@ body{ margin:0; background:var(--bg); color:var(--fg);
 .compare-page .slot{ margin-bottom:4px; }
 .compare-page .uploader{ margin-bottom:8px; }
 
-/* compare controls (one-row layout) */
-.slot{ display:grid; grid-template-columns: 120px 46px 1fr 80px auto auto auto; align-items:center; gap:10px; margin-bottom:8px; }
+/* compare controls (one-row layout) - compact: select capped to reduce empty space */
+.slot{ display:grid; grid-template-columns: 90px 40px minmax(120px, 220px) 70px auto auto; align-items:center; gap:8px; margin-bottom:8px; }
 
 /* Theme-aware form controls */
 .slot input[type="checkbox"] {
@@ -597,32 +597,278 @@ body{ margin:0; background:var(--bg); color:var(--fg);
 /* footer */
 .footer{ margin:22px auto 30px; max-width:1200px; padding:0 14px; color:var(--muted); display:flex; justify-content:flex-end; opacity:.85 }
 
-/* Mobile responsiveness for taskbar */
-@media (max-width: 768px) {
-  .taskbar-content {
-    padding: 0 12px;
-    height: 50px;
+/* Mobile bottom bar (Flightradar24-style) - base styles, shown only on mobile */
+.mobile-bottom-bar {
+  display: none;
+}
+
+@media (max-width: 1280px) {
+  .mobile-bottom-bar {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 10001;
+    padding: 6px 6px;
+    padding-bottom: calc(6px + env(safe-area-inset-bottom, 0));
+    background: rgba(15, 19, 24, 0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid var(--line);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.3);
+    justify-content: space-around;
+    align-items: center;
+    transition: transform 0.3s ease-out;
   }
-  
-  .nav-menu {
-    display: none; /* Hide navigation on mobile for now */
+
+  .mobile-bottom-bar.mobile-bottom-bar-hidden {
+    transform: translateY(100%);
   }
-  
-  .taskbar-right {
-    gap: 8px;
-  }
-  
-  .theme-toggle span {
-    display: none; /* Hide text on mobile */
-  }
-  
-  .brand {
-    font-size: 14px;
-  }
-  
-  .badge {
+
+  .mobile-bar-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 8px;
+    background: transparent;
+    border: none;
+    color: var(--fg);
     font-size: 10px;
-    padding: 1px 6px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    border-radius: 10px;
+    transition: background 0.2s ease, color 0.2s ease;
+    min-width: 48px;
+  }
+
+  .mobile-bar-item:hover,
+  .mobile-bar-item:active {
+    background: var(--hover-bg);
+    color: var(--accent);
+  }
+
+  .mobile-bar-item svg {
+    width: 18px;
+    height: 18px;
+    color: var(--fg);
+  }
+
+  .mobile-bar-item:hover svg,
+  .mobile-bar-item:active svg {
+    color: var(--accent);
+  }
+
+  /* Dark theme: force white for non-theme bar items for readability */
+  html:not([data-theme="light"]) .mobile-bar-item:not(#mobileThemeBtn),
+  html:not([data-theme="light"]) .mobile-bar-item:not(#mobileThemeBtn) svg {
+    color: #fff !important;
+  }
+  html:not([data-theme="light"]) .mobile-bar-item:not(#mobileThemeBtn) svg path,
+  html:not([data-theme="light"]) .mobile-bar-item:not(#mobileThemeBtn) svg circle {
+    fill: #fff !important;
+  }
+
+  .settings-sheet-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 16px;
+  }
+
+  .settings-row {
+    display: flex;
+    align-items: center;
+  }
+
+  .settings-row .switch {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .settings-divider {
+    height: 1px;
+    background: var(--line);
+    margin: 8px 0;
+  }
+
+  .settings-btn {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .settings-icons-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 16px;
+    justify-content: flex-start;
+  }
+
+  .settings-icon-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 12px;
+    background: transparent;
+    border: none;
+    border-radius: 12px;
+    color: var(--fg);
+    font-size: 12px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.2s, color 0.2s;
+    min-width: 64px;
+  }
+
+  .settings-icon-item:hover {
+    background: var(--hover-bg);
+    color: var(--accent);
+  }
+
+  .settings-icon-item .settings-icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .settings-icon-item .settings-icon svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .settings-icon-label {
+    font-weight: 500;
+    text-align: center;
+    line-height: 1.2;
+  }
+
+  .settings-btn-icon {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .settings-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    color: var(--accent);
+  }
+
+  .settings-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .switch-label-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  /* Hide floating actions on mobile - replaced by bottom bar */
+  .floating-actions {
+    display: none !important;
+  }
+
+  /* Add bottom padding to wrap so content isn't hidden behind bar */
+  .wrap {
+    padding-bottom: 70px;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .footer {
+    margin-bottom: 70px;
+  }
+
+  /* Compare page: compact single-row layout (no stacking) */
+  .compare-page .slot {
+    grid-template-columns: 70px 36px minmax(100px, 1fr) 55px auto auto;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+  .compare-page .slot select {
+    min-width: 0;
+  }
+  .compare-page .slot .scale-val {
+    width: 100%;
+    min-width: 50px;
+  }
+  .compare-page .slot .valwrap {
+    min-width: 0;
+  }
+  .compare-page .slot .btns .mini {
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+
+  .card, .plot-card {
+    min-width: 0;
+  }
+}
+
+/* Rotate prompt overlay (Correlation Lab portrait) - bar stays on top via z-index */
+.rotate-prompt-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  padding-bottom: 100px;
+}
+
+.rotate-prompt-overlay.hidden {
+  display: none;
+}
+
+.rotate-prompt-content {
+  text-align: center;
+  color: var(--fg);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.rotate-prompt-content p {
+  margin: 0;
+}
+
+.rotate-prompt-icon {
+  width: 120px;
+  height: 120px;
+  margin-bottom: 24px;
+  color: var(--accent);
+  animation: rotate-pulse 2s ease-in-out infinite;
+}
+
+@keyframes rotate-pulse {
+  0%, 100% { transform: rotate(-90deg) scale(1); opacity: 1; }
+  50% { transform: rotate(-90deg) scale(1.05); opacity: 0.9; }
+}
+
+/* Mobile responsiveness - hide taskbar entirely, use floating bar only */
+@media (max-width: 1280px) {
+  .taskbar {
+    display: none !important;
+  }
+  
+  body {
+    overflow-x: hidden;
+  }
+  
+  .wrap {
+    max-width: 100%;
+    overflow-x: hidden;
   }
 }
 

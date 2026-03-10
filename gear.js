@@ -1,4 +1,5 @@
 import { parseCSV, findRpmIndex } from "./parser.js";
+import { initMobile } from "./modules/mobile.js";
 
 const gearFile = document.getElementById("gearFile");
 const gearReload = document.getElementById("gearReload");
@@ -31,6 +32,7 @@ let currentMode = "rpm-speed";
 
 function init(){
   initTheme();
+  initMobile();
   initDropdowns();
   if (gearModeToggle){
     gearModeToggle.addEventListener("click", (e)=>{

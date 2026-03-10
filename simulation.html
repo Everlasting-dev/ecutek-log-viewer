@@ -314,6 +314,16 @@
       <button class="modal-close" id="changelogClose" aria-label="Close change log">×</button>
       <h3>Change Log</h3>
       <div class="changelog-entry">
+        <h4>v1.6.1</h4>
+        <ul>
+          <li><strong>Mobile:</strong> 2s long-press for window mode (was 3s).</li>
+          <li><strong>Mobile:</strong> Triple-tap to reset (was double-tap).</li>
+          <li><strong>Mobile:</strong> Signals/back button on rotate prompt for easy dismissal.</li>
+          <li><strong>Mobile:</strong> Compact floating bar, improved dark-theme contrast.</li>
+          <li><strong>Mobile:</strong> Broader breakpoint (1280px) for consistent mobile UI on rotation.</li>
+        </ul>
+      </div>
+      <div class="changelog-entry">
         <h4>v1.6.0</h4>
         <ul>
           <li><strong>Simulation Lab:</strong> player popup, Graph A/B, playback controls, and cursor sync.</li>
@@ -334,6 +344,51 @@
   </div>
 
   <div class="footer">Client-side parsing. Your file never leaves the device. · Simulation Lab</div>
+
+  <!-- Mobile bottom bar -->
+  <div id="mobileBottomBar" class="mobile-bottom-bar" data-page="simulation">
+    <button class="mobile-bar-item" id="mobileSettingsBtn" aria-label="Settings">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.04.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+      <span>Settings</span>
+    </button>
+    <a href="index.html" class="mobile-bar-item" aria-label="Signal Matrix">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+      <span>Signals</span>
+    </a>
+    <a href="compare.html" class="mobile-bar-item" aria-label="Correlation Lab">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+      <span>Correlation</span>
+    </a>
+    <button class="mobile-bar-item" id="mobileThemeBtn" aria-label="Theme">
+      <svg class="mobile-theme-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-3.03 0-5.5-2.47-5.5-5.5 0-1.82.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/></svg>
+      <span>Theme</span>
+    </button>
+  </div>
+
+  <div id="settingsModal" class="modal hidden">
+    <div class="modal-content">
+      <button class="modal-close" id="settingsClose" aria-label="Close settings">×</button>
+      <h3>Settings</h3>
+      <div class="settings-sheet-content">
+        <div class="settings-row">
+          <button class="btn ghost settings-btn" id="settingsHintsBtn">Hints</button>
+        </div>
+        <div class="settings-row">
+          <a href="about.html" class="btn ghost settings-btn">About</a>
+        </div>
+        <div class="settings-row">
+          <a href="https://ecutek.atlassian.net/wiki/spaces/SUPPORT/pages/327698/EcuTek+Knowledge+Base" target="_blank" rel="noopener" class="btn ghost settings-btn">EcuTek Knowledge Base</a>
+        </div>
+        <div class="settings-row">
+          <a href="https://github.com/Everlasting-dev/ecutek-log-viewer" target="_blank" rel="noopener" class="btn ghost settings-btn">Documentation</a>
+        </div>
+        <div class="settings-row">
+          <button class="btn ghost settings-btn" id="settingsChangelogBtn">Changelog</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <button id="toTop" class="totop" title="Back to top">↑ Top</button>
   <script type="module" src="simulation.js?v=1.5.0"></script>
 </body>

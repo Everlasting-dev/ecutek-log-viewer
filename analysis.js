@@ -1,4 +1,5 @@
 import { parseCSV, findTimeIndex, findRpmIndex } from "./parser.js";
+import { initMobile } from "./modules/mobile.js";
 
 const el = (id) => document.getElementById(id);
 
@@ -47,6 +48,7 @@ let rpmIdx = -1;
 
 function init(){
   initTheme();
+  initMobile();
   if (fileInput){
     fileInput.addEventListener("change", (e)=>{
       const file = e.target.files?.[0];

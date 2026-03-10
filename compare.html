@@ -13,6 +13,14 @@
   </script>
 </head>
 <body class="compare-page">
+  <!-- Rotate prompt (mobile portrait) - floating bar stays visible below -->
+  <div id="rotatePromptOverlay" class="rotate-prompt-overlay hidden">
+    <div class="rotate-prompt-content">
+      <svg class="rotate-prompt-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
+      <p>Please rotate your device to landscape to use Correlation Lab</p>
+      <p style="font-size: 14px; font-weight: 400; margin-top: 8px; color: var(--muted);">Use the menu below to go back</p>
+    </div>
+  </div>
   <!-- Loading Screen -->
   <div id="loadingScreen" class="loading-screen hidden">
     <div class="classic-loader" id="classicLoader">
@@ -374,6 +382,16 @@
       <button class="modal-close" id="changelogClose" aria-label="Close change log">×</button>
       <h3>Change Log</h3>
       <div class="changelog-entry">
+        <h4>v1.6.1</h4>
+        <ul>
+          <li><strong>Mobile:</strong> 2s long-press for window mode (was 3s).</li>
+          <li><strong>Mobile:</strong> Triple-tap to reset (was double-tap).</li>
+          <li><strong>Mobile:</strong> Signals/back button on rotate prompt for easy dismissal.</li>
+          <li><strong>Mobile:</strong> Compact floating bar, improved dark-theme contrast.</li>
+          <li><strong>Mobile:</strong> Broader breakpoint (1280px) for consistent mobile UI on rotation.</li>
+        </ul>
+      </div>
+      <div class="changelog-entry">
         <h4>v1.6.0</h4>
         <ul>
           <li><strong>Simulation Lab:</strong> player popup, Graph A/B, playback controls, and cursor sync.</li>
@@ -397,16 +415,61 @@
     <div class="modal-content">
       <button class="modal-close" id="hintsClose" aria-label="Close hints">×</button>
       <h3>Hints</h3>
-      <ul>
+      <ul id="hintsDesktop">
         <li>Use Auto Scale to align wildly different signals before fine tuning.</li>
         <li>Enable highlights only for the active traces to spot events quickly.</li>
-        <li>On mobile, swipe from the left edge to open analysis controls.</li>
+        <li>Hold Shift/Alt when clicking ▲/▼ for finer scaling steps.</li>
         <li>Load a reference log to compare runs without re-uploading data.</li>
+      </ul>
+      <ul id="hintsMobile" class="hidden">
+        <li>Use Auto Scale to align wildly different signals before fine tuning.</li>
+        <li>Enable highlights only for the active traces to spot events quickly.</li>
+        <li>Long-press 2s on the plot to select a time range for correlation.</li>
+        <li>Triple-tap the plot to reset zoom or time window.</li>
+        <li>Swipe right to go back to Signal Matrix.</li>
       </ul>
     </div>
   </div>
 
   <div class="footer">Client‑side parsing. Your file never leaves the device. · Beta 1.5</div>
+
+  <!-- Mobile bottom bar (Flightradar24-style) -->
+  <div id="mobileBottomBar" class="mobile-bottom-bar" data-page="compare">
+    <button class="mobile-bar-item" id="mobileSettingsBtn" aria-label="Settings">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.04.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+      <span>Settings</span>
+    </button>
+    <button class="mobile-bar-item" id="mobileResetBtn" aria-label="Reset window">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
+      <span>Reset</span>
+    </button>
+    <a href="index.html" class="mobile-bar-item" aria-label="Signal Matrix">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+      <span>Signals</span>
+    </a>
+    <button class="mobile-bar-item" id="mobileThemeBtn" aria-label="Theme">
+      <svg class="mobile-theme-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-3.03 0-5.5-2.47-5.5-5.5 0-1.82.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/></svg>
+      <span>Theme</span>
+    </button>
+  </div>
+
+  <!-- Settings bottom sheet (mobile) -->
+  <div id="settingsModal" class="modal hidden">
+    <div class="modal-content">
+      <button class="modal-close" id="settingsClose" aria-label="Close settings">×</button>
+      <h3>Settings</h3>
+      <div class="settings-sheet-content">
+        <div class="settings-icons-row">
+          <button class="settings-icon-item" id="settingsHintsBtn" title="Hints"><span class="settings-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></span><span class="settings-icon-label">Hints</span></button>
+          <a href="about.html" class="settings-icon-item" title="About"><span class="settings-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg></span><span class="settings-icon-label">About</span></a>
+          <a href="https://ecutek.atlassian.net/wiki/spaces/SUPPORT/pages/327698/EcuTek+Knowledge+Base" target="_blank" rel="noopener" class="settings-icon-item" title="EcuTek Knowledge Base"><span class="settings-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z"/></svg></span><span class="settings-icon-label">EcuTek</span></a>
+          <a href="https://github.com/Everlasting-dev/ecutek-log-viewer" target="_blank" rel="noopener" class="settings-icon-item" title="Documentation"><span class="settings-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg></span><span class="settings-icon-label">Documentation</span></a>
+          <button class="settings-icon-item" id="settingsChangelogBtn" title="Changelog"><span class="settings-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg></span><span class="settings-icon-label">Changelog</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="floating-actions">
     <button id="toTop" class="totop action-btn" title="Back to top">↑ Top</button>
   </div>

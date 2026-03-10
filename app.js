@@ -5,7 +5,7 @@ import { storeLog, getRecentLog, storeParsed, getParsed, addToRecent, migrateFro
 import { downsampleLTTB } from "./modules/downsample.js";
 import { registerShortcut, initShortcuts, getModifierKey } from "./modules/shortcuts.js";
 import { exportPlotPNG, exportPlotSVG, exportAllPlots, exportPDFReport } from "./modules/export.js";
-import { initMobile } from "./modules/mobile.js";
+import { initMobile, isMobile } from "./modules/mobile.js";
 import { initAnnotations, addAnnotation, getAllAnnotations, exportAnnotations, removeAnnotation as removeAnn, updateAnnotationMarkers } from "./modules/annotations.js";
 import { initTemplates, getAllTemplates, createTemplate, applyTemplate, deleteTemplate, exportTemplates, createPresets, getTemplate } from "./modules/templates.js";
 import { createShareableLinkFromCurrentView, copyShareableLink } from "./modules/shareable.js";
@@ -647,12 +647,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Initialize quick search
   initQuickSearch();
   
-  // Initialize annotations system
-  initAnnotations();
-  
-  // Initialize templates system
-  await initTemplates();
-  await createPresets(); // Create default presets if they don't exist
+  if (!isMobile()) {
+    initAnnotations();
+    await initTemplates();
+    await createPresets();
+  }
   
   // Initialize mobile features
   initMobile();
@@ -887,6 +886,7 @@ const toast = (m,t="error")=>{
   els.toast.style.borderColor = t==="error" ? "#742020" : "#1a6a36";
   clearTimeout(toast._t); toast._t=setTimeout(()=>els.toast.style.display="none",3500);
 };
+window.showWindowModeToast = () => toast("Select range", "ok");
 const fmt = formatBytes; // Use utility function
 
 // Cache functions - now use IndexedDB
@@ -915,13 +915,24 @@ async function cacheClr(){
 function openChangelog(){
   if (changelogModal) changelogModal.classList.remove("hidden");
 }
+window.openChangelog = openChangelog;
 
 function closeChangelog(){
   if (changelogModal) changelogModal.classList.add("hidden");
 }
 
 function openHints(){
-  if (hintsModal) hintsModal.classList.remove("hidden");
+  if (!hintsModal) return;
+  const desktop = document.getElementById("hintsDesktop");
+  const mobile = document.getElementById("hintsMobile");
+  if (isMobile() && mobile) {
+    if (desktop) desktop.classList.add("hidden");
+    mobile.classList.remove("hidden");
+  } else {
+    if (mobile) mobile.classList.add("hidden");
+    if (desktop) desktop.classList.remove("hidden");
+  }
+  hintsModal.classList.remove("hidden");
 }
 
 function closeHints(){
@@ -1452,6 +1463,8 @@ function applyWindowRangeToPlot(div){
 
 function setSelectionMode(enabled){
   timeWindow.enabled = !!enabled;
+  const toggle = els.timeWindowToggle;
+  if (toggle) toggle.checked = !!enabled;
   plotRegistry.forEach(({div})=>{
     Plotly.relayout(div, { shapes: [] });  // clear snap line when switching modes
     Plotly.relayout(div, { selections: [] }); // clear any selection box
@@ -1459,6 +1472,7 @@ function setSelectionMode(enabled){
   });
   updatePlotFooters();
 }
+window.setSelectionMode = setSelectionMode;
 
 function updatePlotFooters(){
   plotRegistry.forEach(({footerHint})=>{
@@ -1522,6 +1536,7 @@ function wirePlotSelection(div){
     t0 = Math.max(t0,minT); t1 = Math.min(t1,maxT);
     if (t1 - t0 <= 0) return;
     applyWindowRange([t0,t1]);
+    setSelectionMode(false);
   });
 }
 

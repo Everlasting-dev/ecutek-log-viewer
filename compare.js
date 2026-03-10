@@ -3,6 +3,7 @@ import { parseCSV, findTimeIndex, findRpmIndex, numericColumns } from "./parser.
 import { downsampleLTTB, calculateOptimalSampleSize, shouldDownsample } from "./modules/downsample.js";
 import { initAnnotations, getAllAnnotations, exportAnnotations, removeAnnotation } from "./modules/annotations.js";
 import { initTemplates, getAllTemplates, createTemplate, deleteTemplate, exportTemplates } from "./modules/templates.js";
+import { initMobile, isMobile } from "./modules/mobile.js";
 
 function openShiftLabModal(){
   if (shiftLabModal) {
@@ -476,6 +477,13 @@ function applyDragSelection(ev){
   t0 = Math.max(t0, xMin);
   t1 = Math.min(t1, xMax);
   if (t1 - t0 <= EPS) return;
+  const fullRange = xMax - xMin;
+  const minRange = Math.max(0.5, fullRange * 0.05);
+  if (t1 - t0 < minRange) {
+    const mid = (t0 + t1) / 2;
+    t0 = Math.max(xMin, mid - minRange / 2);
+    t1 = Math.min(xMax, mid + minRange / 2);
+  }
   timeRangeMin = t0;
   timeRangeMax = t1;
   timeRangeEnabled = true;
@@ -483,6 +491,8 @@ function applyDragSelection(ev){
   plot(false, false);
   rescaleYToWindow();
   syncTimeRangeControls();
+  timeWindowSelectEnabled = false;
+  setChartDragMode();
 }
 
 function setChartDragMode(){
@@ -490,6 +500,12 @@ function setChartDragMode(){
   const dragmode = timeWindowSelectEnabled ? "select" : false;
   Plotly.relayout(chart, { dragmode, selectdirection:"h" });
 }
+
+window.setCompareTimeWindowSelectEnabled = (enabled) => {
+  timeWindowSelectEnabled = !!enabled;
+  setChartDragMode();
+};
+window.clearCompareTimeWindow = clearTimeWindowSelection;
 
 function wirePlotSelectionHandlers(){
   if (!chart || !chartReady || typeof chart.on !== "function") return;
@@ -640,6 +656,7 @@ function openChangelog(){
     changelogModal.classList.remove("hidden");
   }
 }
+window.openChangelog = openChangelog;
 
 function closeChangelog(){
   if (changelogModal) {
@@ -648,9 +665,17 @@ function closeChangelog(){
 }
 
 function openHints(){
-  if (hintsModal) {
-    hintsModal.classList.remove("hidden");
+  if (!hintsModal) return;
+  const desktop = document.getElementById("hintsDesktop");
+  const mobile = document.getElementById("hintsMobile");
+  if (isMobile() && mobile) {
+    if (desktop) desktop.classList.add("hidden");
+    mobile.classList.remove("hidden");
+  } else {
+    if (mobile) mobile.classList.add("hidden");
+    if (desktop) desktop.classList.remove("hidden");
   }
+  hintsModal.classList.remove("hidden");
 }
 
 function closeHints(){
@@ -725,6 +750,7 @@ function toastMsg(msg, type="error"){
   toast.style.borderColor=(type==="error")?"#742020":"#1a6a36";
   clearTimeout(toastMsg._t); toastMsg._t=setTimeout(()=>toast.style.display="none",2600); 
 }
+window.showWindowModeToast = () => toastMsg("Select range", "ok");
 function fmtBytes(n){
   const u=["B","KB","MB","GB"]; let i=0;
   while(n>=1024&&i<u.length-1){n/=1024;i++;}
@@ -1741,10 +1767,10 @@ function buildUI(){
   const xLeft=document.createElement("div"); xLeft.style.display="flex"; xLeft.alignItems="center"; xLeft.gap="8px";
   const xTick=document.createElement("input"); xTick.type="checkbox"; xTick.checked=true; xTick.disabled=true;
   const xLab=document.createElement("label"); xLab.textContent="X Axis"; xLeft.append(xTick,xLab);
-  const colorPad=document.createElement("div"); colorPad.style.width="46px";
+  const colorPad=document.createElement("div"); colorPad.style.width="40px";
   const xVal=document.createElement("span"); xVal.className="valbox"; xVal.textContent="";
   const xWrap=document.createElement("div"); xWrap.className="valwrap"; xWrap.append(xVal);
-  const xSel=document.createElement("select"); xSel.id="xSel"; xSel.style.minWidth="340px";
+  const xSel=document.createElement("select"); xSel.id="xSel"; xSel.style.minWidth="180px"; xSel.style.maxWidth="220px";
   const xPad=document.createElement("div"); xPad.className="btns";
   xRow.append(xLeft,colorPad,xSel,xWrap,xPad);
   axisPanel.appendChild(xRow);
@@ -1770,7 +1796,7 @@ function buildUI(){
 
     // col2: color picker
     const color=document.createElement("input"); color.type="color"; color.value=ySlots[i].color||"#00aaff";
-    color.style.width="44px"; color.style.height="32px"; color.style.borderRadius="8px"; color.style.border="1px solid #2a3038";
+    color.style.width="40px"; color.style.height="28px"; color.style.borderRadius="6px"; color.style.border="1px solid var(--line)";
 
     // col3: column selector
     const sel=document.createElement("select"); const none=document.createElement("option"); none.value="-1"; none.textContent="(None)"; sel.appendChild(none);
@@ -1914,16 +1940,18 @@ function plot(showToasts=true, preserveRange=false){
       plotX = downsampled.x;
       plotY = downsampled.y;
     }
-    traces.push({
+    const traceConfig = {
       type: typ,
-      mode: "lines",
+      mode: typ === "scattergl" ? "lines" : "lines+markers",
       x: plotX,
       y: plotY,
       customdata: filteredData.customdata,
       name: label,
       line: { width: lineWidth, color: s.color },
       hoverinfo: "skip"
-    });
+    };
+    if (typ === "scatter") traceConfig.marker = { size: 3, symbol: "circle", color: s.color };
+    traces.push(traceConfig);
 
     if (compareLog && compareLog.headers?.includes(label) && compareLog.timeIdx >= 0){
       const refIdx = compareLog.headers.indexOf(label);
@@ -1946,9 +1974,9 @@ function plot(showToasts=true, preserveRange=false){
           refPlotX = downsampled.x;
           refPlotY = downsampled.y;
         }
-        traces.push({
+        const refTraceConfig = {
           type: refTyp,
-          mode: "lines",
+          mode: refTyp === "scattergl" ? "lines" : "lines+markers",
           x: refPlotX,
           y: refPlotY,
           customdata: refFiltered.customdata,
@@ -1956,7 +1984,9 @@ function plot(showToasts=true, preserveRange=false){
           line: { width: Math.max(0.8, lineWidth - 0.4), dash: "dot", color: s.color },
           hoverinfo: "skip",
           opacity: 0.85
-        });
+        };
+        if (refTyp === "scatter") refTraceConfig.marker = { size: 2, symbol: "circle", color: s.color };
+        traces.push(refTraceConfig);
       }
     }
   }
@@ -2805,13 +2835,39 @@ document.addEventListener("DOMContentLoaded", ()=>{
   } catch(e) {
     console.error("Theme init error:", e);
   }
+
+  // Initialize mobile features (bottom bar, gestures)
+  try {
+    initMobile();
+  } catch(e) {
+    console.warn("Mobile init error:", e);
+  }
+
+  // Correlation: show rotate prompt when in portrait on mobile
+  const rotatePrompt = document.getElementById("rotatePromptOverlay");
+  const wrap = document.querySelector(".wrap");
+  function checkOrientation() {
+    if (!isMobile() || !rotatePrompt) return;
+    const isPortrait = window.innerWidth < window.innerHeight;
+    if (isPortrait) {
+      rotatePrompt.classList.remove("hidden");
+      if (wrap) wrap.style.visibility = "hidden";
+    } else {
+      rotatePrompt.classList.add("hidden");
+      if (wrap) wrap.style.visibility = "";
+    }
+  }
+  checkOrientation();
+  window.addEventListener("resize", checkOrientation);
+  window.addEventListener("orientationchange", () => setTimeout(checkOrientation, 100));
   
   // Initialize dropdown interactions
   try {
     initDropdowns();
-    // Initialize templates and annotations systems
-    initTemplates().catch(e => console.warn("Templates init failed:", e));
-    initAnnotations();
+    if (!isMobile()) {
+      initTemplates().catch(e => console.warn("Templates init failed:", e));
+      initAnnotations();
+    }
   } catch(e) {
     console.error("Dropdowns init error:", e);
   }

@@ -1,4 +1,5 @@
 import { parseCSV, findTimeIndex, numericColumns } from "./parser.js";
+import { initMobile } from "./modules/mobile.js";
 
 const els = {
   file: document.getElementById("simFile"),
@@ -720,6 +721,7 @@ const toTopBtn = document.getElementById("toTop");
 if (toTopBtn) toTopBtn.onclick = () => window.scrollTo({ top: 0, behavior: "smooth" });
 
 initTheme();
+initMobile();
 
 const cachedText = sessionStorage.getItem("csvText");
 if (cachedText) {
