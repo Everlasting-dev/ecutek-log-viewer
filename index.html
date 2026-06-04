@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <title>ApexLog Studio (TXT/CSV)</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="style.css?v=1.7.3" />
+  <link rel="stylesheet" href="style.css?v=1.7.4" />
   <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script>
@@ -232,9 +232,8 @@
     </div>
   </div>
 
-  <div class="footer">Made by AK Everlasting Dev · Apex Build 1.7.3</div>
+  <div class="footer">Made by AK Everlasting Dev · Apex Build 1.7.4</div>
   <div class="floating-actions">
-    <a href="compare.html" class="totop action-btn mobile-plot-jump" title="Open Mega Plot">Mega</a>
     <label class="switch floating-switch" title="Sync click selection across plots">
       <input type="checkbox" id="syncSnapToggle" checked />
       <span class="slider"></span>
@@ -285,11 +284,11 @@
       <button class="modal-close" id="changelogClose" aria-label="Close change log">×</button>
       <h3>Change Log</h3>
             <div class="changelog-entry">
-        <h4>Apex Build 1.7.3</h4>
+        <h4>Apex Build 1.7.4</h4>
         <ul>
-          <li><strong>Mega Plot View:</strong> restored the previous phone layout so the plot is easier to inspect.</li>
-          <li><strong>Access Only:</strong> kept the Mini/Mega switcher in the phone header without reshaping the plot controls.</li>
-          <li><strong>Back Path:</strong> kept the floating Mini shortcut from Mega Plot and Mega shortcut from Mini Plots.</li>
+          <li><strong>Bottom Bar:</strong> removed duplicate Mini/Mega shortcuts because the phone header already handles plot navigation.</li>
+          <li><strong>Mobile Controls:</strong> tightened the floating action bar so Sync, Window, Reset, and Top fit better.</li>
+          <li><strong>Top Button:</strong> strengthened scroll-to-top handling across mobile browsers.</li>
         </ul>
       </div><div class="changelog-entry">
         <h4>v1.6.0</h4>
@@ -346,6 +345,6 @@
       </section>
     </div>
   </div>
-  <script type="module" src="app.js?v=1.7.3"></script>
+  <script type="module" src="app.js?v=1.7.4"></script>
 </body>
 </html>

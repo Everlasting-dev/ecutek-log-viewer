@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>ApexLog Studio (GR6 Scope)</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="style.css?v=1.7.3" />
+  <link rel="stylesheet" href="style.css?v=1.7.4" />
   <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 </head>
@@ -249,11 +249,11 @@
       <button class="modal-close" id="changelogClose" aria-label="Close change log">×</button>
       <h3>Change Log</h3>
             <div class="changelog-entry">
-        <h4>Apex Build 1.7.3</h4>
+        <h4>Apex Build 1.7.4</h4>
         <ul>
-          <li><strong>Mega Plot View:</strong> restored the previous phone layout so the plot is easier to inspect.</li>
-          <li><strong>Access Only:</strong> kept the Mini/Mega switcher in the phone header without reshaping the plot controls.</li>
-          <li><strong>Back Path:</strong> kept the floating Mini shortcut from Mega Plot and Mega shortcut from Mini Plots.</li>
+          <li><strong>Bottom Bar:</strong> removed duplicate Mini/Mega shortcuts because the phone header already handles plot navigation.</li>
+          <li><strong>Mobile Controls:</strong> tightened the floating action bar so Sync, Window, Reset, and Top fit better.</li>
+          <li><strong>Top Button:</strong> strengthened scroll-to-top handling across mobile browsers.</li>
         </ul>
       </div><div class="changelog-entry">
         <h4>v1.6.0</h4>
@@ -275,7 +275,7 @@
 
   <div class="footer">Client-side parsing. Your file never leaves the device. · GR6 Scope</div>
   <button id="toTop" class="totop" title="Back to top">↑ Top</button>
-  <script type="module" src="gear.js?v=1.7.3"></script>
+  <script type="module" src="gear.js?v=1.7.4"></script>
 </body>
 </html>
 

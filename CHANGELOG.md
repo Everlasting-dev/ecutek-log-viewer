@@ -2,6 +2,14 @@
 
 ## Version History
 
+### Apex Build 1.7.4 - Mobile Bottom Bar Cleanup
+**Date:** June 4, 2026
+**Status:** Released
+
+#### Fixes
+- Removed duplicate Mini/Mega shortcuts from the lower phone action bar now that plot navigation is visible in the header.
+- Let the floating action controls wrap and size more cleanly on narrow phone screens.
+- Hardened the Top button by scrolling both the document root and window.
 ### Apex Build 1.7.3 - Mega Plot Access Only
 **Date:** June 4, 2026
 **Status:** Released

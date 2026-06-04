@@ -621,7 +621,6 @@ body{ margin:0; background:var(--bg); color:var(--fg);
 .floating-actions .totop{ position:static; }
 .totop:hover{ background:var(--hover-bg) }
 .action-btn{ min-width:72px; }
-.mobile-plot-jump{ display:none !important; }
 
 /* footer */
 .footer{ margin:22px auto 30px; max-width:1200px; padding:0 14px; color:var(--muted); display:flex; justify-content:flex-end; opacity:.85 }
@@ -679,8 +678,10 @@ body{ margin:0; background:var(--bg); color:var(--fg);
     right: 8px;
     bottom: 8px;
     flex-direction: row;
-    justify-content: flex-end;
+    justify-content: center;
     align-items: center;
+    gap:8px;
+    flex-wrap:wrap;
   }
 
   .floating-actions .floating-switch,
@@ -688,12 +689,13 @@ body{ margin:0; background:var(--bg); color:var(--fg);
   .floating-actions .action-btn {
     width: auto;
     height: 34px;
-    min-width: 72px;
+    min-width: 0;
+    flex:0 1 auto;
+    padding:0 10px;
   }
 
-  .mobile-plot-jump{
-    display:inline-flex !important;
-    text-decoration:none;
+  .floating-actions .floating-switch{
+    min-width:110px;
   }
 
 }

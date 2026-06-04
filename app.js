@@ -816,7 +816,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Back to top button
   const toTopBtn = document.getElementById("toTop");
-  if (toTopBtn) toTopBtn.onclick = () => window.scrollTo({ top: 0, behavior: "smooth" });
+  if (toTopBtn) toTopBtn.onclick = () => {
+    const root = document.scrollingElement || document.documentElement;
+    root.scrollTo?.({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
   updatePlotFooters();
 });
 
