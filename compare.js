@@ -462,7 +462,6 @@ function clearTimeWindowSelection(){
     Plotly.relayout(chart, { 'xaxis.autorange': true, selections: [] });
   }
   plot(false, false);
-  rescaleYToWindow();
   syncTimeRangeControls();
 }
 
@@ -481,7 +480,6 @@ function applyDragSelection(ev){
   timeRangeEnabled = true;
   lastYRange = null;
   plot(false, false);
-  rescaleYToWindow();
   syncTimeRangeControls();
 }
 
@@ -1497,9 +1495,9 @@ function applyTimeRangeChange(){
   timeRangeMin = Math.max(xMin, Math.min(timeRangeMin, xMax));
   timeRangeMax = Math.max(xMin, Math.min(timeRangeMax, xMax));
   refreshTimeRangeState();
+  lastYRange = null;
   syncTimeRangeControls();
   plot(false, false);
-  rescaleYToWindow();
   setChartDragMode();
 }
 
@@ -1591,40 +1589,63 @@ function hideLoading() {
   stopClassicLoader();
 }
 
-function rescaleYToWindow(){
-  const xs = activeTimeSeries.length ? activeTimeSeries : cols[xIdx];
-  if (!xs || !xs.length) return;
-  let mn = +Infinity, mx = -Infinity;
-
-  for (let s of ySlots){
+function getMinimumYSpan(){
+  let mn = +Infinity;
+  let mx = -Infinity;
+  for (const s of ySlots){
     if (!s.enabled || s.colIdx === -1) continue;
     const ys = cols[s.colIdx];
+    if (!Array.isArray(ys)) continue;
     const exponent = s.scale ?? 0;
-    for (let i = 0; i < xs.length; i++){
-      // Always respect the current time window if enabled
-      if (timeRangeEnabled && (xs[i] < timeRangeMin || xs[i] > timeRangeMax)) continue;
-      const v = ys[i]; if (!Number.isFinite(v)) continue;
-      const y = applyPowerScaling(v, exponent);
-      if (Number.isFinite(y)) {
-        if (y < mn) mn = y; if (y > mx) mx = y;
+    for (const raw of ys){
+      if (!Number.isFinite(raw)) continue;
+      const y = applyPowerScaling(raw, exponent);
+      if (!Number.isFinite(y)) continue;
+      if (y < mn) mn = y;
+      if (y > mx) mx = y;
+    }
+  }
+  if (mn === +Infinity || mx === -Infinity) return 1;
+  return Math.max((mx - mn) * 0.02, 1e-3);
+}
+
+function collectVisibleYRange(){
+  let mn = +Infinity, mx = -Infinity;
+
+  for (const trace of chart?.data || []){
+    if (!trace || trace.visible === "legendonly" || trace.name?.includes("Highlight")) continue;
+    const xs = Array.isArray(trace.x) ? trace.x : [];
+    const ys = Array.isArray(trace.y) ? trace.y : [];
+    for (let i = 0; i < ys.length; i++){
+      const x = xs[i];
+      if (timeRangeEnabled && Number.isFinite(x) && (x < timeRangeMin || x > timeRangeMax)) continue;
+      const y = ys[i];
+      if (Number.isFinite(y)){
+        if (y < mn) mn = y;
+        if (y > mx) mx = y;
       }
     }
   }
 
-  if (mn === +Infinity || mx === -Infinity) return;
-  const pad = Math.max((mx - mn) * 0.05, 1e-6);
-  const targetRange = [mn - pad, mx + pad];
-  if (!lastYRange){
-    lastYRange = targetRange;
-  } else {
-    const blend = 0.25;
-    lastYRange = [
-      targetRange[0] * blend + lastYRange[0] * (1 - blend),
-      targetRange[1] * blend + lastYRange[1] * (1 - blend)
-    ];
-    lastYRange[0] = Math.min(lastYRange[0], targetRange[0]);
-    lastYRange[1] = Math.max(lastYRange[1], targetRange[1]);
+  return mn === +Infinity || mx === -Infinity ? null : { mn, mx };
+}
+
+function rescaleYToWindow(){
+  if (!chart || !chartReady) return;
+  const visibleRange = collectVisibleYRange();
+  if (!visibleRange) return;
+
+  let { mn, mx } = visibleRange;
+  const minSpan = getMinimumYSpan();
+  if (mx - mn < minSpan){
+    const mid = (mn + mx) / 2;
+    mn = mid - minSpan / 2;
+    mx = mid + minSpan / 2;
   }
+
+  const pad = Math.max((mx - mn) * 0.08, minSpan * 0.25);
+  const targetRange = [mn - pad, mx + pad];
+  lastYRange = targetRange;
 
   const rangeX = timeRangeEnabled ? [timeRangeMin, timeRangeMax] : [xMin, xMax];
 
@@ -2117,13 +2138,15 @@ function plot(showToasts=true, preserveRange=false){
     dragRect.addEventListener('pointermove', e=>{ if (dragging) { e.preventDefault(); e.stopPropagation(); snapAt(e); } });
     dragRect.addEventListener('pointerup',   ()=>{ dragging=false; });
     dragRect.addEventListener('pointercancel', ()=>{ dragging=false; });
+
+    if (autoY) {
+      rescaleYToWindow();
+    } else if (timeRangeEnabled) {
+      Plotly.relayout(chart, { "xaxis.autorange": false, "xaxis.range": [timeRangeMin, timeRangeMax] });
+    }
   });
 
   updateReadouts();
-  if (autoY) rescaleYToWindow();
-  else if (timeRangeEnabled) {
-    Plotly.relayout(chart, { "xaxis.autorange": false, "xaxis.range": [timeRangeMin, timeRangeMax] });
-  }
 }
 
 // Container click handler function

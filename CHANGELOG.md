@@ -2,6 +2,16 @@
 
 ## Version History
 
+### Apex Build 1.7.1 - Mega Plot Crop Stabilization
+**Date:** June 4, 2026
+**Status:** Released
+
+#### Fixes
+- Fixed Correlation Lab / Mega Plot time-window cropping where later log sections could autoscale from the wrong Y samples.
+- Moved Y-axis autoscale to run after Plotly finishes rebuilding cropped traces, preventing stale ranges from over-zooming the chart.
+- Added a minimum Y-axis span so very narrow cropped windows remain readable instead of expanding tiny fluctuations across the full plot height.
+- Kept top time sliders and drag crop behavior aligned with the selected X window.
+
 ### Apex Build 1.7 – Performance & UX Overhaul
 **Date:** January 27, 2026  
 **Status:** ✅ Released
