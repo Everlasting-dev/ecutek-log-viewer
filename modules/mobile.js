@@ -6,8 +6,7 @@
  */
 export function isMobile(){
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-         (window.innerWidth <= 900) ||
-         (window.innerHeight <= 500 && window.matchMedia("(orientation: landscape)").matches);
+         (window.innerWidth <= 768);
 }
 
 /**

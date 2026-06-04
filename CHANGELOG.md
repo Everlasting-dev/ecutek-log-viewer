@@ -2,6 +2,14 @@
 
 ## Version History
 
+### Apex Build 1.7.3 - Mega Plot Access Only
+**Date:** June 4, 2026
+**Status:** Released
+
+#### Fixes
+- Restored the previous phone layout behavior for the Mega Plot after the 1.7.2 mobile reshaping made it harder to view.
+- Kept the Mini/Mega phone header switcher as the minimal accessibility improvement.
+- Kept the floating Mini and Mega shortcuts so phone users still have a clear way back and forth between plot views.
 ### Apex Build 1.7.2 - Mobile Plot Navigation
 **Date:** June 4, 2026
 **Status:** Released
