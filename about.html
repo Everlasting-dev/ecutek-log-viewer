@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>About – ApexLog Studio</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="style.css?v=1.7.1" />
+  <link rel="stylesheet" href="style.css?v=1.7.2" />
   <style>
     .page-title{font-size:28px;font-weight:800;text-align:center;margin:18px 0 6px}
     .page-subtitle{color:var(--muted);text-align:center;margin:0 0 14px}
@@ -176,6 +176,10 @@
       </div>
       
       <div class="taskbar-right">
+        <div class="mobile-view-switch" aria-label="Plot view switcher">
+          <a href="index.html" class="mobile-view-link">Mini</a>
+          <a href="compare.html" class="mobile-view-link">Mega</a>
+        </div>
         <div class="theme-toggle" id="themeToggle">
           <svg class="theme-icon" id="themeIcon" viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-3.03 0-5.5-2.47-5.5-5.5 0-1.82.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/>
@@ -237,12 +241,13 @@
       </section>
 
       <section class="about-section">
-        <h2 style="margin:0 0 6px">What&apos;s new in Apex Build 1.7.1</h2>
+        <h2 style="margin:0 0 6px">What&apos;s new in Apex Build 1.7.2</h2>
         <ul class="feature-list" style="color:var(--muted)">
-          <li><strong>Mega Plot Crop:</strong> fixed the Correlation Lab graph over-zoom after selecting later log sections.</li>
-          <li><strong>Y-Axis Autoscale:</strong> now uses the visible plotted traces after each crop.</li>
-          <li><strong>Readability:</strong> tight cropped windows keep a sane Y-axis span instead of stretching tiny changes across the graph.</li>
-          <li><strong>Documentation:</strong> in-app changelog and visible build labels now show the 1.7.1 patch.</li>
+          <li><strong>Mobile Plot Switcher:</strong> phone headers now expose Mini and Mega plot controls.</li>
+          <li><strong>Back Path:</strong> floating shortcuts jump from Mega Plot back to Mini Plots and from Mini Plots into Mega.</li>
+          <li><strong>Phone Scrolling:</strong> plots have side gutters for vertical page scrolling during point inspection.</li>
+          <li><strong>Correlation Lab Layout:</strong> controls now fit narrow phone screens without horizontal clipping.</li>
+          <li><strong>Documentation:</strong> in-app changelog and visible build labels now show the 1.7.2 patch.</li>
         </ul>
       </section>
       <section class="about-section">
@@ -258,7 +263,7 @@
       <section class="about-section">
         <h2 style="margin:0 0 6px">Release</h2>
         <dl class="kv" style="color:var(--muted)">
-          <dt>Current Version</dt><dd>Apex Build 1.7.1</dd>
+          <dt>Current Version</dt><dd>Apex Build 1.7.2</dd>
           <dt>Last Updated</dt><dd>June 4, 2026</dd>
           <dt>Browser Support</dt><dd>Chrome 80+, Firefox 75+, Safari 13+, Edge 80+</dd>
           <dt>License</dt><dd>MIT</dd>
@@ -267,7 +272,7 @@
     </div>
   </div>
 
-  <div class="footer">Client-side parsing. Your file never leaves the device. · Apex Build 1.7.1</div>
+  <div class="footer">Client-side parsing. Your file never leaves the device. · Apex Build 1.7.2</div>
   
   <script>
     // ASCII Dot-Matrix Animation
@@ -310,7 +315,7 @@
     }
     requestAnimationFrame(tick);
   </script>
-  <script src="about.js?v=1.7.1"></script>
+  <script src="about.js?v=1.7.2"></script>
 </body>
 </html>
 

@@ -1,6 +1,6 @@
 ﻿# ApexLog Studio
 
-**Current build:** `Apex Build 1.7.1`
+**Current build:** `Apex Build 1.7.2`
 
 A modern, client-side web application for viewing and analyzing ECU CSV/TXT log files. Built with vanilla JavaScript, Plotly.js, and PapaParse for robust CSV parsing and interactive data visualization.
 
@@ -19,12 +19,13 @@ A modern, client-side web application for viewing and analyzing ECU CSV/TXT log 
 - **Performance Benchmarks** – automatic 0‑60/60‑130/100‑200 computations with torque & traction watchers
 - **Correlation Lab simplified** – only the uploader, axis config, enhancements, time slider, and primary plot remain; all advanced labs live under the Tools menu.
 
-## What is new in Apex Build 1.7.1
+## What is new in Apex Build 1.7.2
 
-- **Mega Plot Crop fix** – Correlation Lab no longer over-zooms after selecting later log sections.
-- **Visible-trace autoscale** – Y-axis scaling now uses the plotted data after the crop is applied.
-- **Readable tight windows** – very narrow selections keep a minimum Y-axis span so small changes do not fill the whole chart.
-- **In-app documentation updated** – About, Change Log modals, build labels, and cache-bust query strings now show Apex Build 1.7.1.
+- **Mobile Mini/Mega access** - phone headers now expose direct Mini and Mega plot controls.
+- **Clear mobile back path** - floating shortcuts let you jump from Mega Plot back to Mini Plots, and from Mini Plots into Mega.
+- **Phone scroll gutters** - plots keep precise point inspection while leaving side space for vertical page scrolling.
+- **Correlation Lab responsive layout** - axis, enhancement, upload, and time-window controls now fit narrow screens.
+- **In-app documentation updated** - About, Change Log modals, build labels, and cache-bust query strings now show Apex Build 1.7.2.
 
 ## 📁 Project Structure
 

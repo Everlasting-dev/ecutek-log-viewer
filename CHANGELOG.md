@@ -2,6 +2,17 @@
 
 ## Version History
 
+### Apex Build 1.7.2 - Mobile Plot Navigation
+**Date:** June 4, 2026
+**Status:** Released
+
+#### Fixes
+- Added a direct Mini/Mega plot switcher to the compact phone header so Mega Plot is reachable when the desktop navigation is hidden.
+- Added floating Mini and Mega shortcuts on the plot pages for a clear phone back path after scrolling.
+- Reworked Correlation Lab axis, enhancement, upload, and time-window controls into a single-column phone layout.
+- Added vertical scroll gutters around plots so point inspection can stay precise without trapping the whole page.
+- Matched the JavaScript mobile breakpoint with the CSS phone/landscape breakpoint for more consistent behavior.
+
 ### Apex Build 1.7.1 - Mega Plot Crop Stabilization
 **Date:** June 4, 2026
 **Status:** Released

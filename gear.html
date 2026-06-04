@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>ApexLog Studio (GR6 Scope)</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="style.css?v=1.7.1" />
+  <link rel="stylesheet" href="style.css?v=1.7.2" />
   <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 </head>
@@ -143,6 +143,10 @@
         </nav>
       </div>
       <div class="taskbar-right">
+        <div class="mobile-view-switch" aria-label="Plot view switcher">
+          <a href="index.html" class="mobile-view-link">Mini</a>
+          <a href="compare.html" class="mobile-view-link">Mega</a>
+        </div>
         <div class="theme-toggle" id="themeToggle">
           <svg class="theme-icon" id="themeIcon" viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-3.03 0-5.5-2.47-5.5-5.5 0-1.82.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/>
@@ -245,11 +249,12 @@
       <button class="modal-close" id="changelogClose" aria-label="Close change log">×</button>
       <h3>Change Log</h3>
             <div class="changelog-entry">
-        <h4>Apex Build 1.7.1</h4>
+        <h4>Apex Build 1.7.2</h4>
         <ul>
-          <li><strong>Mega Plot Crop:</strong> fixed over-zooming after cropping later log sections.</li>
-          <li><strong>Y-Axis Autoscale:</strong> now scales from the visible plotted traces after the crop is applied.</li>
-          <li><strong>Readability:</strong> added a minimum Y-axis span so tight windows stay legible.</li>
+          <li><strong>Mobile Plot Switcher:</strong> added direct Mini and Mega controls to the phone header.</li>
+          <li><strong>Phone Scrolling:</strong> added vertical scroll gutters around plots so point inspection no longer traps the page.</li>
+          <li><strong>Correlation Lab Layout:</strong> rebuilt axis, enhancement, and time controls for narrow screens.</li>
+          <li><strong>Mobile Back Path:</strong> added a floating Mini shortcut from Mega Plot and a Mega shortcut from Mini Plots.</li>
         </ul>
       </div><div class="changelog-entry">
         <h4>v1.6.0</h4>
@@ -271,7 +276,7 @@
 
   <div class="footer">Client-side parsing. Your file never leaves the device. · GR6 Scope</div>
   <button id="toTop" class="totop" title="Back to top">↑ Top</button>
-  <script type="module" src="gear.js?v=1.7.1"></script>
+  <script type="module" src="gear.js?v=1.7.2"></script>
 </body>
 </html>
 
