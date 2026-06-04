@@ -1,7 +1,7 @@
 // IndexedDB storage wrapper for persistent data storage
 // Migrates from sessionStorage and provides larger storage capacity
 
-const DB_NAME = 'ecutek-log-viewer';
+const DB_NAME = 'apexlog-studio';
 const DB_VERSION = 1;
 
 let db = null;

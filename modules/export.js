@@ -158,7 +158,7 @@ export async function exportPDFReport({ plots = [], metadata = {}, filename = 'e
   try {
     // Add title page with metadata
     doc.setFontSize(20);
-    doc.text('EcuTek Log Viewer Report', margin, margin + 10);
+    doc.text('ApexLog Studio Report', margin, margin + 10);
     
     doc.setFontSize(12);
     let yPos = margin + 20;

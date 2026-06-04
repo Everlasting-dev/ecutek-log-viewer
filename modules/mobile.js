@@ -1,9 +1,4 @@
-// Mobile-specific improvements: touch gestures, bottom sheets, swipe navigation
-
-let touchStartX = 0;
-let touchStartY = 0;
-let touchEndX = 0;
-let touchEndY = 0;
+// Mobile-specific improvements: touch gestures and bottom sheets.
 
 /**
  * Detect if device is mobile
@@ -22,9 +17,6 @@ export function initMobile(){
   
   // Convert modals to bottom sheets on mobile
   convertModalsToBottomSheets();
-  
-  // Add swipe gestures for navigation
-  initSwipeGestures();
   
   // Add touch gestures for plots
   initPlotTouchGestures();
@@ -55,96 +47,6 @@ function convertModalsToBottomSheets(){
   });
   
   observer.observe(document.body, { childList: true, subtree: true });
-}
-
-/**
- * Initialize swipe gestures for navigation
- */
-function initSwipeGestures(){
-  let touchStart = null;
-  let touchEnd = null;
-  
-  const minSwipeDistance = 50;
-  
-  document.addEventListener('touchstart', (e) => {
-    touchStart = {
-      x: e.touches[0].clientX,
-      y: e.touches[0].clientY,
-      time: Date.now()
-    };
-  }, { passive: true });
-  
-  document.addEventListener('touchend', (e) => {
-    if (!touchStart) return;
-    
-    touchEnd = {
-      x: e.changedTouches[0].clientX,
-      y: e.changedTouches[0].clientY,
-      time: Date.now()
-    };
-    
-    const deltaX = touchEnd.x - touchStart.x;
-    const deltaY = touchEnd.y - touchStart.y;
-    const deltaTime = touchEnd.time - touchStart.time;
-    
-    // Ignore if too slow (not a swipe)
-    if (deltaTime > 300) {
-      touchStart = null;
-      touchEnd = null;
-      return;
-    }
-    
-    // Ignore if scrolling
-    if (Math.abs(deltaY) > Math.abs(deltaX)) {
-      touchStart = null;
-      touchEnd = null;
-      return;
-    }
-    
-    // Horizontal swipe
-    if (Math.abs(deltaX) > minSwipeDistance){
-      if (deltaX > 0){
-        // Swipe right - go to previous page/view
-        handleSwipeRight();
-      } else {
-        // Swipe left - go to next page/view
-        handleSwipeLeft();
-      }
-    }
-    
-    touchStart = null;
-    touchEnd = null;
-  }, { passive: true });
-}
-
-/**
- * Handle swipe right gesture
- */
-function handleSwipeRight(){
-  // Navigate to previous plot or previous page
-  const currentPath = window.location.pathname;
-  if (currentPath.includes('compare.html')){
-    window.location.href = 'index.html';
-  } else if (currentPath.includes('gear.html')){
-    window.location.href = 'compare.html';
-  } else if (currentPath.includes('analysis.html')){
-    window.location.href = 'gear.html';
-  }
-}
-
-/**
- * Handle swipe left gesture
- */
-function handleSwipeLeft(){
-  // Navigate to next plot or next page
-  const currentPath = window.location.pathname;
-  if (currentPath.includes('index.html') || currentPath === '/' || currentPath.endsWith('/')){
-    window.location.href = 'compare.html';
-  } else if (currentPath.includes('compare.html')){
-    window.location.href = 'gear.html';
-  } else if (currentPath.includes('gear.html')){
-    window.location.href = 'analysis.html';
-  }
 }
 
 /**

@@ -3,8 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>About – EcuTek Log Viewer</title>
-  <link rel="stylesheet" href="style.css?v=1.5.0" />
+  <title>About – ApexLog Studio</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="style.css?v=1.7.0" />
   <style>
     .page-title{font-size:28px;font-weight:800;text-align:center;margin:18px 0 6px}
     .page-subtitle{color:var(--muted);text-align:center;margin:0 0 14px}
@@ -34,7 +35,7 @@
   <div id="loadingScreen" class="loading-screen">
     <div class="ascii-loading">
       <div class="matrix"></div>
-      <div class="loading-text">ECU-TEK LOG VIEWER</div>
+      <div class="loading-text">APEXLOG STUDIO</div>
       <div class="hint">loading…</div>
     </div>
   </div>
@@ -47,7 +48,7 @@
           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
             <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
           </svg>
-          EcuTek Log Viewer
+          ApexLog Studio
         </div>
         
         <nav class="nav-menu">
@@ -102,12 +103,6 @@
                 </svg>
                 GR6 Gear Scope
               </a>
-              <a href="simulation.html" class="dropdown-item">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M3 13h2v-2H3v2zm4 4h14v-2H7v2zm0-8h14V7H7v2zM5 3h14v2H5z"/>
-                </svg>
-                Simulation Lab
-              </a>
               <div class="dropdown-divider"></div>
               <a href="#" class="dropdown-item" id="hintsBtn">
                 <svg viewBox="0 0 24 24" fill="currentColor">
@@ -157,17 +152,11 @@
           <div class="dropdown">
             <a href="#" class="nav-item">Help</a>
             <div class="dropdown-content">
-              <a href="https://github.com/Everlasting-dev/ecutek-log-viewer" target="_blank" class="dropdown-item">
+              <a href="https://github.com/Everlasting-dev/apexlog-studio" target="_blank" class="dropdown-item">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/>
                 </svg>
                 Documentation
-              </a>
-              <a href="https://ecutek.atlassian.net/wiki/spaces/SUPPORT/pages/327698/EcuTek+Knowledge+Base" target="_blank" class="dropdown-item">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/>
-                </svg>
-                EcuTek Knowledge Base
               </a>
               <a href="#" class="dropdown-item" id="changelogMenu">
                 <svg viewBox="0 0 24 24" fill="currentColor">
@@ -210,7 +199,7 @@
       <section class="about-section">
         <h2 style="margin:0 0 6px">What is it?</h2>
         <p style="margin:0;color:var(--muted)">
-          A <strong>client-side</strong> CSV/TXT log viewer for EcuTek style exports. Real-time graphs for RPM, boost, AFR, throttle, ignition, etc.
+          A <strong>client-side</strong> CSV/TXT log viewer for ECU log exports. Real-time graphs for RPM, boost, AFR, throttle, ignition, etc.
           All parsing & rendering happens in your browser. <strong>No uploads.</strong>
         </p>
       </section>
@@ -219,7 +208,6 @@
         <h2 style="margin:0 0 6px">Key features</h2>
         <ul class="feature-list" style="color:var(--muted)">
           <li><strong>Signal Matrix:</strong> multi-axis grid with synced snap readouts</li>
-          <li><strong>Simulation Lab:</strong> playback controls with live readouts and cursor tracking</li>
           <li><strong>GR6 Gear Scope:</strong> shift points, torque intervention, and slip timelines</li>
           <li><strong>Correlation Lab:</strong> overlays, smoothing, highlighting, and scaling tools</li>
           <li><strong>100% Local:</strong> no uploads, no server processing</li>
@@ -231,7 +219,7 @@
       <section class="about-section">
         <h2 style="margin:0 0 6px">Supported formats</h2>
         <p style="margin:0;color:var(--muted)">
-          EcuTek CSV/TXT with a header row and time-series columns (e.g., <em>Time</em>, <em>RPM</em>, <em>Boost</em>, <em>AFR</em>, <em>Throttle</em>, <em>Ignition</em>).
+          ECU log CSV/TXT with a header row and time-series columns (e.g., <em>Time</em>, <em>RPM</em>, <em>Boost</em>, <em>AFR</em>, <em>Throttle</em>, <em>Ignition</em>).
         </p>
       </section>
 
@@ -252,9 +240,7 @@
       <section class="about-section">
         <h2 style="margin:0 0 6px">What’s new in v1.6.0</h2>
         <ul class="feature-list" style="color:var(--muted)">
-          <li><strong>Simulation Lab:</strong> player popup, Graph A/B, playback controls, and cursor sync</li>
           <li><strong>Signal Matrix:</strong> synced snap default and footer readout layout</li>
-          <li><strong>Navigation:</strong> Simulation Lab and Change Log available across pages</li>
           <li><strong>Recent Files:</strong> click-to-load from the File menu</li>
         </ul>
       </section>
@@ -280,7 +266,7 @@
     </div>
   </div>
 
-  <div class="footer">Client-side parsing. Your file never leaves the device. · Beta 1.5</div>
+  <div class="footer">Client-side parsing. Your file never leaves the device. · Apex Build 1.7</div>
   
   <script>
     // ASCII Dot-Matrix Animation
@@ -323,7 +309,7 @@
     }
     requestAnimationFrame(tick);
   </script>
-  <script src="about.js?v=1.5.0"></script>
+  <script src="about.js?v=1.7.0"></script>
 </body>
 </html>
 

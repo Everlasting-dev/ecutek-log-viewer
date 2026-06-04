@@ -1,8 +1,8 @@
-# EcuTek Log Viewer
+# ApexLog Studio
 
-**Current build:** `Beta 1.5`
+**Current build:** `Apex Build 1.7`
 
-A modern, client-side web application for viewing and analyzing EcuTek CSV log files. Built with vanilla JavaScript, Plotly.js, and PapaParse for robust CSV parsing and interactive data visualization.
+A modern, client-side web application for viewing and analyzing ECU CSV/TXT log files. Built with vanilla JavaScript, Plotly.js, and PapaParse for robust CSV parsing and interactive data visualization.
 
 ## 🚀 Features
 
@@ -31,7 +31,7 @@ A modern, client-side web application for viewing and analyzing EcuTek CSV log f
 ## 📁 Project Structure
 
 ```
-ecutek-log-viewer/
+apexlog-studio/
 ├── index.html          # Time Plot interface (main page)
 ├── compare.html        # Analysis interface (comparison page)
 ├── app.js             # Time Plot logic and file handling
@@ -69,6 +69,7 @@ npm install -g http-server
 
 # Run server
 http-server -p 8000
+```
 
 #### Option 3: Live Server (VS Code Extension)
 1. Install "Live Server" extension in VS Code
@@ -81,7 +82,7 @@ http-server -p 8000
 2. **Open your browser** and navigate to:
    - `http://localhost:8000` (for Python/Node.js servers)
    - `http://127.0.0.1:5500` (for Live Server)
-3. **Upload EcuTek CSV files** using the file picker
+3. **Upload ECU log files** using the file picker
 4. **Switch between views** using the dropdown (or mobile links in the taskbar):
    - **Time Plot**: Individual parameter visualization
    - **Analysis**: Unified comparison interface

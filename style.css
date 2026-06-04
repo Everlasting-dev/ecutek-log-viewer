@@ -21,7 +21,7 @@ body { background: var(--bg); color: var(--text); }
 .plot-card, .panel, .control-box { background: var(--card-bg); }
 
 *{box-sizing:border-box}
-html,body{height:100%}
+html,body{height:100%; overflow-x:hidden}
 body{ margin:0; background:var(--bg); color:var(--fg);
   font:14px "Inter", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; 
   transition: background-color 0.3s ease, color 0.3s ease; }
@@ -131,7 +131,7 @@ body{ margin:0; background:var(--bg); color:var(--fg);
 
 /* layout */
 .wrap{max-width:1200px; margin:18px auto; padding:0 14px; display:grid; gap:14px}
-.card{ background:var(--card-bg); border:1px solid var(--line); border-radius:14px; padding:14px; box-shadow: var(--shadow); 
+.card{ background:var(--card-bg); border:1px solid var(--line); border-radius:8px; padding:14px; box-shadow: var(--shadow);
   transition: background-color 0.3s ease, border-color 0.3s ease; }
 .page-hero{
   display:flex;
@@ -327,12 +327,12 @@ body{ margin:0; background:var(--bg); color:var(--fg);
 
 /* plots grid */
 .plots{display:flex; flex-direction:column; gap:14px}
-.plot-card{ display:flex; flex-direction:column; min-height:180px; border-radius:14px; overflow:hidden; }
+.plot-card{ display:flex; flex-direction:column; min-height:180px; border-radius:8px; overflow:hidden; }
 .plot-title{padding:10px 12px; border-bottom:1px solid var(--line); color:var(--fg); font-weight:600; background:var(--panel); display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;}
 .plot-title span{white-space:nowrap;}
 .plot-readout{font-size:12px; color:var(--accent); font-family:monospace;}
-.plot-frame{padding:10px}
-.plot{height:180px; width:100%}
+.plot-frame{padding:10px; overflow:hidden; overscroll-behavior:contain; touch-action:none}
+.plot{height:180px; width:100%; max-width:100%; overscroll-behavior:contain; touch-action:none}
 .plot-footer{
   padding:6px 10px;
   border-top:1px solid var(--line);
@@ -364,6 +364,8 @@ body{ margin:0; background:var(--bg); color:var(--fg);
   height:600px !important; 
   position:relative; 
   cursor:crosshair; 
+  touch-action:none;
+  overscroll-behavior:contain;
 }
 
 /* Compact layout for compare page */
@@ -598,7 +600,7 @@ body{ margin:0; background:var(--bg); color:var(--fg);
 .footer{ margin:22px auto 30px; max-width:1200px; padding:0 14px; color:var(--muted); display:flex; justify-content:flex-end; opacity:.85 }
 
 /* Mobile responsiveness for taskbar */
-@media (max-width: 768px) {
+@media (max-width: 900px), (max-height: 500px) and (orientation: landscape) {
   .taskbar-content {
     padding: 0 12px;
     height: 50px;
@@ -623,6 +625,22 @@ body{ margin:0; background:var(--bg); color:var(--fg);
   .badge {
     font-size: 10px;
     padding: 1px 6px;
+  }
+
+  .floating-actions {
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    flex-direction: row;
+    justify-content: flex-end;
+    align-items: center;
+  }
+
+  .floating-actions .floating-switch,
+  .floating-actions .totop {
+    width: auto;
+    height: 34px;
+    min-width: 72px;
   }
 }
 
@@ -1270,127 +1288,6 @@ body{ margin:0; background:var(--bg); color:var(--fg);
 .analysis-result.scrollable{
   max-height:220px;
   overflow:auto;
-}
-
-/* Simulation lab */
-.sim-controls{
-  display:flex;
-  gap:10px;
-  align-items:center;
-  flex-wrap:wrap;
-}
-.sim-time-label{
-  font-weight:600;
-  color:var(--fg);
-}
-.sim-time-display{
-  font-family:monospace;
-  color:var(--accent);
-}
-.sim-time-slider{
-  width:100%;
-  margin-top:10px;
-}
-.sim-hint{
-  margin-top:8px;
-  color:var(--muted);
-  font-size:12px;
-}
-.sim-filter{
-  width:100%;
-  padding:8px 10px;
-  border-radius:8px;
-  border:1px solid var(--line);
-  background:var(--input-bg);
-  color:var(--fg);
-  margin:8px 0;
-}
-.sim-param-list{
-  max-height:260px;
-  overflow:auto;
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-}
-.sim-param-item{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  font-size:13px;
-  color:var(--fg);
-}
-.sim-readout-grid{
-  display:flex;
-  flex-direction:column;
-  gap:12px;
-  margin-top:12px;
-}
-.sim-player-modal .sim-controls{
-  margin-bottom:8px;
-}
-.sim-player-body{
-  display:flex;
-  gap:16px;
-  align-items:flex-start;
-  margin-top:10px;
-}
-.sim-player-left{
-  width:760px;
-  flex:0 0 760px;
-}
-.modal-content.sim-player-modal{
-  max-width:1200px;
-  width:95%;
-}
-.sim-player-right{
-  flex:1;
-  max-height:70vh;
-  overflow:auto;
-  padding-right:6px;
-}
-.sim-plots .plot-card{
-  min-height:220px;
-}
-.sim-plots .plot.big{
-  height:260px;
-}
-.sim-plots .plot-card + .plot-card{
-  margin-top:12px;
-}
-.sim-disabled{
-  opacity:0.55;
-}
-.sim-disabled .sim-param-list,
-.sim-disabled .sim-filter{
-  pointer-events:none;
-}
-
-@media (max-width: 980px){
-  .sim-player-body{
-    flex-direction:column;
-  }
-  .sim-player-left{
-    width:100%;
-    flex:1 1 auto;
-  }
-  .sim-player-right{
-    max-height:40vh;
-  }
-}
-.sim-readout{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-}
-.sim-readout-item{
-  display:flex;
-  justify-content:space-between;
-  padding:4px 0;
-  border-bottom:1px solid var(--line);
-}
-.sim-readout-item strong{
-  color:var(--accent);
-  font-family:monospace;
 }
 
 .checklist-grid{

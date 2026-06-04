@@ -1,8 +1,8 @@
-# EcuTek Log Viewer - Development Changelog
+# ApexLog Studio - Development Changelog
 
 ## Version History
 
-### Beta 1.5 – Performance & UX Overhaul
+### Apex Build 1.7 – Performance & UX Overhaul
 **Date:** January 27, 2026  
 **Status:** ✅ Released
 
@@ -53,7 +53,7 @@
 - **Compare sliders restored** – Start/end sliders retained; toggle/reset row removed.
 - **Cloud Save Note as filename** – Uploaded files are renamed to the content of the Cloud Save Note box for easy identification.
 - **Auto-close archive modal** – Modal automatically closes after successful upload.
-- **Help dropdown links** – Added Documentation link to GitHub repo and EcuTek Knowledge Base link to help dropdown.
+- **Help dropdown links** – Added Documentation link to GitHub repo and ECU Knowledge Base link to help dropdown.
 - **Experimental label** – Comparison Log labeled as "(experimental)" to indicate it's not fully stable.
 
 #### 🐛 Fixes
@@ -188,7 +188,7 @@
 #### 🎯 Major Features Implemented
 - **Multi-Plot View** (`index.html`) - Individual parameter visualization
 - **Mega Plot View** (`compare.html`) - Unified comparison interface
-- **CSV Parser** (`parser.js`) - Robust EcuTek log file parsing
+- **CSV Parser** (`parser.js`) - Robust ECU log file parsing
 - **File Upload System** - Drag & drop + file picker support
 - **Session Storage** - Persistent file caching between sessions
 - **Responsive Design** - Mobile-first approach
@@ -218,7 +218,7 @@
 
 #### 📁 File Structure
 ```
-ecutek-log-viewer/
+apexlog-studio/
 ├── index.html          # Multi-plot interface
 ├── compare.html        # Mega plot interface
 ├── app.js             # Multi-plot logic

@@ -304,14 +304,9 @@ function initDropdowns() {
       // Handle external links (target="_blank") - allow default or open programmatically
       if (item.hasAttribute("target") && item.getAttribute("target") === "_blank") {
         // Check if it's a handled external link
-        if (href && href.includes("github.com/Everlasting-dev/ecutek-log-viewer")) {
+        if (href && href.includes("github.com/Everlasting-dev/apexlog-studio")) {
           e.preventDefault();
-          window.open("https://github.com/Everlasting-dev/ecutek-log-viewer", "_blank");
-          return;
-        }
-        if (href && href.includes("ecutek.atlassian.net")) {
-          e.preventDefault();
-          window.open("https://ecutek.atlassian.net/wiki/spaces/SUPPORT/pages/327698/EcuTek+Knowledge+Base", "_blank");
+          window.open("https://github.com/Everlasting-dev/apexlog-studio", "_blank");
           return;
         }
         // For other external links, allow default behavior
@@ -342,9 +337,6 @@ function initDropdowns() {
         case "GR6 Gear Scope":
           window.location.href = "gear.html";
           break;
-        case "Simulation Lab":
-          window.location.href = "simulation.html";
-          break;
         case "Data Analysis Suite":
           window.location.href = "analysis.html";
           break;
@@ -361,10 +353,7 @@ function initDropdowns() {
           openMetadataModal();
           break;
         case "Documentation":
-          window.open("https://github.com/Everlasting-dev/ecutek-log-viewer", "_blank");
-          break;
-        case "EcuTek Knowledge Base":
-          window.open("https://ecutek.atlassian.net/wiki/spaces/SUPPORT/pages/327698/EcuTek+Knowledge+Base", "_blank");
+          window.open("https://github.com/Everlasting-dev/apexlog-studio", "_blank");
           break;
         case "Change Log":
           openChangelog();
@@ -1547,12 +1536,18 @@ function wirePlotSnap(div, xSeries, ySeries, timeEl, valueEl, label){
   div.addEventListener("pointerdown", (e)=>{
     if (timeWindow.enabled) return;       // selection mode disables snap
     dragging=true;
+    e.preventDefault();
+    e.stopPropagation();
     update(e.clientX);
     div.setPointerCapture?.(e.pointerId);
   });
   div.addEventListener("pointermove", (e)=>{
     if (timeWindow.enabled) return;
-    if (dragging) update(e.clientX);
+    if (dragging) {
+      e.preventDefault();
+      e.stopPropagation();
+      update(e.clientX);
+    }
   });
   ["pointerup","pointercancel","pointerleave"].forEach(evt=>{
     div.addEventListener(evt, ()=>{ dragging=false; });
@@ -1601,6 +1596,7 @@ function initPlotObserver(){
 function renderSinglePlot(div, { trace, layout, config, originalX, originalY, header, footer, footerHint, footerTime, footerValue }){
   Plotly.newPlot(div, [trace], layout, config)
     .then(() => {
+      containPlotGestures(div);
       applyTheme(document.documentElement.getAttribute('data-theme') === 'light', [div]);
       wirePlotSnap(div, originalX, originalY, footerTime, footerValue, header);
       wirePlotSelection(div);
@@ -1612,6 +1608,16 @@ function renderSinglePlot(div, { trace, layout, config, originalX, originalY, he
       }
       applyWindowRangeToPlot(div);
     });
+}
+
+function containPlotGestures(div){
+  div.style.touchAction = "none";
+  div.style.overscrollBehavior = "contain";
+  const layer = div.querySelector(".plotly .nsewdrag");
+  if (layer){
+    layer.style.touchAction = "none";
+    layer.style.overscrollBehavior = "contain";
+  }
 }
 
 function renderPlots(){

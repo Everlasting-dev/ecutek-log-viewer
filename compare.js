@@ -2075,6 +2075,8 @@ function plot(showToasts=true, preserveRange=false){
     // Ensure chart has proper styling
     chart.style.position = "relative";
     chart.style.cursor = "crosshair";
+    chart.style.touchAction = "none";
+    chart.style.overscrollBehavior = "contain";
     
     // Add container click handler as fallback
     const chartContainer = chart.parentElement;
@@ -2109,8 +2111,10 @@ function plot(showToasts=true, preserveRange=false){
       const idx = nearestIndexByX(xd);
       if (Number.isFinite(idx)) showPointInfoAt(idx);
     }
-    dragRect.addEventListener('pointerdown', e=>{ dragging=true; dragRect.setPointerCapture?.(e.pointerId); snapAt(e); });
-    dragRect.addEventListener('pointermove', e=>{ if (dragging) snapAt(e); });
+    dragRect.style.touchAction = "none";
+    dragRect.style.overscrollBehavior = "contain";
+    dragRect.addEventListener('pointerdown', e=>{ dragging=true; e.preventDefault(); e.stopPropagation(); dragRect.setPointerCapture?.(e.pointerId); snapAt(e); });
+    dragRect.addEventListener('pointermove', e=>{ if (dragging) { e.preventDefault(); e.stopPropagation(); snapAt(e); } });
     dragRect.addEventListener('pointerup',   ()=>{ dragging=false; });
     dragRect.addEventListener('pointercancel', ()=>{ dragging=false; });
   });
@@ -2603,14 +2607,9 @@ function initDropdowns() {
       // Handle external links (target="_blank") - allow default or open programmatically
       if (item.hasAttribute("target") && item.getAttribute("target") === "_blank") {
         // Check if it's a handled external link
-        if (href && href.includes("github.com/Everlasting-dev/ecutek-log-viewer")) {
+        if (href && href.includes("github.com/Everlasting-dev/apexlog-studio")) {
           e.preventDefault();
-          window.open("https://github.com/Everlasting-dev/ecutek-log-viewer", "_blank");
-          return;
-        }
-        if (href && href.includes("ecutek.atlassian.net")) {
-          e.preventDefault();
-          window.open("https://ecutek.atlassian.net/wiki/spaces/SUPPORT/pages/327698/EcuTek+Knowledge+Base", "_blank");
+          window.open("https://github.com/Everlasting-dev/apexlog-studio", "_blank");
           return;
         }
         // For other external links, allow default behavior
@@ -2652,9 +2651,6 @@ function initDropdowns() {
         case "GR6 Gear Scope":
           window.location.href = "gear.html";
           break;
-        case "Simulation Lab":
-          window.location.href = "simulation.html";
-          break;
         case "Shift Strategy Lab":
           openShiftLabModal();
           break;
@@ -2677,10 +2673,7 @@ function initDropdowns() {
           openChangelog();
           break;
         case "Documentation":
-          window.open("https://github.com/Everlasting-dev/ecutek-log-viewer", "_blank");
-          break;
-        case "EcuTek Knowledge Base":
-          window.open("https://ecutek.atlassian.net/wiki/spaces/SUPPORT/pages/327698/EcuTek+Knowledge+Base", "_blank");
+          window.open("https://github.com/Everlasting-dev/apexlog-studio", "_blank");
           break;
         default:
           console.log("Menu item clicked:", text, "href:", href);
