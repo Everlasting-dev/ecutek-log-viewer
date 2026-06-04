@@ -1,11 +1,11 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>About – ApexLog Studio</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="style.css?v=1.7.0" />
+  <link rel="stylesheet" href="style.css?v=1.7.1" />
   <style>
     .page-title{font-size:28px;font-weight:800;text-align:center;margin:18px 0 6px}
     .page-subtitle{color:var(--muted);text-align:center;margin:0 0 14px}
@@ -199,8 +199,8 @@
       <section class="about-section">
         <h2 style="margin:0 0 6px">What is it?</h2>
         <p style="margin:0;color:var(--muted)">
-          A <strong>client-side</strong> CSV/TXT log viewer for ECU log exports. Real-time graphs for RPM, boost, AFR, throttle, ignition, etc.
-          All parsing & rendering happens in your browser. <strong>No uploads.</strong>
+          A <strong>client-side</strong> CSV/TXT log viewer for ECU log exports. Real-time graphs for RPM, boost, AFR, throttle, ignition, and related tuning channels.
+          All parsing and rendering happens in your browser.
         </p>
       </section>
 
@@ -208,9 +208,8 @@
         <h2 style="margin:0 0 6px">Key features</h2>
         <ul class="feature-list" style="color:var(--muted)">
           <li><strong>Signal Matrix:</strong> multi-axis grid with synced snap readouts</li>
+          <li><strong>Correlation Lab:</strong> overlays, smoothing, highlighting, scaling, and time-window cropping</li>
           <li><strong>GR6 Gear Scope:</strong> shift points, torque intervention, and slip timelines</li>
-          <li><strong>Correlation Lab:</strong> overlays, smoothing, highlighting, and scaling tools</li>
-          <li><strong>100% Local:</strong> no uploads, no server processing</li>
           <li><strong>Session cache:</strong> switch views without re-uploading</li>
           <li><strong>Exports:</strong> PNG/SVG/ZIP/PDF reporting</li>
         </ul>
@@ -219,29 +218,31 @@
       <section class="about-section">
         <h2 style="margin:0 0 6px">Supported formats</h2>
         <p style="margin:0;color:var(--muted)">
-          ECU log CSV/TXT with a header row and time-series columns (e.g., <em>Time</em>, <em>RPM</em>, <em>Boost</em>, <em>AFR</em>, <em>Throttle</em>, <em>Ignition</em>).
+          ECU log CSV/TXT with a header row and time-series columns such as <em>Time</em>, <em>RPM</em>, <em>Boost</em>, <em>AFR</em>, <em>Throttle</em>, and <em>Ignition</em>.
         </p>
       </section>
 
       <section class="about-section">
         <h2 style="margin:0 0 6px">Tech stack</h2>
         <p style="margin:0;color:var(--muted)">
-          Vanilla JS + HTML5 + CSS3. <strong>Plotly.js</strong> for charts, <strong>PapaParse</strong> for CSV. Optimized for large logs—no backend.
+          Vanilla JS + HTML5 + CSS3. <strong>Plotly.js</strong> for charts, <strong>PapaParse</strong> for CSV. Optimized for large logs with no backend.
         </p>
       </section>
 
       <section class="about-section">
         <h2 style="margin:0 0 6px">Privacy</h2>
         <p style="margin:0;color:var(--muted)">
-          Logs are processed locally. <strong>No network requests</strong> for file handling; your data stays on your device.
+          Logs are processed locally for normal viewing workflows; your data stays on your device unless you explicitly use a cloud/archive feature.
         </p>
       </section>
 
       <section class="about-section">
-        <h2 style="margin:0 0 6px">What’s new in v1.6.0</h2>
+        <h2 style="margin:0 0 6px">What&apos;s new in Apex Build 1.7.1</h2>
         <ul class="feature-list" style="color:var(--muted)">
-          <li><strong>Signal Matrix:</strong> synced snap default and footer readout layout</li>
-          <li><strong>Recent Files:</strong> click-to-load from the File menu</li>
+          <li><strong>Mega Plot Crop:</strong> fixed the Correlation Lab graph over-zoom after selecting later log sections.</li>
+          <li><strong>Y-Axis Autoscale:</strong> now uses the visible plotted traces after each crop.</li>
+          <li><strong>Readability:</strong> tight cropped windows keep a sane Y-axis span instead of stretching tiny changes across the graph.</li>
+          <li><strong>Documentation:</strong> in-app changelog and visible build labels now show the 1.7.1 patch.</li>
         </ul>
       </section>
       <section class="about-section">
@@ -257,8 +258,8 @@
       <section class="about-section">
         <h2 style="margin:0 0 6px">Release</h2>
         <dl class="kv" style="color:var(--muted)">
-          <dt>Current Version</dt><dd>v1.6.0</dd>
-          <dt>Last Updated</dt><dd>January 28, 2026</dd>
+          <dt>Current Version</dt><dd>Apex Build 1.7.1</dd>
+          <dt>Last Updated</dt><dd>June 4, 2026</dd>
           <dt>Browser Support</dt><dd>Chrome 80+, Firefox 75+, Safari 13+, Edge 80+</dd>
           <dt>License</dt><dd>MIT</dd>
         </dl>
@@ -266,7 +267,7 @@
     </div>
   </div>
 
-  <div class="footer">Client-side parsing. Your file never leaves the device. · Apex Build 1.7</div>
+  <div class="footer">Client-side parsing. Your file never leaves the device. · Apex Build 1.7.1</div>
   
   <script>
     // ASCII Dot-Matrix Animation
@@ -309,7 +310,7 @@
     }
     requestAnimationFrame(tick);
   </script>
-  <script src="about.js?v=1.7.0"></script>
+  <script src="about.js?v=1.7.1"></script>
 </body>
 </html>
 

@@ -1,11 +1,11 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>ApexLog Studio · Data Analysis</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="style.css?v=1.7.0" />
+  <link rel="stylesheet" href="style.css?v=1.7.1" />
   <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 </head>
@@ -282,7 +282,14 @@
     <div class="modal-content wide">
       <button class="modal-close" id="changelogClose" aria-label="Close change log">×</button>
       <h3>Change Log</h3>
-      <div class="changelog-entry">
+            <div class="changelog-entry">
+        <h4>Apex Build 1.7.1</h4>
+        <ul>
+          <li><strong>Mega Plot Crop:</strong> fixed over-zooming after cropping later log sections.</li>
+          <li><strong>Y-Axis Autoscale:</strong> now scales from the visible plotted traces after the crop is applied.</li>
+          <li><strong>Readability:</strong> added a minimum Y-axis span so tight windows stay legible.</li>
+        </ul>
+      </div><div class="changelog-entry">
         <h4>v1.6.0</h4>
         <ul>
           <li><strong>Signal Matrix:</strong> synced snap default, footer readout layout, and improved action stack.</li>
@@ -303,7 +310,7 @@
   <div class="footer">Client-side parsing. Your file never leaves the device. · Data Analysis Suite</div>
   <button id="toTop" class="totop" title="Back to top">↑ Top</button>
 
-  <script type="module" src="analysis.js?v=1.7.0"></script>
+  <script type="module" src="analysis.js?v=1.7.1"></script>
 </body>
 </html>
 

@@ -1,6 +1,6 @@
-# ApexLog Studio
+﻿# ApexLog Studio
 
-**Current build:** `Apex Build 1.7`
+**Current build:** `Apex Build 1.7.1`
 
 A modern, client-side web application for viewing and analyzing ECU CSV/TXT log files. Built with vanilla JavaScript, Plotly.js, and PapaParse for robust CSV parsing and interactive data visualization.
 
@@ -19,14 +19,12 @@ A modern, client-side web application for viewing and analyzing ECU CSV/TXT log 
 - **Performance Benchmarks** – automatic 0‑60/60‑130/100‑200 computations with torque & traction watchers
 - **Correlation Lab simplified** – only the uploader, axis config, enhancements, time slider, and primary plot remain; all advanced labs live under the Tools menu.
 
-## 🆕 What’s new in preAlpha 1.3.11
+## What is new in Apex Build 1.7.1
 
-- **Archive-ready logs** – new “Archive Current Log” button downloads a timestamped CSV ready for `logs/`.
-- **Metadata Grid** – duration, sampling rate, RPM range, speed source, GR6 shift deltas, torque/traction notes.
-- **Line Weight control** – per-trace thickness sliders for both primary and comparison traces.
-- **Shift Strategy Lab** – GR6-friendly gearing visualizer + notes (built with inspiration from [blocklayer.com](https://www.blocklayer.com/rpm-gear)).
-- **Performance metrics overhaul** – automatic speed-channel detection, 0‑60/60‑130/100‑200, peak G, and health overlays.
-- **Random zoom fix** – X range now clamps exactly to the Time Window sliders while Y auto-rescales inside that window.
+- **Mega Plot Crop fix** – Correlation Lab no longer over-zooms after selecting later log sections.
+- **Visible-trace autoscale** – Y-axis scaling now uses the plotted data after the crop is applied.
+- **Readable tight windows** – very narrow selections keep a minimum Y-axis span so small changes do not fill the whole chart.
+- **In-app documentation updated** – About, Change Log modals, build labels, and cache-bust query strings now show Apex Build 1.7.1.
 
 ## 📁 Project Structure
 
