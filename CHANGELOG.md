@@ -2,6 +2,14 @@
 
 ## Version History
 
+### Apex Build 1.7.6 - Rotate Prompt Readability
+**Date:** June 5, 2026
+**Status:** Released
+
+#### Fixes
+- Fixed the broken diagonal Mega Plot portrait prompt by removing rotation from the ASCII phone graphic.
+- Kept animation on the rotate cue only so the instruction remains readable.
+
 ### Apex Build 1.7.5 - Mega Plot Rotate Prompt
 **Date:** June 5, 2026
 **Status:** Released

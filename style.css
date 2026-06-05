@@ -780,8 +780,6 @@ body{ margin:0; background:var(--bg); color:var(--fg);
   white-space: pre;
   text-shadow: 0 0 8px rgba(0, 255, 102, 0.35);
   filter: drop-shadow(0 0 6px rgba(0, 255, 100, 0.45));
-  animation: rotate-phone-hint 2.8s ease-in-out infinite;
-  transform-origin: center center;
 }
 
 .orientation-gate-arrow {
@@ -789,12 +787,6 @@ body{ margin:0; background:var(--bg); color:var(--fg);
   color: var(--accent);
   text-shadow: 0 0 10px rgba(0, 255, 102, 0.5);
   animation: rotate-arrow-hint 2.8s ease-in-out infinite;
-}
-
-@keyframes rotate-phone-hint {
-  0%, 18% { transform: rotate(0deg); }
-  45%, 55% { transform: rotate(-90deg); }
-  82%, 100% { transform: rotate(0deg); }
 }
 
 @keyframes rotate-arrow-hint {
