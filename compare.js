@@ -4,6 +4,7 @@ import { downsampleLTTB, calculateOptimalSampleSize, shouldDownsample } from "./
 import { initAnnotations, getAllAnnotations, exportAnnotations, removeAnnotation } from "./modules/annotations.js";
 import { initTemplates, getAllTemplates, createTemplate, deleteTemplate, exportTemplates } from "./modules/templates.js";
 import { bindToTopButton } from "./modules/utils.js";
+import { initLandscapeOrientationGate } from "./modules/mobile.js";
 
 function openShiftLabModal(){
   if (shiftLabModal) {
@@ -2793,6 +2794,15 @@ function handleStartupSplash(){
 }
 
 document.addEventListener("DOMContentLoaded", ()=>{ 
+  initLandscapeOrientationGate({
+    onUnlock(){
+      const chart = document.getElementById("chart");
+      if (chart && window.Plotly){
+        window.Plotly.Plots.resize(chart);
+      }
+    }
+  });
+
   // Ensure loading screen is hidden on startup (safety check)
   try {
     const ls = document.getElementById("loadingScreen");

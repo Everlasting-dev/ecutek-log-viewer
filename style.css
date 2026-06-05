@@ -734,6 +734,103 @@ body{ margin:0; background:var(--bg); color:var(--fg);
 
 }
 
+/* Mega Plot: portrait orientation gate (mobile) */
+.orientation-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 10001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  padding-top: calc(24px + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  background: var(--bg);
+}
+
+.orientation-gate.hidden {
+  display: none;
+}
+
+.orientation-gate-panel {
+  max-width: 320px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.orientation-gate-visual {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.orientation-gate-art {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: clamp(11px, 3.2vw, 14px);
+  line-height: 1.05;
+  letter-spacing: 0.5px;
+  color: var(--accent);
+  white-space: pre;
+  text-shadow: 0 0 8px rgba(0, 255, 102, 0.35);
+  filter: drop-shadow(0 0 6px rgba(0, 255, 100, 0.45));
+  animation: rotate-phone-hint 2.8s ease-in-out infinite;
+  transform-origin: center center;
+}
+
+.orientation-gate-arrow {
+  font-size: 28px;
+  color: var(--accent);
+  text-shadow: 0 0 10px rgba(0, 255, 102, 0.5);
+  animation: rotate-arrow-hint 2.8s ease-in-out infinite;
+}
+
+@keyframes rotate-phone-hint {
+  0%, 18% { transform: rotate(0deg); }
+  45%, 55% { transform: rotate(-90deg); }
+  82%, 100% { transform: rotate(0deg); }
+}
+
+@keyframes rotate-arrow-hint {
+  0%, 18% { opacity: 1; transform: rotate(0deg); }
+  45%, 55% { opacity: 0.35; transform: rotate(-90deg); }
+  82%, 100% { opacity: 1; transform: rotate(0deg); }
+}
+
+.orientation-gate-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--fg);
+}
+
+.orientation-gate-text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.orientation-gate-back {
+  margin-top: 4px;
+  text-decoration: none;
+}
+
+.compare-page.orientation-locked .taskbar,
+.compare-page.orientation-locked .wrap,
+.compare-page.orientation-locked .footer,
+.compare-page.orientation-locked .floating-actions,
+.compare-page.orientation-locked .loading-screen {
+  pointer-events: none;
+  user-select: none;
+}
+
 /* Loading screen */
 .loading-screen {
   position: fixed;

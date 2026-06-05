@@ -10,6 +10,72 @@ export function isMobile(){
 }
 
 /**
+ * Detect portrait orientation.
+ * @returns {boolean}
+ */
+export function isPortrait(){
+  if (window.screen?.orientation?.type){
+    return window.screen.orientation.type.startsWith("portrait");
+  }
+  if (window.matchMedia?.("(orientation: portrait)").matches){
+    return true;
+  }
+  return window.innerHeight > window.innerWidth;
+}
+
+/**
+ * Detect phone-sized touch devices (matches Mega Plot mobile breakpoint).
+ * @returns {boolean}
+ */
+export function isPhoneLike(){
+  const touch = "ontouchstart" in window || navigator.maxTouchPoints > 0;
+  return isMobile() || (touch && window.innerWidth <= 900);
+}
+
+/**
+ * Block page interaction on phone portrait until the user rotates to landscape.
+ * @param {object} [options]
+ * @param {string} [options.gateId="orientationGate"]
+ * @param {string} [options.lockedClass="orientation-locked"]
+ * @param {() => void} [options.onUnlock]
+ */
+export function initLandscapeOrientationGate(options = {}){
+  const {
+    gateId = "orientationGate",
+    lockedClass = "orientation-locked",
+    onUnlock = null
+  } = options;
+
+  const gate = document.getElementById(gateId);
+  if (!gate) return;
+
+  let wasLocked = false;
+
+  const update = () => {
+    const locked = isPhoneLike() && isPortrait();
+    gate.classList.toggle("hidden", !locked);
+    gate.setAttribute("aria-hidden", locked ? "false" : "true");
+    document.body.classList.toggle(lockedClass, locked);
+    document.body.style.overflow = locked ? "hidden" : "";
+
+    if (wasLocked && !locked){
+      onUnlock?.();
+    }
+    wasLocked = locked;
+  };
+
+  update();
+  window.addEventListener("orientationchange", () => setTimeout(update, 150));
+  window.addEventListener("resize", update);
+
+  if (window.screen?.orientation?.addEventListener){
+    window.screen.orientation.addEventListener("change", update);
+  } else {
+    window.matchMedia("(orientation: portrait)")?.addEventListener("change", update);
+  }
+}
+
+/**
  * Initialize mobile-specific features
  */
 export function initMobile(){
