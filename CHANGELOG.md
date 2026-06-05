@@ -2,6 +2,15 @@
 
 ## Version History
 
+### Apex Build 1.7.7 - Rotate Cue and Crop Preview
+**Date:** June 5, 2026
+**Status:** Released
+
+#### Fixes
+- Replaced the Mega Plot portrait ASCII block with a cleaner phone-and-arrows rotate cue inspired by common mobile rotate prompts.
+- Made the Mega Plot crop preview permanent and visual, using a lightweight canvas sparkline instead of a duplicate Plotly chart.
+- Added the current build number to the ApexLog Studio loading screen.
+
 ### Apex Build 1.7.6 - Rotate Prompt Readability
 **Date:** June 5, 2026
 **Status:** Released

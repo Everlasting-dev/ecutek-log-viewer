@@ -347,6 +347,10 @@ const timeMaxInput = $("timeMaxInput");
 const timeMinDisplay = $("timeMinDisplay");
 const timeMaxDisplay = $("timeMaxDisplay");
 const resetTimeRange = $("resetTimeRange");
+const timeCropPreview = $("timeCropPreview");
+const timeCropPreviewRange = $("timeCropPreviewRange");
+const timeCropPreviewDuration = $("timeCropPreviewDuration");
+const timeCropPreviewCanvas = $("timeCropPreviewCanvas");
 const fullTimeRange = null;
 const smoothSelect = $("smoothSelect");
 const highlightToggle = $("highlightToggle");
@@ -369,6 +373,7 @@ let activeIndexMap = [];
 let smoothingWindow = 0;
 let timeWindowSelectEnabled = false;
 let chartReady = false;
+let cropPreviewFrame = null;
 let highlightSettings = {
   enabled:false,
   columnIdx:-1,
@@ -1480,6 +1485,144 @@ function updateSessionComparison(primaryIdx){
 function updateTimeRangeDisplays() {
   if (timeMinDisplay) timeMinDisplay.textContent = `${timeRangeMin.toFixed(1)}s`;
   if (timeMaxDisplay) timeMaxDisplay.textContent = `${timeRangeMax.toFixed(1)}s`;
+  updateCropPreview();
+}
+
+function updateCropPreview(){
+  if (!timeCropPreview || !Number.isFinite(xMin) || !Number.isFinite(xMax) || xMax <= xMin) return;
+  timeCropPreview.classList.remove("hidden");
+  const start = Math.max(xMin, Math.min(timeRangeMin, xMax));
+  const end = Math.max(xMin, Math.min(timeRangeMax, xMax));
+  const duration = Math.max(0, end - start);
+  if (timeCropPreviewRange) timeCropPreviewRange.textContent = `Crop: ${start.toFixed(1)}s to ${end.toFixed(1)}s`;
+  if (timeCropPreviewDuration) timeCropPreviewDuration.textContent = `${duration.toFixed(1)}s selected`;
+  scheduleCropPreviewDraw();
+}
+
+function scheduleCropPreviewDraw(){
+  if (!timeCropPreviewCanvas) return;
+  if (cropPreviewFrame) cancelAnimationFrame(cropPreviewFrame);
+  cropPreviewFrame = requestAnimationFrame(()=> {
+    cropPreviewFrame = null;
+    drawCropPreview();
+  });
+}
+
+function drawCropPreview(){
+  const canvas = timeCropPreviewCanvas;
+  if (!canvas || !Array.isArray(cols[xIdx])) return;
+  const rect = canvas.getBoundingClientRect();
+  const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
+  const cssWidth = Math.max(220, Math.floor(rect.width || canvas.clientWidth || 320));
+  const cssHeight = Math.max(70, Math.floor(rect.height || 78));
+  const pxWidth = Math.floor(cssWidth * dpr);
+  const pxHeight = Math.floor(cssHeight * dpr);
+  if (canvas.width !== pxWidth || canvas.height !== pxHeight){
+    canvas.width = pxWidth;
+    canvas.height = pxHeight;
+  }
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, cssWidth, cssHeight);
+
+  const xData = cols[xIdx];
+  const traces = ySlots
+    .filter(s => s.enabled && s.colIdx >= 0 && Array.isArray(cols[s.colIdx]))
+    .slice(0, 5)
+    .map(s => ({ slot:s, y:cols[s.colIdx], exponent:s.scale ?? 0 }));
+
+  if (!traces.length){
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--muted").trim() || "#9aa7b2";
+    ctx.font = "12px sans-serif";
+    ctx.fillText("Select Y axes to preview crop shape", 12, cssHeight / 2);
+    return;
+  }
+
+  const start = Math.max(xMin, Math.min(timeRangeMin, xMax));
+  const end = Math.max(xMin, Math.min(timeRangeMax, xMax));
+  const samples = Math.max(64, Math.min(180, Math.floor(cssWidth / 3)));
+  const buckets = traces.map(t => ({
+    ...t,
+    sums:Array(samples).fill(0),
+    counts:Array(samples).fill(0),
+    points:[]
+  }));
+  let yMin = +Infinity;
+  let yMax = -Infinity;
+
+  const span = Math.max(EPS, end - start);
+  for (let i = 0; i < xData.length; i++){
+    const x = xData[i];
+    if (!Number.isFinite(x) || x < start || x > end) continue;
+    const bucketIdx = Math.max(0, Math.min(samples - 1, Math.floor(((x - start) / span) * samples)));
+    buckets.forEach(bucket => {
+      const y = applyPowerScaling(bucket.y[i], bucket.exponent);
+      if (!Number.isFinite(y)) return;
+      bucket.sums[bucketIdx] += y;
+      bucket.counts[bucketIdx]++;
+    });
+  }
+
+  buckets.forEach(bucket => {
+    bucket.points = bucket.sums.map((sum, idx) => {
+      const count = bucket.counts[idx];
+      const yAvg = count ? sum / count : NaN;
+      if (Number.isFinite(yAvg)){
+        if (yAvg < yMin) yMin = yAvg;
+        if (yAvg > yMax) yMax = yAvg;
+      }
+      return yAvg;
+    });
+  });
+
+  const styles = getComputedStyle(document.documentElement);
+  const lineColor = styles.getPropertyValue("--line").trim() || "#1b1f25";
+  const muted = styles.getPropertyValue("--muted").trim() || "#9aa7b2";
+  ctx.strokeStyle = lineColor;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, cssHeight - 18);
+  ctx.lineTo(cssWidth, cssHeight - 18);
+  ctx.stroke();
+
+  if (yMin === +Infinity || yMax === -Infinity){
+    ctx.fillStyle = muted;
+    ctx.font = "12px sans-serif";
+    ctx.fillText("No samples in selected crop", 12, cssHeight / 2);
+    return;
+  }
+  if (Math.abs(yMax - yMin) < 1e-9){
+    yMax += 1;
+    yMin -= 1;
+  }
+
+  const padX = 8;
+  const padY = 8;
+  const plotW = cssWidth - padX * 2;
+  const plotH = cssHeight - padY * 2 - 10;
+
+  buckets.forEach(bucket => {
+    ctx.strokeStyle = bucket.slot.color || "#34a0ff";
+    ctx.lineWidth = 1.6;
+    ctx.globalAlpha = 0.9;
+    ctx.beginPath();
+    let started = false;
+    bucket.points.forEach((y, idx) => {
+      if (!Number.isFinite(y)) return;
+      const x = padX + plotW * (idx / Math.max(1, bucket.points.length - 1));
+      const yy = padY + plotH * (1 - ((y - yMin) / (yMax - yMin)));
+      if (!started){
+        ctx.moveTo(x, yy);
+        started = true;
+      } else {
+        ctx.lineTo(x, yy);
+      }
+    });
+    if (started) ctx.stroke();
+  });
+  ctx.globalAlpha = 1;
 }
 
 function refreshTimeRangeState(){
@@ -1517,6 +1660,10 @@ function syncTimeRangeControls(){
     timeMaxInput.value = timeRangeMax.toFixed(1);
   }
   updateTimeRangeDisplays();
+}
+
+function showCropPreview(){
+  updateCropPreview();
 }
 
 function initializeTimeRange() {
@@ -2332,6 +2479,7 @@ function wireInitialEventListeners(){
       const v = Number(e.target.value);
       if (Number.isFinite(v)){
         timeRangeMin = Math.min(v, timeRangeMax - EPS);
+        showCropPreview();
         applyTimeRangeChange();
       }
     });
@@ -2341,6 +2489,7 @@ function wireInitialEventListeners(){
       const v = Number(e.target.value);
       if (Number.isFinite(v)){
         timeRangeMax = Math.max(v, timeRangeMin + EPS);
+        showCropPreview();
         applyTimeRangeChange();
       }
     });
@@ -2350,6 +2499,7 @@ function wireInitialEventListeners(){
       const v = Number(e.target.value);
       if (Number.isFinite(v)){
         timeRangeMin = Math.min(v, timeRangeMax - EPS);
+        showCropPreview();
         applyTimeRangeChange();
       }
     });
@@ -2359,6 +2509,7 @@ function wireInitialEventListeners(){
       const v = Number(e.target.value);
       if (Number.isFinite(v)){
         timeRangeMax = Math.max(v, timeRangeMin + EPS);
+        showCropPreview();
         applyTimeRangeChange();
       }
     });
@@ -2368,6 +2519,7 @@ function wireInitialEventListeners(){
       timeRangeMin = xMin;
       timeRangeMax = xMax;
       timeRangeEnabled = false;
+      showCropPreview();
       applyTimeRangeChange();
     });
   }

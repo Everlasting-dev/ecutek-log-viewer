@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>ApexLog Studio (Compare)</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="style.css?v=1.7.6" />
+  <link rel="stylesheet" href="style.css?v=1.7.7" />
   <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script>
@@ -20,6 +20,7 @@
       <div class="ascii-loading">
         <div class="matrix" id="classicMatrix"></div>
         <div class="loading-text">APEXLOG STUDIO</div>
+        <div class="loading-version">Apex Build 1.7.7</div>
         <div class="hint">loading…</div>
       </div>
     </div>
@@ -270,6 +271,13 @@
     </div>
 
     <div class="time-window-controls card">
+      <div id="timeCropPreview" class="time-crop-preview" aria-live="polite">
+        <div class="time-crop-preview__head">
+          <span id="timeCropPreviewRange">Crop: full range</span>
+          <strong id="timeCropPreviewDuration">0.0s selected</strong>
+        </div>
+        <canvas id="timeCropPreviewCanvas" class="time-crop-preview__canvas" width="640" height="120" aria-label="Selected crop preview"></canvas>
+      </div>
       <div class="tw-row">
         <label for="timeMinSlider">Start (s)</label>
         <input type="range" id="timeMinSlider" min="0" max="1" step="0.1" />
@@ -367,10 +375,11 @@
       <button class="modal-close" id="changelogClose" aria-label="Close change log">×</button>
       <h3>Change Log</h3>
             <div class="changelog-entry">
-        <h4>Apex Build 1.7.6</h4>
+        <h4>Apex Build 1.7.7</h4>
         <ul>
-          <li><strong>Rotate Prompt:</strong> fixed the broken diagonal ASCII art by keeping the phone graphic upright.</li>
-          <li><strong>Animation:</strong> only the rotate cue moves now, so the message stays readable.</li>
+          <li><strong>Rotate Prompt:</strong> replaced the ASCII block with a clean phone-and-arrows rotate cue.</li>
+          <li><strong>Crop Preview:</strong> added a permanent lightweight visual preview of the selected Mega Plot crop window.</li>
+          <li><strong>Loading Screen:</strong> added the current build number below the ApexLog Studio loader title.</li>
         </ul>
       </div><div class="changelog-entry">
         <h4>v1.6.0</h4>
@@ -403,7 +412,7 @@
     </div>
   </div>
 
-  <div class="footer">Client‑side parsing. Your file never leaves the device. · Apex Build 1.7.6</div>
+  <div class="footer">Client‑side parsing. Your file never leaves the device. · Apex Build 1.7.7</div>
   <div class="floating-actions floating-actions--single">
     <button id="toTop" class="totop action-btn" title="Back to top">↑ Top</button>
   </div>
@@ -411,12 +420,11 @@
   <div id="orientationGate" class="orientation-gate hidden" role="dialog" aria-modal="true" aria-labelledby="orientationGateTitle" aria-hidden="true">
     <div class="orientation-gate-panel">
       <div class="orientation-gate-visual">
-        <pre class="orientation-gate-art" aria-hidden="true">+---------+
-|  MEGA   |
-|  PLOT   |
-+---------+
-ROTATE -> LANDSCAPE</pre>
-        <span class="orientation-gate-arrow" aria-hidden="true">⟲</span>
+        <div class="orientation-rotate-icon" aria-hidden="true">
+          <span class="orientation-arc orientation-arc--top"></span>
+          <span class="orientation-phone-shape"></span>
+          <span class="orientation-arc orientation-arc--bottom"></span>
+        </div>
       </div>
       <h2 id="orientationGateTitle" class="orientation-gate-title">Turn Phone Sideways</h2>
       <p class="orientation-gate-text">Mega Plot needs landscape view so the graph has room to breathe.</p>
@@ -425,6 +433,6 @@ ROTATE -> LANDSCAPE</pre>
   </div>
 
   <!-- ES module so compare.js can import parser.js -->
-  <script type="module" src="compare.js?v=1.7.6"></script>
+  <script type="module" src="compare.js?v=1.7.7"></script>
 </body>
 </html>

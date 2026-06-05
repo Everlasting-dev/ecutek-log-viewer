@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <title>ApexLog Studio (TXT/CSV)</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="style.css?v=1.7.6" />
+  <link rel="stylesheet" href="style.css?v=1.7.7" />
   <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script>
@@ -22,6 +22,7 @@
       <div class="ascii-loading">
         <div class="matrix" id="classicMatrix"></div>
         <div class="loading-text">APEXLOG STUDIO</div>
+        <div class="loading-version">Apex Build 1.7.7</div>
         <div class="hint">loading…</div>
       </div>
     </div>
@@ -232,7 +233,7 @@
     </div>
   </div>
 
-  <div class="footer">Made by AK Everlasting Dev · Apex Build 1.7.6</div>
+  <div class="footer">Made by AK Everlasting Dev · Apex Build 1.7.7</div>
   <div class="floating-actions">
     <label class="switch floating-switch" title="Sync click selection across plots">
       <input type="checkbox" id="syncSnapToggle" checked />
@@ -284,10 +285,11 @@
       <button class="modal-close" id="changelogClose" aria-label="Close change log">×</button>
       <h3>Change Log</h3>
             <div class="changelog-entry">
-        <h4>Apex Build 1.7.6</h4>
+        <h4>Apex Build 1.7.7</h4>
         <ul>
-          <li><strong>Rotate Prompt:</strong> fixed the broken diagonal ASCII art by keeping the phone graphic upright.</li>
-          <li><strong>Animation:</strong> only the rotate cue moves now, so the message stays readable.</li>
+          <li><strong>Rotate Prompt:</strong> replaced the ASCII block with a clean phone-and-arrows rotate cue.</li>
+          <li><strong>Crop Preview:</strong> added a permanent lightweight visual preview of the selected Mega Plot crop window.</li>
+          <li><strong>Loading Screen:</strong> added the current build number below the ApexLog Studio loader title.</li>
         </ul>
       </div><div class="changelog-entry">
         <h4>v1.6.0</h4>
@@ -344,6 +346,6 @@
       </section>
     </div>
   </div>
-  <script type="module" src="app.js?v=1.7.6"></script>
+  <script type="module" src="app.js?v=1.7.7"></script>
 </body>
 </html>
