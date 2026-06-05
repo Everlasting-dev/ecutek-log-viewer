@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>ApexLog Studio (Compare)</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="style.css?v=1.7.8" />
+  <link rel="stylesheet" href="style.css?v=1.7.9" />
   <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script>
@@ -20,7 +20,7 @@
       <div class="ascii-loading">
         <div class="matrix" id="classicMatrix"></div>
         <div class="loading-text">APEXLOG STUDIO</div>
-        <div class="loading-version">Apex Build 1.7.8</div>
+        <div class="loading-version">Apex Build 1.7.9</div>
         <div class="hint">loading…</div>
       </div>
     </div>
@@ -375,10 +375,10 @@
       <button class="modal-close" id="changelogClose" aria-label="Close change log">×</button>
       <h3>Change Log</h3>
             <div class="changelog-entry">
-        <h4>Apex Build 1.7.8</h4>
+        <h4>Apex Build 1.7.9</h4>
         <ul>
-          <li><strong>Rotate Prompt:</strong> replaced the icon-style cue with a true ASCII phone outline.</li>
-          <li><strong>Animation:</strong> the phone rotates from portrait to landscape around its own center.</li>
+          <li><strong>Rotate Prompt:</strong> replaced the ASCII cue with a proper animated phone graphic.</li>
+          <li><strong>Animation:</strong> the phone rotates smoothly from portrait to landscape around the center of the screen.</li>
           <li><strong>Crop Preview:</strong> kept the permanent lightweight Mega Plot crop preview.</li>
         </ul>
       </div><div class="changelog-entry">
@@ -412,7 +412,7 @@
     </div>
   </div>
 
-  <div class="footer">Client‑side parsing. Your file never leaves the device. · Apex Build 1.7.8</div>
+  <div class="footer">Client‑side parsing. Your file never leaves the device. · Apex Build 1.7.9</div>
   <div class="floating-actions floating-actions--single">
     <button id="toTop" class="totop action-btn" title="Back to top">↑ Top</button>
   </div>
@@ -420,22 +420,17 @@
   <div id="orientationGate" class="orientation-gate hidden" role="dialog" aria-modal="true" aria-labelledby="orientationGateTitle" aria-hidden="true">
     <div class="orientation-gate-panel">
       <div class="orientation-gate-visual">
-        <div class="orientation-phone-stage" aria-hidden="true">
-          <div class="orientation-phone-ring"></div>
-          <pre class="orientation-phone-frame orientation-phone-frame--portrait">   ╭─────────╮
-   │ ┌─────┐ │
-   │ │▓▓▓▓▓│ │
-   │ │░░░░░│ │
-   │ │▄▄▄▄▄│ │
-   │ └─────┘ │
-   │    ◉    │
-   ╰─────────╯</pre>
-          <pre class="orientation-phone-frame orientation-phone-frame--landscape">╭───────────────────╮
-│ ┌───────────────┐ │
-│ │▓▓▓▓▓░░░░░▄▄▄▄▄│ │
-│ └───────────────┘ │
-╰───────────────────╯</pre>
-        </div>
+        <svg class="orientation-rotate-svg" viewBox="0 0 220 220" aria-hidden="true">
+          <path class="orientation-rotate-svg__arc orientation-rotate-svg__arc--top" d="M70 56 C45 58 31 75 30 96" />
+          <path class="orientation-rotate-svg__arc orientation-rotate-svg__arc--bottom" d="M150 164 C175 162 189 145 190 124" />
+          <path class="orientation-rotate-svg__arrow orientation-rotate-svg__arrow--top" d="M30 96 L21 83 L45 88 Z" />
+          <path class="orientation-rotate-svg__arrow orientation-rotate-svg__arrow--bottom" d="M190 124 L199 137 L175 132 Z" />
+          <g class="orientation-rotate-svg__phone">
+            <rect x="82" y="46" width="56" height="128" rx="10" />
+            <rect x="91" y="61" width="38" height="90" rx="4" />
+            <circle cx="110" cy="160" r="4" />
+          </g>
+        </svg>
         <p class="orientation-phone-caption" aria-hidden="true">Portrait → Landscape</p>
       </div>
       <h2 id="orientationGateTitle" class="orientation-gate-title">Rotate to Landscape</h2>
@@ -445,6 +440,6 @@
   </div>
 
   <!-- ES module so compare.js can import parser.js -->
-  <script type="module" src="compare.js?v=1.7.8"></script>
+  <script type="module" src="compare.js?v=1.7.9"></script>
 </body>
 </html>
