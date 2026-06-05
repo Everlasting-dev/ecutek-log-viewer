@@ -2,6 +2,14 @@
 
 ## Version History
 
+### Apex Build 1.7.5 - Mega Plot Rotate Prompt
+**Date:** June 5, 2026
+**Status:** Released
+
+#### Fixes
+- Refined the Mega Plot portrait-mode ASCII art into a cleaner phone-to-landscape cue.
+- Shortened the portrait lock message so phone users understand the rotate requirement faster.
+
 ### Apex Build 1.7.4 - Mobile Bottom Bar Cleanup
 **Date:** June 4, 2026
 **Status:** Released

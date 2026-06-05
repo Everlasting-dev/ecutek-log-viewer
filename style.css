@@ -753,12 +753,12 @@ body{ margin:0; background:var(--bg); color:var(--fg);
 }
 
 .orientation-gate-panel {
-  max-width: 320px;
+  max-width: 340px;
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
 }
 
 .orientation-gate-visual {
@@ -766,15 +766,15 @@ body{ margin:0; background:var(--bg); color:var(--fg);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 10px;
   margin-bottom: 4px;
 }
 
 .orientation-gate-art {
   margin: 0;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-  font-size: clamp(11px, 3.2vw, 14px);
-  line-height: 1.05;
+  font-size: clamp(12px, 3.4vw, 15px);
+  line-height: 1.08;
   letter-spacing: 0.5px;
   color: var(--accent);
   white-space: pre;
@@ -785,7 +785,7 @@ body{ margin:0; background:var(--bg); color:var(--fg);
 }
 
 .orientation-gate-arrow {
-  font-size: 28px;
+  font-size: 30px;
   color: var(--accent);
   text-shadow: 0 0 10px rgba(0, 255, 102, 0.5);
   animation: rotate-arrow-hint 2.8s ease-in-out infinite;

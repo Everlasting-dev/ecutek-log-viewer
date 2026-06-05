@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>ApexLog Studio (Compare)</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="style.css?v=1.7.4" />
+  <link rel="stylesheet" href="style.css?v=1.7.5" />
   <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script>
@@ -367,11 +367,10 @@
       <button class="modal-close" id="changelogClose" aria-label="Close change log">×</button>
       <h3>Change Log</h3>
             <div class="changelog-entry">
-        <h4>Apex Build 1.7.4</h4>
+        <h4>Apex Build 1.7.5</h4>
         <ul>
-          <li><strong>Bottom Bar:</strong> removed duplicate Mini/Mega shortcuts because the phone header already handles plot navigation.</li>
-          <li><strong>Mobile Controls:</strong> tightened the floating action bar so Sync, Window, Reset, and Top fit better.</li>
-          <li><strong>Top Button:</strong> strengthened scroll-to-top handling across mobile browsers.</li>
+          <li><strong>Rotate Prompt:</strong> refined the Mega Plot portrait ASCII art for a cleaner landscape cue.</li>
+          <li><strong>Message Clarity:</strong> shortened the portrait lock copy so phone users know exactly what to do.</li>
         </ul>
       </div><div class="changelog-entry">
         <h4>v1.6.0</h4>
@@ -404,7 +403,7 @@
     </div>
   </div>
 
-  <div class="footer">Client‑side parsing. Your file never leaves the device. · Apex Build 1.7.4</div>
+  <div class="footer">Client‑side parsing. Your file never leaves the device. · Apex Build 1.7.5</div>
   <div class="floating-actions floating-actions--single">
     <button id="toTop" class="totop action-btn" title="Back to top">↑ Top</button>
   </div>
@@ -412,21 +411,23 @@
   <div id="orientationGate" class="orientation-gate hidden" role="dialog" aria-modal="true" aria-labelledby="orientationGateTitle" aria-hidden="true">
     <div class="orientation-gate-panel">
       <div class="orientation-gate-visual">
-        <pre class="orientation-gate-art" aria-hidden="true">   ┌───────┐
-   │ ~ ~ ~ │
-   │ ~ ~ ~ │
-   │ ~ ~ ~ │
-   │▓▓▓▓▓▓▓│
-   └───────┘</pre>
+        <pre class="orientation-gate-art" aria-hidden="true">┌─────┐
+│     │
+│ MEGA│  ↷
+│ PLOT│
+│     │
+└─────┘
+
+LANDSCAPE</pre>
         <span class="orientation-gate-arrow" aria-hidden="true">⟲</span>
       </div>
-      <h2 id="orientationGateTitle" class="orientation-gate-title">Rotate to Landscape</h2>
-      <p class="orientation-gate-text">Mega Plot is locked in portrait mode. Turn your phone sideways to unlock this view.</p>
+      <h2 id="orientationGateTitle" class="orientation-gate-title">Turn Phone Sideways</h2>
+      <p class="orientation-gate-text">Mega Plot needs landscape view so the graph has room to breathe.</p>
       <a href="index.html" class="btn ghost orientation-gate-back">← Back to Mini Plot</a>
     </div>
   </div>
 
   <!-- ES module so compare.js can import parser.js -->
-  <script type="module" src="compare.js?v=1.7.4"></script>
+  <script type="module" src="compare.js?v=1.7.5"></script>
 </body>
 </html>
