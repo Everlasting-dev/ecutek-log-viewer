@@ -812,78 +812,30 @@ body{ margin:0; background:var(--bg); color:var(--fg);
   margin-bottom: 4px;
 }
 
-.orientation-rotate-icon{
-  position:relative;
-  width:170px;
-  height:170px;
+.orientation-phone-ascii{
+  width:168px;
+  height:168px;
+  margin:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
   color:var(--accent);
-  filter:drop-shadow(0 0 7px rgba(0, 255, 102, 0.35));
+  font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size:clamp(17px, 5vw, 22px);
+  line-height:1;
+  letter-spacing:0;
+  white-space:pre;
+  text-align:left;
+  text-shadow:0 0 8px rgba(0, 255, 102, 0.4);
+  filter:drop-shadow(0 0 7px rgba(0, 255, 102, 0.38));
+  transform-origin:50% 50%;
+  animation:phone-ascii-rotate 3.2s ease-in-out infinite;
 }
 
-.orientation-phone-shape{
-  position:absolute;
-  left:50%;
-  top:50%;
-  width:62px;
-  height:104px;
-  transform:translate(-50%, -50%);
-  border:4px solid currentColor;
-  border-radius:9px;
-  box-shadow:inset 0 0 0 1px rgba(0, 255, 102, 0.16);
-}
-
-.orientation-arc{
-  position:absolute;
-  width:95px;
-  height:54px;
-  border:4px solid currentColor;
-  border-color:currentColor transparent transparent currentColor;
-  border-radius:80px 0 0 0;
-}
-
-.orientation-arc::after{
-  content:"";
-  position:absolute;
-  width:13px;
-  height:13px;
-  border-left:4px solid currentColor;
-  border-bottom:4px solid currentColor;
-}
-
-.orientation-arc--top{
-  left:13px;
-  top:15px;
-  transform:rotate(-9deg);
-  animation:rotate-arc-top 2.8s ease-in-out infinite;
-}
-
-.orientation-arc--top::after{
-  left:-7px;
-  top:43px;
-  transform:rotate(2deg);
-}
-
-.orientation-arc--bottom{
-  right:13px;
-  bottom:16px;
-  transform:rotate(171deg);
-  animation:rotate-arc-bottom 2.8s ease-in-out infinite;
-}
-
-.orientation-arc--bottom::after{
-  left:-7px;
-  top:43px;
-  transform:rotate(2deg);
-}
-
-@keyframes rotate-arc-top {
-  0%, 100% { transform:rotate(-9deg) translateX(0); opacity:0.9; }
-  50% { transform:rotate(-9deg) translateX(-5px); opacity:0.55; }
-}
-
-@keyframes rotate-arc-bottom {
-  0%, 100% { transform:rotate(171deg) translateX(0); opacity:0.9; }
-  50% { transform:rotate(171deg) translateX(-5px); opacity:0.55; }
+@keyframes phone-ascii-rotate {
+  0%, 22% { transform:rotate(0deg); }
+  48%, 68% { transform:rotate(90deg); }
+  94%, 100% { transform:rotate(0deg); }
 }
 
 .orientation-gate-title {

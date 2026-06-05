@@ -2,6 +2,15 @@
 
 ## Version History
 
+### Apex Build 1.7.8 - ASCII Rotate Animation
+**Date:** June 5, 2026
+**Status:** Released
+
+#### Fixes
+- Replaced the icon-style Mega Plot rotate cue with a true ASCII phone outline.
+- Animated the ASCII phone from portrait to landscape around its center point.
+- Kept the permanent lightweight Mega Plot crop preview from 1.7.7.
+
 ### Apex Build 1.7.7 - Rotate Cue and Crop Preview
 **Date:** June 5, 2026
 **Status:** Released
