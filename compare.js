@@ -3,6 +3,7 @@ import { parseCSV, findTimeIndex, findRpmIndex, numericColumns } from "./parser.
 import { downsampleLTTB, calculateOptimalSampleSize, shouldDownsample } from "./modules/downsample.js";
 import { initAnnotations, getAllAnnotations, exportAnnotations, removeAnnotation } from "./modules/annotations.js";
 import { initTemplates, getAllTemplates, createTemplate, deleteTemplate, exportTemplates } from "./modules/templates.js";
+import { bindToTopButton } from "./modules/utils.js";
 
 function openShiftLabModal(){
   if (shiftLabModal) {
@@ -2270,6 +2271,7 @@ function tryLoadCached(){
 
 /* file flow */
 function wireInitialEventListeners(){
+  bindToTopButton();
   if (!csvFile) {
     console.error("csvFile element not found");
     return;
@@ -2585,14 +2587,6 @@ function wireInitialEventListeners(){
     });
   }
 
-  // Back to top button
-  const toTopBtn = document.getElementById("toTop");
-  if (toTopBtn) toTopBtn.onclick = () => {
-    const root = document.scrollingElement || document.documentElement;
-    root.scrollTo?.({ top: 0, behavior: "smooth" });
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-  
   clearBtn.addEventListener("click", ()=>{
     ySlots.forEach(s=>{ s.enabled=false; s.colIdx=-1; s.scale=0; s.color="#00aaff"; s.ui={}; });
     axisPanel.innerHTML=""; chart.innerHTML=""; fileInfo.classList.add("hidden");

@@ -230,8 +230,26 @@ document.addEventListener("DOMContentLoaded", () => {
   
   // Back to top button
   const toTopBtn = document.getElementById("toTop");
-  if (toTopBtn) {
-    toTopBtn.onclick = () => window.scrollTo({ top: 0, behavior: "smooth" });
+  if (toTopBtn && toTopBtn.dataset.scrollBound !== "1") {
+    toTopBtn.dataset.scrollBound = "1";
+    toTopBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      const scrollRoot = document.scrollingElement || document.documentElement;
+      scrollRoot.scrollTop = 0;
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+      try {
+        window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+      } catch {
+        window.scrollTo(0, 0);
+      }
+      requestAnimationFrame(() => {
+        scrollRoot.scrollTop = 0;
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+        window.scrollTo(0, 0);
+      });
+    });
   }
   
   // Loading screen handlers

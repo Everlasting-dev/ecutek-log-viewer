@@ -79,3 +79,47 @@ export function supportsWebWorkers(){
 export function supportsIndexedDB(){
   return typeof indexedDB !== 'undefined';
 }
+
+/**
+ * Scroll the page back to the top. Handles mobile browser quirks.
+ */
+export function scrollToTop(){
+  const scrollRoot = document.scrollingElement || document.documentElement;
+
+  scrollRoot.scrollTop = 0;
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+
+  try {
+    window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+  } catch {
+    window.scrollTo(0, 0);
+  }
+
+  if (scrollRoot.scrollTo){
+    try {
+      scrollRoot.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+    } catch { /* ignore */ }
+  }
+
+  requestAnimationFrame(() => {
+    scrollRoot.scrollTop = 0;
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    window.scrollTo(0, 0);
+  });
+}
+
+/**
+ * Bind the scroll-to-top handler to a button element.
+ * @param {string} buttonId - Element id (default: "toTop")
+ */
+export function bindToTopButton(buttonId = "toTop"){
+  const btn = document.getElementById(buttonId);
+  if (!btn || btn.dataset.scrollBound === "1") return;
+  btn.dataset.scrollBound = "1";
+  btn.addEventListener("click", (e) => {
+    e.preventDefault();
+    scrollToTop();
+  });
+}

@@ -1,6 +1,6 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm";
 import { findTimeIndex } from "./parser.js";
-import { debounce, throttle, formatBytes, supportsWebWorkers } from "./modules/utils.js";
+import { debounce, throttle, formatBytes, supportsWebWorkers, bindToTopButton } from "./modules/utils.js";
 import { storeLog, getRecentLog, storeParsed, getParsed, addToRecent, migrateFromSessionStorage, getRecentFiles, getLog } from "./modules/storage.js";
 import { downsampleLTTB } from "./modules/downsample.js";
 import { registerShortcut, initShortcuts, getModifierKey } from "./modules/shortcuts.js";
@@ -618,6 +618,7 @@ function handleStartupSplash(){
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  bindToTopButton();
   handleStartupSplash();
   
   // Initialize IndexedDB and migrate from sessionStorage
@@ -814,13 +815,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (text){ stageParsed(text, sessionStorage.getItem("csvName")||"cached.csv", Number(sessionStorage.getItem("csvSize")||0)); }
   }
 
-  // Back to top button
-  const toTopBtn = document.getElementById("toTop");
-  if (toTopBtn) toTopBtn.onclick = () => {
-    const root = document.scrollingElement || document.documentElement;
-    root.scrollTo?.({ top: 0, behavior: "smooth" });
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
   updatePlotFooters();
 });
 

@@ -21,7 +21,8 @@ body { background: var(--bg); color: var(--text); }
 .plot-card, .panel, .control-box { background: var(--card-bg); }
 
 *{box-sizing:border-box}
-html,body{height:100%; overflow-x:hidden}
+html{overflow-x:hidden}
+body{min-height:100%; overflow-x:hidden}
 body{ margin:0; background:var(--bg); color:var(--fg);
   font:14px "Inter", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; 
   transition: background-color 0.3s ease, color 0.3s ease; }
@@ -599,10 +600,17 @@ body{ margin:0; background:var(--bg); color:var(--fg);
   flex-direction:column;
   align-items:stretch;
 }
+.floating-actions .totop,
+.floating-actions .action-btn{
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+}
 .totop{
   padding:10px 12px; border-radius:10px; border:1px solid var(--line);
   background:var(--panel); color:var(--fg); font-weight:700; cursor:pointer;
   box-shadow: var(--shadow);
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
 }
 .floating-actions .floating-switch,
 .floating-actions .action-btn,
@@ -673,29 +681,55 @@ body{ margin:0; background:var(--bg); color:var(--fg);
     padding: 1px 6px;
   }
 
+  body:has(.floating-actions) {
+    padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px));
+  }
+
   .floating-actions {
-    left: 8px;
-    right: 8px;
-    bottom: 8px;
-    flex-direction: row;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px));
+    background: color-mix(in srgb, var(--panel) 94%, transparent);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-top: 1px solid var(--line);
+    border-radius: 0;
+    box-shadow: 0 -4px 20px rgba(0,0,0,.28);
+  }
+
+  .floating-actions--single {
+    display: flex;
     justify-content: center;
-    align-items: center;
-    gap:8px;
-    flex-wrap:wrap;
+  }
+
+  .floating-actions--single .totop,
+  .floating-actions--single .action-btn {
+    flex: 1;
+    max-width: 220px;
   }
 
   .floating-actions .floating-switch,
   .floating-actions .totop,
   .floating-actions .action-btn {
-    width: auto;
-    height: 34px;
+    width: 100%;
+    height: 38px;
     min-width: 0;
-    flex:0 1 auto;
-    padding:0 10px;
+    flex: unset;
+    padding: 0 8px;
+    font-size: 13px;
   }
 
-  .floating-actions .floating-switch{
-    min-width:110px;
+  .floating-actions .floating-switch {
+    justify-content: space-between;
+    min-width: 0;
+  }
+
+  .floating-actions .switch .label {
+    font-size: 13px;
   }
 
 }

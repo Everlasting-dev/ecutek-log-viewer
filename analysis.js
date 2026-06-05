@@ -1,4 +1,5 @@
 import { parseCSV, findTimeIndex, findRpmIndex } from "./parser.js";
+import { bindToTopButton } from "./modules/utils.js";
 
 const el = (id) => document.getElementById(id);
 
@@ -46,6 +47,7 @@ let timeIdx = -1;
 let rpmIdx = -1;
 
 function init(){
+  bindToTopButton();
   initTheme();
   if (fileInput){
     fileInput.addEventListener("change", (e)=>{

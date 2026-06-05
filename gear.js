@@ -1,4 +1,5 @@
 import { parseCSV, findRpmIndex } from "./parser.js";
+import { bindToTopButton } from "./modules/utils.js";
 
 const gearFile = document.getElementById("gearFile");
 const gearReload = document.getElementById("gearReload");
@@ -30,6 +31,7 @@ let rpmIdx = -1;
 let currentMode = "rpm-speed";
 
 function init(){
+  bindToTopButton();
   initTheme();
   initDropdowns();
   if (gearModeToggle){
