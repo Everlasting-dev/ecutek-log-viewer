@@ -420,16 +420,26 @@
   <div id="orientationGate" class="orientation-gate hidden" role="dialog" aria-modal="true" aria-labelledby="orientationGateTitle" aria-hidden="true">
     <div class="orientation-gate-panel">
       <div class="orientation-gate-visual">
-        <pre class="orientation-phone-ascii" aria-hidden="true">+-------+
-|       |
-|       |
-|       |
-|       |
-|       |
-+-------+</pre>
+        <div class="orientation-phone-stage" aria-hidden="true">
+          <div class="orientation-phone-ring"></div>
+          <pre class="orientation-phone-frame orientation-phone-frame--portrait">   ╭─────────╮
+   │ ┌─────┐ │
+   │ │▓▓▓▓▓│ │
+   │ │░░░░░│ │
+   │ │▄▄▄▄▄│ │
+   │ └─────┘ │
+   │    ◉    │
+   ╰─────────╯</pre>
+          <pre class="orientation-phone-frame orientation-phone-frame--landscape">╭───────────────────╮
+│ ┌───────────────┐ │
+│ │▓▓▓▓▓░░░░░▄▄▄▄▄│ │
+│ └───────────────┘ │
+╰───────────────────╯</pre>
+        </div>
+        <p class="orientation-phone-caption" aria-hidden="true">Portrait → Landscape</p>
       </div>
-      <h2 id="orientationGateTitle" class="orientation-gate-title">Turn Phone Sideways</h2>
-      <p class="orientation-gate-text">Mega Plot needs landscape view so the graph has room to breathe.</p>
+      <h2 id="orientationGateTitle" class="orientation-gate-title">Rotate to Landscape</h2>
+      <p class="orientation-gate-text">Mega Plot is optimized for landscape orientation. Rotate your device to continue.</p>
       <a href="index.html" class="btn ghost orientation-gate-back">← Back to Mini Plot</a>
     </div>
   </div>

@@ -807,35 +807,91 @@ body{ margin:0; background:var(--bg); color:var(--fg);
 .orientation-gate-visual {
   position: relative;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  margin-bottom: 4px;
+  gap: 10px;
+  margin-bottom: 2px;
 }
 
-.orientation-phone-ascii{
-  width:168px;
-  height:168px;
-  margin:0;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  color:var(--accent);
-  font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-  font-size:clamp(17px, 5vw, 22px);
-  line-height:1;
-  letter-spacing:0;
-  white-space:pre;
-  text-align:left;
-  text-shadow:0 0 8px rgba(0, 255, 102, 0.4);
-  filter:drop-shadow(0 0 7px rgba(0, 255, 102, 0.38));
-  transform-origin:50% 50%;
-  animation:phone-ascii-rotate 3.2s ease-in-out infinite;
+.orientation-phone-stage {
+  position: relative;
+  width: 220px;
+  height: 168px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-@keyframes phone-ascii-rotate {
-  0%, 22% { transform:rotate(0deg); }
-  48%, 68% { transform:rotate(90deg); }
-  94%, 100% { transform:rotate(0deg); }
+.orientation-phone-ring {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 156px;
+  height: 156px;
+  border: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: 50%;
+  animation: orientation-phone-ring-spin 8s linear infinite;
+}
+
+.orientation-phone-ring::after {
+  content: "↻";
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 15px;
+  color: var(--accent);
+  text-shadow: 0 0 8px rgba(0, 255, 102, 0.45);
+}
+
+.orientation-phone-frame {
+  position: absolute;
+  margin: 0;
+  color: var(--accent);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: clamp(10px, 2.8vw, 12px);
+  line-height: 1.15;
+  letter-spacing: 0.02em;
+  white-space: pre;
+  text-align: left;
+  text-shadow: 0 0 6px rgba(0, 255, 102, 0.35);
+  filter: drop-shadow(0 0 5px rgba(0, 255, 102, 0.28));
+}
+
+.orientation-phone-frame--portrait {
+  animation: orientation-phone-portrait 4.8s ease-in-out infinite;
+}
+
+.orientation-phone-frame--landscape {
+  opacity: 0;
+  animation: orientation-phone-landscape 4.8s ease-in-out infinite;
+}
+
+.orientation-phone-caption {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+@keyframes orientation-phone-ring-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes orientation-phone-portrait {
+  0%, 34% { opacity: 1; transform: scale(1); }
+  42%, 48% { opacity: 0; transform: scale(0.94); }
+  86%, 100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes orientation-phone-landscape {
+  0%, 34% { opacity: 0; transform: scale(0.94); }
+  42%, 72% { opacity: 1; transform: scale(1); }
+  80%, 100% { opacity: 0; transform: scale(0.94); }
 }
 
 .orientation-gate-title {
