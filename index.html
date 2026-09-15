@@ -1,11 +1,11 @@
-ï»¿<!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <title>ApexLog Studio (TXT/CSV)</title>
+  <title>Tool</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="style.css?v=1.7.9" />
   <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
@@ -23,7 +23,7 @@
         <div class="matrix" id="classicMatrix"></div>
         <div class="loading-text">APEXLOG STUDIO</div>
         <div class="loading-version">Apex Build 1.7.9</div>
-        <div class="hint">loadingâ€¦</div>
+        <div class="hint">loading…</div>
       </div>
     </div>
   </div>
@@ -233,7 +233,7 @@
     </div>
   </div>
 
-  <div class="footer">Made by AK Everlasting Dev Â· Apex Build 1.7.9</div>
+  <div class="footer">Made by AK Everlasting Dev · Apex Build 1.7.9</div>
   <div class="floating-actions">
     <label class="switch floating-switch" title="Sync click selection across plots">
       <input type="checkbox" id="syncSnapToggle" checked />
@@ -245,13 +245,13 @@
       <span class="slider"></span>
       <span class="label">Window</span>
     </label>
-    <button id="resetWindow" class="totop action-btn" title="Reset time window">â†º Reset</button>
-    <button id="toTop" class="totop action-btn" title="Back to top">â†‘ Top</button>
+    <button id="resetWindow" class="totop action-btn" title="Reset time window">? Reset</button>
+    <button id="toTop" class="totop action-btn" title="Back to top">? Top</button>
   </div>
   <div id="shiftLabModal" class="modal hidden">
     <div class="modal-content wide">
-      <button class="modal-close" id="shiftLabClose" aria-label="Close shift lab">Ã—</button>
-      <h3>Shift Strategy Lab Â· GR6 Focus</h3>
+      <button class="modal-close" id="shiftLabClose" aria-label="Close shift lab">×</button>
+      <h3>Shift Strategy Lab · GR6 Focus</h3>
       <p class="muted">Blend gearbox ratios, final drive, and tire diameter to visualize shift points and re-clutch RPM. Inspired by <a href="https://www.blocklayer.com/rpm-gear" target="_blank" rel="noopener">blocklayer.com</a>.</p>
       <div class="shift-grid">
         <div class="shift-config">
@@ -282,7 +282,7 @@
 
   <div id="changelogModal" class="modal hidden">
     <div class="modal-content wide">
-      <button class="modal-close" id="changelogClose" aria-label="Close change log">Ã—</button>
+      <button class="modal-close" id="changelogClose" aria-label="Close change log">×</button>
       <h3>Change Log</h3>
             <div class="changelog-entry">
         <h4>Apex Build 1.7.9</h4>
@@ -310,7 +310,7 @@
   </div>
   <div id="hintsModal" class="modal hidden">
     <div class="modal-content">
-      <button class="modal-close" id="hintsClose" aria-label="Close hints">Ã—</button>
+      <button class="modal-close" id="hintsClose" aria-label="Close hints">×</button>
       <h3>Hints</h3>
       <ul>
         <li>Signal Matrix shows every column; toggle plots off to declutter.</li>
@@ -322,7 +322,7 @@
   </div>
   <div id="metadataModal" class="modal hidden">
     <div class="modal-content wide">
-      <button class="modal-close" id="metadataClose" aria-label="Close metadata">Ã—</button>
+      <button class="modal-close" id="metadataClose" aria-label="Close metadata">×</button>
       <h3>Log Metadata & Archive</h3>
       <div id="metaSummary" class="meta-grid muted">
         <span>Upload a log to see VIN, ECU SW numbers, dongle IDs, sampling stats, GR6 shifts, and torque interventions.</span>
@@ -330,7 +330,7 @@
       <section class="modal-section">
         <h4>Cloud Save Note</h4>
         <div class="form-grid">
-          <textarea id="archiveNoteInput" rows="2" placeholder="e.g. 2025-11-24 Â· 4th gear pull Â· new injectors"></textarea>
+          <textarea id="archiveNoteInput" rows="2" placeholder="e.g. 2025-11-24 · 4th gear pull · new injectors"></textarea>
           <button id="archiveLogBtn" class="btn primary mini" disabled>Archive Current Log</button>
         </div>
         <p class="muted">Uploads to cloud storage with your note as the filename. Your note helps identify the log file.</p>

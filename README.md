@@ -1,9 +1,5 @@
 ﻿# ecutek-log-viewer
 
-Experimental client-side tooling. Not a product brief.
+Experimental tooling.
 
-[Open](https://everlasting-dev.github.io/ecutek-log-viewer/)
-
----
-
-AK Everlasting Dev
+Proprietary — AK Everlasting Dev. All rights reserved.

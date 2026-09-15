@@ -1,9 +1,9 @@
-ï»¿<!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>ApexLog Studio Â· Data Analysis</title>
+  <title>Tool</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="style.css?v=1.7.9" />
   <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
@@ -189,7 +189,7 @@
         <span>Load a log to inspect VIN, ECU software, dongle, sampling rate, and shift insights.</span>
       </div>
       <div class="meta-footer">
-        <textarea id="analysisArchiveNote" rows="2" placeholder="Cloud note / branch hint (e.g., 2025-11-24 Â· track A Â· pump E50)"></textarea>
+        <textarea id="analysisArchiveNote" rows="2" placeholder="Cloud note / branch hint (e.g., 2025-11-24 · track A · pump E50)"></textarea>
         <div class="meta-actions">
           <button id="analysisArchiveBtn" class="btn primary mini">Archive Snapshot</button>
           <small>Archives prepend your note as <code># CloudNote:</code> and are ready for <code>logs/</code> + <code>git checkout -b logvault/&lt;stamp&gt;</code>.</small>
@@ -206,8 +206,8 @@
         <select id="analysisDerivedOp">
           <option value="subtract">A - B</option>
           <option value="add">A + B</option>
-          <option value="divide">A Ã· B</option>
-          <option value="multiply">A Ã— B</option>
+          <option value="divide">A ÷ B</option>
+          <option value="multiply">A × B</option>
         </select>
         <select id="analysisDerivedB"></select>
         <input type="text" id="analysisDerivedName" placeholder="Label (e.g., Boost Delta)" />
@@ -235,14 +235,14 @@
       <div class="card-heading">
         <span>Performance Benchmarks</span>
       </div>
-      <p class="muted">Automatically detects the cleanest mph/kmh column and produces 0â€‘60, 60â€‘130, 100â€‘200, and peak G values. Uses the same logic as the Correlation Lab.</p>
+      <p class="muted">Automatically detects the cleanest mph/kmh column and produces 0-60, 60-130, 100-200, and peak G values. Uses the same logic as the Correlation Lab.</p>
       <button id="analysisPerfRefresh" class="btn ghost mini">Refresh Benchmarks</button>
       <div id="analysisPerfSummary" class="analysis-result muted">Load a log to compute benchmarks.</div>
     </div>
 
     <div class="card">
       <div class="card-heading">
-        <span>Diagnostics Â· GR6 Insights</span>
+        <span>Diagnostics · GR6 Insights</span>
       </div>
       <div id="analysisDiagSummary" class="analysis-result muted">Wheel slip, torque reductions, MIL flags, and GR6 shift drops will appear here.</div>
     </div>
@@ -252,8 +252,8 @@
 
   <div id="shiftLabModal" class="modal hidden">
     <div class="modal-content wide">
-      <button class="modal-close" id="shiftLabClose" aria-label="Close shift lab">Ã—</button>
-      <h3>Shift Strategy Lab Â· GR6 Focus</h3>
+      <button class="modal-close" id="shiftLabClose" aria-label="Close shift lab">×</button>
+      <h3>Shift Strategy Lab · GR6 Focus</h3>
       <p class="muted">Blend gearbox ratios, final drive, and tire diameter to visualize shift points and re-clutch RPM. Inspired by <a href="https://www.blocklayer.com/rpm-gear" target="_blank" rel="noopener">blocklayer.com</a>.</p>
       <div class="shift-grid">
         <div class="shift-config">
@@ -284,7 +284,7 @@
 
   <div id="changelogModal" class="modal hidden">
     <div class="modal-content wide">
-      <button class="modal-close" id="changelogClose" aria-label="Close change log">Ã—</button>
+      <button class="modal-close" id="changelogClose" aria-label="Close change log">×</button>
       <h3>Change Log</h3>
             <div class="changelog-entry">
         <h4>Apex Build 1.7.9</h4>
@@ -311,9 +311,9 @@
     </div>
   </div>
 
-  <div class="footer">Client-side parsing. Your file never leaves the device. Â· Data Analysis Suite</div>
+  <div class="footer">Client-side parsing. Your file never leaves the device. · Data Analysis Suite</div>
   <div class="floating-actions floating-actions--single">
-    <button id="toTop" class="totop action-btn" title="Back to top">â†‘ Top</button>
+    <button id="toTop" class="totop action-btn" title="Back to top">? Top</button>
   </div>
 
   <script type="module" src="analysis.js?v=1.7.9"></script>

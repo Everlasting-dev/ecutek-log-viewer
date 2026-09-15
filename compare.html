@@ -1,9 +1,9 @@
-Ôªø<!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>ApexLog Studio (Compare)</title>
+  <title>Tool</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="style.css?v=1.7.9" />
   <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
@@ -21,7 +21,7 @@
         <div class="matrix" id="classicMatrix"></div>
         <div class="loading-text">APEXLOG STUDIO</div>
         <div class="loading-version">Apex Build 1.7.9</div>
-        <div class="hint">loading‚Ä¶</div>
+        <div class="hint">loadingÖ</div>
       </div>
     </div>
   </div>
@@ -251,9 +251,9 @@
             <div class="threshold-row">
               <select id="highlightMode">
                 <option value="gt">&gt; threshold</option>
-                <option value="gte">‚â• threshold</option>
+                <option value="gte">= threshold</option>
                 <option value="eq">= threshold</option>
-                <option value="lte">‚â§ threshold</option>
+                <option value="lte">= threshold</option>
                 <option value="lt">&lt; threshold</option>
               </select>
               <input type="number" id="highlightThreshold" step="0.1" placeholder="Threshold" />
@@ -307,14 +307,14 @@
 
   <div id="scaleHelpModal" class="modal hidden">
     <div class="modal-content">
-      <button class="modal-close" id="scaleHelpClose" aria-label="Close scaling help">√ó</button>
+      <button class="modal-close" id="scaleHelpClose" aria-label="Close scaling help">◊</button>
       <h3>Scaling Shortcuts</h3>
-      <p>Use the ‚ñ≤ / ‚ñº buttons (or the exponent input) to adjust each trace. Hold modifier keys for finer control:</p>
+      <p>Use the ? / ? buttons (or the exponent input) to adjust each trace. Hold modifier keys for finer control:</p>
       <ul>
-        <li><strong>Click</strong> ‚Äì step by <code>¬±1</code></li>
-        <li><strong>Shift + Click</strong> ‚Äì step by <code>¬±0.1</code></li>
-        <li><strong>Alt + Click</strong> ‚Äì step by <code>¬±0.01</code></li>
-        <li><strong>Shift + Alt + Click</strong> ‚Äì step by <code>¬±0.001</code></li>
+        <li><strong>Click</strong> ñ step by <code>±1</code></li>
+        <li><strong>Shift + Click</strong> ñ step by <code>±0.1</code></li>
+        <li><strong>Alt + Click</strong> ñ step by <code>±0.01</code></li>
+        <li><strong>Shift + Alt + Click</strong> ñ step by <code>±0.001</code></li>
       </ul>
       <p>The exponent shown (e.g., <code>0.01</code>) is applied as <code>value = raw ^ exponent</code>. Reset returns to <code>0</code> (no scaling).</p>
     </div>
@@ -322,7 +322,7 @@
 
   <div id="metadataModal" class="modal hidden">
     <div class="modal-content wide">
-      <button class="modal-close" id="metadataClose" aria-label="Close metadata">√ó</button>
+      <button class="modal-close" id="metadataClose" aria-label="Close metadata">◊</button>
       <h3>Log Metadata & Archive</h3>
       <div id="metaSummary" class="meta-grid muted">
         <span>Upload a log to see VIN, ECU SW numbers, dongle IDs, sampling stats, GR6 shifts, and torque interventions.</span>
@@ -330,7 +330,7 @@
       <section class="modal-section">
         <h4>Cloud Save Note</h4>
         <div class="form-grid">
-          <textarea id="archiveNoteInput" rows="2" placeholder="e.g. 2025-11-24 ¬∑ 4th gear pull ¬∑ new injectors"></textarea>
+          <textarea id="archiveNoteInput" rows="2" placeholder="e.g. 2025-11-24 ∑ 4th gear pull ∑ new injectors"></textarea>
           <button id="archiveLogBtn" class="btn primary mini" disabled>Archive Current Log</button>
         </div>
         <p class="muted">Downloads a timestamped CSV with your note prepended as a comment. Drop it into <code>logs/</code> and commit via <code>logvault/&lt;date&gt;-&lt;rand&gt;</code>.</p>
@@ -340,8 +340,8 @@
 
   <div id="shiftLabModal" class="modal hidden">
     <div class="modal-content wide">
-      <button class="modal-close" id="shiftLabClose" aria-label="Close shift lab">√ó</button>
-      <h3>Shift Strategy Lab ¬∑ GR6 Focus</h3>
+      <button class="modal-close" id="shiftLabClose" aria-label="Close shift lab">◊</button>
+      <h3>Shift Strategy Lab ∑ GR6 Focus</h3>
       <p class="muted">Blend gearbox ratios, final drive, and tire diameter to visualize shift points and re-clutch RPM. Inspired by <a href="https://www.blocklayer.com/rpm-gear" target="_blank" rel="noopener">blocklayer.com</a>.</p>
       <div class="shift-grid">
         <div class="shift-config">
@@ -372,7 +372,7 @@
 
   <div id="changelogModal" class="modal hidden">
     <div class="modal-content wide">
-      <button class="modal-close" id="changelogClose" aria-label="Close change log">√ó</button>
+      <button class="modal-close" id="changelogClose" aria-label="Close change log">◊</button>
       <h3>Change Log</h3>
             <div class="changelog-entry">
         <h4>Apex Build 1.7.9</h4>
@@ -401,7 +401,7 @@
 
   <div id="hintsModal" class="modal hidden">
     <div class="modal-content">
-      <button class="modal-close" id="hintsClose" aria-label="Close hints">√ó</button>
+      <button class="modal-close" id="hintsClose" aria-label="Close hints">◊</button>
       <h3>Hints</h3>
       <ul>
         <li>Use Auto Scale to align wildly different signals before fine tuning.</li>
@@ -412,9 +412,9 @@
     </div>
   </div>
 
-  <div class="footer">Client‚Äëside parsing. Your file never leaves the device. ¬∑ Apex Build 1.7.9</div>
+  <div class="footer">Client-side parsing. Your file never leaves the device. ∑ Apex Build 1.7.9</div>
   <div class="floating-actions floating-actions--single">
-    <button id="toTop" class="totop action-btn" title="Back to top">‚Üë Top</button>
+    <button id="toTop" class="totop action-btn" title="Back to top">? Top</button>
   </div>
 
   <div id="orientationGate" class="orientation-gate hidden" role="dialog" aria-modal="true" aria-labelledby="orientationGateTitle" aria-hidden="true">
@@ -431,11 +431,11 @@
             <circle cx="110" cy="160" r="4" />
           </g>
         </svg>
-        <p class="orientation-phone-caption" aria-hidden="true">Portrait ‚Üí Landscape</p>
+        <p class="orientation-phone-caption" aria-hidden="true">Portrait ? Landscape</p>
       </div>
       <h2 id="orientationGateTitle" class="orientation-gate-title">Rotate to Landscape</h2>
       <p class="orientation-gate-text">Mega Plot is optimized for landscape orientation. Rotate your device to continue.</p>
-      <a href="index.html" class="btn ghost orientation-gate-back">‚Üê Back to Mini Plot</a>
+      <a href="index.html" class="btn ghost orientation-gate-back">? Back to Mini Plot</a>
     </div>
   </div>
 
